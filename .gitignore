@@ -1,0 +1,7 @@
+# Claude-Code-Dateien (lokal, nicht versioniert)
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+
+# macOS
+.DS_Store
