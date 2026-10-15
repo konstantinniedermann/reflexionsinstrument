@@ -8,3 +8,6 @@ CLAUDE.local.md
 
 # Vertrauliche Projektunterlagen (Auftraggeberin, Inhalte, Feedback)
 intern/
+
+# Ausgabe der E2E-Prüfung
+tests/.e2e/
