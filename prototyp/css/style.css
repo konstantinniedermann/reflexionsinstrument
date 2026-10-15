@@ -1,0 +1,827 @@
+/* Reflexionsheft – Prototyp. Mobile-first, Karten, CSS Grid. */
+
+:root {
+  --papier: #f6f4ef;
+  --karte: #fffdf9;
+  --tinte: #1f2a2e;
+  --gedaempft: #5b686d;
+  --linie: #e3ddd2;
+  --akzent: #1f5f5b;
+  --akzent-text: #ffffff;
+  --akzent-sanft: #e4efed;
+  --erledigt: #3d6b3a;
+  --erledigt-sanft: #e7f0e3;
+  --hinweis: #fbf3df;
+  --hinweis-linie: #c99a2e;
+  --fehler: #a33a2a;
+  --schatten: 0 1px 2px rgb(31 42 46 / 0.06), 0 2px 8px rgb(31 42 46 / 0.04);
+  --radius: 14px;
+  --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --papier: #151a1b;
+    --karte: #1e2526;
+    --tinte: #e8e5df;
+    --gedaempft: #a2adaf;
+    --linie: #313a3b;
+    --akzent: #79b9b0;
+    --akzent-text: #0f1a19;
+    --akzent-sanft: #1f3331;
+    --erledigt: #9cc895;
+    --erledigt-sanft: #223122;
+    --hinweis: #2a2416;
+    --hinweis-linie: #b38a35;
+    --fehler: #f08e7c;
+    --schatten: none;
+    color-scheme: dark;
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--papier);
+  color: var(--tinte);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.55;
+}
+
+h1,
+h2 {
+  font-family: var(--serif);
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+h1 {
+  font-size: 1.85rem;
+  margin: 0.25rem 0 0.75rem;
+}
+
+h1:focus {
+  outline: none;
+}
+
+h2 {
+  font-size: 1.25rem;
+  margin: 0 0 0.5rem;
+}
+
+p {
+  margin: 0 0 0.75rem;
+}
+
+a {
+  color: var(--akzent);
+}
+
+:focus-visible {
+  outline: 3px solid var(--akzent);
+  outline-offset: 2px;
+}
+
+/* ---------- Layout ---------- */
+
+.inhalt {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 1rem 16px calc(6rem + env(safe-area-inset-bottom));
+  display: grid;
+  gap: 1rem;
+  align-content: start;
+}
+
+.inhalt > * {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.inhalt:focus {
+  outline: none;
+}
+
+.lead {
+  font-size: 1.05rem;
+  color: var(--gedaempft);
+}
+
+.gedaempft {
+  color: var(--gedaempft);
+  font-size: 0.95rem;
+}
+
+.ueberzeile {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--gedaempft);
+}
+
+.abschnitt {
+  margin-top: 0.5rem;
+}
+
+.raster-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+
+.liste-ohne {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+
+/* ---------- Karten ---------- */
+
+.karte {
+  background: var(--karte);
+  border: 1px solid var(--linie);
+  border-radius: var(--radius);
+  padding: 1.1rem 1.1rem 1.2rem;
+  box-shadow: var(--schatten);
+}
+
+.karte > :last-child {
+  margin-bottom: 0;
+}
+
+.karte--link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.karte--link:hover,
+.karte--eintrag:hover,
+.karte--person:hover {
+  border-color: var(--akzent);
+}
+
+.karte--impuls {
+  background: var(--akzent-sanft);
+  border-color: transparent;
+}
+
+.impuls__text {
+  font-family: var(--serif);
+  font-size: 1.2rem;
+  line-height: 1.4;
+  margin: 0.4rem 0 1rem;
+}
+
+.karte--rueckblick {
+  border-style: dashed;
+}
+
+.pfeil {
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--gedaempft);
+}
+
+/* ---------- Runden ---------- */
+
+.runden {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.runde {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "titel pfeil"
+    "marke pfeil";
+  align-items: center;
+  gap: 0.2rem 0.75rem;
+  padding: 0.75rem 0.9rem;
+  border-radius: 10px;
+  border: 1px solid var(--linie);
+  color: inherit;
+  text-decoration: none;
+}
+
+.runde__titel {
+  grid-area: titel;
+  font-weight: 600;
+}
+
+.runde .marke {
+  grid-area: marke;
+  justify-self: start;
+}
+
+.runde .pfeil {
+  grid-area: pfeil;
+}
+
+.runde--offen {
+  border-color: var(--akzent);
+  background: var(--akzent-sanft);
+}
+
+.runde--gesperrt {
+  color: var(--gedaempft);
+  border-style: dashed;
+}
+
+/* ---------- Marken & Chips ---------- */
+
+.marke {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 600;
+  padding: 0.12rem 0.55rem;
+  border-radius: 999px;
+  background: var(--papier);
+  border: 1px solid var(--linie);
+  color: var(--gedaempft);
+  white-space: nowrap;
+}
+
+.marke--offen {
+  background: var(--akzent);
+  border-color: var(--akzent);
+  color: var(--akzent-text);
+}
+
+.marke--erledigt {
+  background: var(--erledigt-sanft);
+  border-color: transparent;
+  color: var(--erledigt);
+}
+
+.marke--runde {
+  background: var(--akzent-sanft);
+  border-color: transparent;
+  color: var(--akzent);
+}
+
+.chips {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+}
+
+.chip {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  border: 1px solid var(--linie);
+  background: var(--karte);
+  color: var(--tinte);
+  text-decoration: none;
+  font-size: 0.9rem;
+}
+
+.chip.ist-aktiv {
+  background: var(--akzent);
+  border-color: var(--akzent);
+  color: var(--akzent-text);
+}
+
+/* ---------- Knöpfe ---------- */
+
+.knopf {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  padding: 0.6rem 1.2rem;
+  border-radius: 10px;
+  border: 1px solid var(--akzent);
+  background: var(--akzent);
+  color: var(--akzent-text);
+  font: inherit;
+  font-weight: 600;
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.knopf--zweit {
+  background: transparent;
+  color: var(--akzent);
+}
+
+.knopf--leise {
+  background: transparent;
+  border-color: var(--linie);
+  color: var(--gedaempft);
+}
+
+.knopf--klein {
+  min-height: 40px;
+  padding: 0.4rem 0.8rem;
+  font-size: 0.9rem;
+}
+
+.formular .knopf,
+.danke .knopf {
+  width: 100%;
+}
+
+/* ---------- Fallbeispiel ---------- */
+
+.fall {
+  background: var(--karte);
+  border-left: 4px solid var(--akzent);
+  border-radius: 4px var(--radius) var(--radius) 4px;
+  padding: 1rem 1.1rem 0.4rem;
+  box-shadow: var(--schatten);
+}
+
+.fall p:not(.ueberzeile) {
+  font-family: var(--serif);
+  font-size: 1.1rem;
+}
+
+/* ---------- Formulare ---------- */
+
+.formular {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.feld {
+  display: grid;
+  gap: 0.35rem;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.feld label,
+.feld legend {
+  font-weight: 600;
+  padding: 0;
+}
+
+.hilfe {
+  margin: -0.2rem 0 0.1rem;
+  font-size: 0.92rem;
+  color: var(--gedaempft);
+}
+
+textarea {
+  width: 100%;
+  min-height: 6rem;
+  padding: 0.75rem 0.85rem;
+  border: 1px solid var(--linie);
+  border-radius: 10px;
+  background: var(--karte);
+  color: var(--tinte);
+  font: inherit;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+textarea:focus {
+  outline: 2px solid var(--akzent);
+  outline-offset: 0;
+  border-color: var(--akzent);
+}
+
+.skala {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.skala__wert {
+  position: relative;
+}
+
+.skala__wert input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+}
+
+.skala__wert span {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 48px;
+  border: 1px solid var(--linie);
+  border-radius: 10px;
+  background: var(--karte);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.skala__wert input:checked + span {
+  background: var(--akzent);
+  border-color: var(--akzent);
+  color: var(--akzent-text);
+}
+
+.skala__wert input:focus-visible + span {
+  outline: 3px solid var(--akzent);
+  outline-offset: 2px;
+}
+
+.skala__pole {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--gedaempft);
+}
+
+.hinweis {
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  background: var(--karte);
+  border: 1px solid var(--linie);
+  font-size: 0.95rem;
+  color: var(--gedaempft);
+}
+
+.fehler {
+  margin: 0;
+  color: var(--fehler);
+  font-weight: 600;
+}
+
+/* ---------- Aufklappen ---------- */
+
+.aufklapp summary {
+  cursor: pointer;
+  font-family: var(--serif);
+  font-size: 1.15rem;
+  font-weight: 600;
+  list-style: none;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.aufklapp summary::-webkit-details-marker {
+  display: none;
+}
+
+.aufklapp summary::after {
+  content: "+";
+  font-family: var(--sans);
+  font-weight: 400;
+  font-size: 1.4rem;
+  color: var(--gedaempft);
+}
+
+.aufklapp[open] summary::after {
+  content: "–";
+}
+
+.aufklapp__inhalt {
+  margin-top: 0.75rem;
+}
+
+.aufklapp__inhalt > :last-child {
+  margin-bottom: 0;
+}
+
+.aufklapp--innen summary {
+  font-family: var(--sans);
+  font-size: 1rem;
+  color: var(--akzent);
+}
+
+.aufklapp--innen .aufklapp__inhalt {
+  display: grid;
+  gap: 1rem;
+}
+
+/* ---------- Einträge ---------- */
+
+.karte--eintrag {
+  display: grid;
+  gap: 0.3rem;
+  color: inherit;
+  text-decoration: none;
+}
+
+.eintrag__kopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.eintrag__vorschau {
+  color: var(--gedaempft);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.antwort + .antwort {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--linie);
+}
+
+.antwort__frage {
+  margin: 0 0 0.25rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--gedaempft);
+}
+
+.antwort__text {
+  margin: 0;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.danke {
+  display: grid;
+  gap: 1rem;
+  padding-top: 2rem;
+}
+
+/* ---------- Projektleiterin ---------- */
+
+.raster-personen {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.karte--person {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.9rem;
+  color: inherit;
+  text-decoration: none;
+  font-size: 0.95rem;
+}
+
+.karte--person.ist-aktiv {
+  border-color: var(--akzent);
+  box-shadow: inset 0 0 0 1px var(--akzent);
+}
+
+.impulsliste {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.impulsliste li.ist-aktuell .marke {
+  background: var(--akzent);
+  border-color: var(--akzent);
+  color: var(--akzent-text);
+}
+
+/* ---------- Zum Besprechen ---------- */
+
+.ohne-hinweise .besprechen {
+  display: none;
+}
+
+.besprechen {
+  border: 1.5px dashed var(--hinweis-linie);
+  background: var(--hinweis);
+  border-radius: var(--radius);
+  padding: 0.85rem 1rem;
+  font-size: 0.95rem;
+}
+
+.besprechen__titel {
+  margin: 0 0 0.3rem;
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--hinweis-linie);
+}
+
+.besprechen ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.besprechen li + li {
+  margin-top: 0.3rem;
+}
+
+/* ---------- Navigation ---------- */
+
+.zurueck {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.tabs {
+  position: fixed;
+  inset: auto 0 0 0;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  background: var(--karte);
+  border-top: 1px solid var(--linie);
+  padding-bottom: env(safe-area-inset-bottom);
+  z-index: 10;
+}
+
+.tabs[hidden] {
+  display: none;
+}
+
+.tabs a {
+  display: grid;
+  justify-items: center;
+  gap: 0.15rem;
+  padding: 0.55rem 0 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--gedaempft);
+  text-decoration: none;
+}
+
+.tabs svg {
+  width: 24px;
+  height: 24px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tabs a.ist-aktiv {
+  color: var(--akzent);
+}
+
+/* ---------- Prototyp-Steuerung ---------- */
+
+.steuerung {
+  background: var(--tinte);
+  color: var(--papier);
+  font-size: 0.85rem;
+}
+
+.steuerung summary {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 0.5rem 16px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.steuerung summary::-webkit-details-marker {
+  display: none;
+}
+
+.steuerung :focus-visible {
+  outline-color: currentColor;
+}
+
+.steuerung__label {
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-size: 0.72rem;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+}
+
+.steuerung__rolle {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.steuerung__oeffnen {
+  text-decoration: underline;
+}
+
+.steuerung[open] .steuerung__oeffnen {
+  text-decoration: none;
+  opacity: 0.7;
+}
+
+.steuerung__inhalt {
+  max-width: 40rem;
+  margin: 0 auto;
+  padding: 0.25rem 16px 0.9rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.steuerung__zeile {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.steuerung input[type="checkbox"] {
+  width: 22px;
+  height: 22px;
+  accent-color: var(--akzent);
+}
+
+.steuerung__knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.steuerung .knopf--zweit,
+.steuerung .knopf--leise {
+  color: var(--papier);
+  border-color: rgb(255 255 255 / 0.35);
+}
+
+@media (prefers-color-scheme: dark) {
+  .steuerung .knopf--zweit,
+  .steuerung .knopf--leise {
+    border-color: rgb(0 0 0 / 0.35);
+  }
+}
+
+.segmente {
+  display: inline-grid;
+  grid-auto-flow: column;
+  gap: 0.3rem;
+}
+
+.segment {
+  min-width: 44px;
+  min-height: 44px;
+  border-radius: 8px;
+  border: 1px solid rgb(127 127 127 / 0.5);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.segment.ist-aktiv {
+  background: var(--papier);
+  color: var(--tinte);
+}
+
+/* ---------- Grössere Bildschirme ---------- */
+
+@media (min-width: 40rem) {
+  .inhalt {
+    padding-top: 2rem;
+  }
+
+  h1 {
+    font-size: 2.2rem;
+  }
+
+  .raster-personen {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
