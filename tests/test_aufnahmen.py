@@ -102,6 +102,28 @@ def test_fehler_beim_umbenennen(tmp_path, monkeypatch):
     assert list(tmp_path.iterdir()) == []
 
 
+def test_fehler_beim_schreiben(tmp_path, monkeypatch):
+    echt = os.fdopen
+
+    class Kaputt:
+        def __init__(self, datei):
+            self.datei = datei
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args):
+            self.datei.close()
+
+        def write(self, _block):
+            raise OSError("voll")
+
+    monkeypatch.setattr(os, "fdopen", lambda fd, modus: Kaputt(echt(fd, modus)))
+    with pytest.raises(OSError, match="voll"):
+        schreibe_datei(BytesIO(WEBM), tmp_path)
+    assert list(tmp_path.iterdir()) == []
+
+
 def test_raeume_waisen(db, lehrperson, tmp_path):
     ordner = tmp_path / "ordner"
     ordner.mkdir()
@@ -126,8 +148,11 @@ def test_raeume_waisen(db, lehrperson, tmp_path):
     os.utime(jung, (jetzt, jetzt))
     unterordner = ordner / ("e" * 32 + ".webm")
     unterordner.mkdir()
+    os.utime(unterordner, (vor_zwei_stunden, vor_zwei_stunden))
     link = ordner / ("f" * 32 + ".webm")
     link.symlink_to(ausserhalb)
+    os.utime(link, (vor_zwei_stunden, vor_zwei_stunden), follow_symlinks=False)
+    os.utime(ausserhalb, (vor_zwei_stunden, vor_zwei_stunden))
     db.execute(
         "INSERT INTO aufnahmen (konto_id, dateiname, mime_typ, groesse_bytes)"
         " VALUES (?, ?, 'audio/webm', 1)",
