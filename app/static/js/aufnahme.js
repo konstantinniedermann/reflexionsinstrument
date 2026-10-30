@@ -133,7 +133,7 @@
     player.src = adresse;
     zustand("fertig");
     melde(grund || null);
-    knopf("neu").focus();
+    knopf("speichern").focus();
   }
 
   function brichStartAb(meldung) {

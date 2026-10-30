@@ -92,17 +92,26 @@ def test_speicher_knapp(tmp_path, monkeypatch, caplog):
     assert [r.getMessage() for r in caplog.records] == ["Aufnahme abgelehnt: Speicherplatz knapp"]
 
 
-def test_fehler_beim_umbenennen(tmp_path, monkeypatch):
+def _erwarte_503_ohne_namen(tmp_path, caplog):
+    with caplog.at_level(logging.WARNING), pytest.raises(AufnahmeFehler) as fehler:
+        schreibe_datei(BytesIO(WEBM), tmp_path)
+    assert fehler.value.status == 503
+    assert fehler.value.__cause__ is None
+    assert list(tmp_path.iterdir()) == []
+    meldungen = [r.getMessage() for r in caplog.records]
+    assert meldungen == ["Aufnahme liess sich nicht schreiben"]
+    assert not any(DATEINAME.search(m) for m in meldungen)
+
+
+def test_fehler_beim_umbenennen(tmp_path, monkeypatch, caplog):
     def kaputt(*_args, **_kwargs):
         raise OSError("kaputt")
 
     monkeypatch.setattr(os, "replace", kaputt)
-    with pytest.raises(OSError, match="kaputt"):
-        schreibe_datei(BytesIO(WEBM), tmp_path)
-    assert list(tmp_path.iterdir()) == []
+    _erwarte_503_ohne_namen(tmp_path, caplog)
 
 
-def test_fehler_beim_schreiben(tmp_path, monkeypatch):
+def test_fehler_beim_schreiben(tmp_path, monkeypatch, caplog):
     echt = os.fdopen
 
     class Kaputt:
@@ -119,7 +128,15 @@ def test_fehler_beim_schreiben(tmp_path, monkeypatch):
             raise OSError("voll")
 
     monkeypatch.setattr(os, "fdopen", lambda fd, modus: Kaputt(echt(fd, modus)))
-    with pytest.raises(OSError, match="voll"):
+    _erwarte_503_ohne_namen(tmp_path, caplog)
+
+
+def test_anderer_fehler_beim_schreiben_bleibt(tmp_path, monkeypatch):
+    def kaputt(*_args, **_kwargs):
+        raise RuntimeError("anders")
+
+    monkeypatch.setattr(os, "replace", kaputt)
+    with pytest.raises(RuntimeError, match="anders"):
         schreibe_datei(BytesIO(WEBM), tmp_path)
     assert list(tmp_path.iterdir()) == []
 

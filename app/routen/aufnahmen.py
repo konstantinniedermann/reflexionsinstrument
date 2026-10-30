@@ -112,7 +112,7 @@ def tagebuch_aufnahme_seite(request: Request, db: DB, ansicht: ANSICHT):
 async def _speichere_upload(
     request: Request,
     mit_text: bool,
-    uebernehmen: Callable[[Path, int | None, str | None], RedirectResponse],
+    uebernehmen: Callable[[aufnahmen.Datei, int | None, str | None], RedirectResponse],
     fehlerseite: Callable[[str, int], Response],
 ) -> Response:
     """Liest und speichert die Datei; `uebernehmen` legt die Zeilen an und gibt die Weiterleitung."""
@@ -140,7 +140,7 @@ async def _speichere_upload(
     dependencies=[Depends(begrenze_upload), Depends(pruefe_csrf)],
 )
 async def tagebuch_aufnahme_speichern(request: Request, db: DB, ansicht: ANSICHT):
-    def uebernehmen(gespeichert: Path, dauer: int | None, text: str | None):
+    def uebernehmen(gespeichert: aufnahmen.Datei, dauer: int | None, text: str | None):
         eintrag_id = aufnahmen.aufnahme_als_tagebucheintrag(
             db, ansicht.konto_id, gespeichert, dauer, text
         )
@@ -175,7 +175,7 @@ def _antwort_pfad(runde_id: int, frage_id: int) -> str:
 
 def _seite_antwort(
     request: Request,
-    db: DB,
+    db: sqlite3.Connection,
     ansicht: Ansicht,
     runde: sqlite3.Row,
     frage: sqlite3.Row,
@@ -218,7 +218,7 @@ async def antwort_aufnahme_speichern(
     runde, frage = _freitext_frage(db, ansicht, runde_id, frage_id)
     verzeichnis = _verzeichnis(request)
 
-    def uebernehmen(gespeichert: Path, dauer: int | None, _text: str | None):
+    def uebernehmen(gespeichert: aufnahmen.Datei, dauer: int | None, _text: str | None):
         aufnahmen.haenge_an_antwort(db, ansicht.konto_id, frage_id, gespeichert, dauer, verzeichnis)
         return RedirectResponse(
             f"/lehrperson/runden/{runde_id}?erledigt=gespeichert#frage-{frage_id}", 303

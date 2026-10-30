@@ -118,8 +118,12 @@ def schreibe_datei(quelle: BinaryIO, verzeichnis: Path) -> Datei:
             while block := quelle.read(BLOCK_BYTES):
                 ausgabe.write(block)
         os.replace(teil, ziel)
-    except BaseException:
+    except BaseException as fehler:
         teil.unlink(missing_ok=True)
+        if isinstance(fehler, OSError):
+            # Ohne Dateinamen: Traceback und Log duerfen keinen Namen tragen.
+            _log.warning("Aufnahme liess sich nicht schreiben")
+            raise AufnahmeFehler(503) from None
         raise
     return Datei(name, mime_typ, groesse_bytes)
 
