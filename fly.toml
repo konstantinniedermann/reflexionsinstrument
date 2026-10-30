@@ -1,7 +1,7 @@
 # Deploy lokal mit `make deploy`.
 # Geheimer Schlüssel einmalig setzen: fly secrets set GEHEIMER_SCHLUESSEL=...
 
-app = "reflexion-pilot"
+app = "reflexionsinstrument"
 primary_region = "fra"
 
 [env]

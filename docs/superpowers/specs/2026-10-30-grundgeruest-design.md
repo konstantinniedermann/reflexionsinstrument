@@ -123,9 +123,9 @@ HTTPS erzwingt fly.io (`force_https = true`): Anfragen über HTTP werden umgelei
 - `Dockerfile`: `python:3.13-slim`, uv aus dem offiziellen Image kopiert, `uv sync --frozen --no-dev` aus `uv.lock`. So installiert der Build genau die geprüften Versionen. (Munica hatte Ausfälle, weil der Build ohne Lockfile frei auflöste.)
 - Nicht-root: Entrypoint startet als root, chownt `/data` (fly mountet das Volume als root) und wechselt per `setpriv` auf `appuser`, wie bei Munica. `exec`, damit uvicorn Signale direkt bekommt.
 - `uvicorn app.main:app --host 0.0.0.0 --port 8080 --proxy-headers --forwarded-allow-ips "*"` (fly-Proxy davor).
-- `fly.toml`: App-Name `reflexion-pilot` (neutral, ohne Personen- oder Schulnamen; ist er vergeben, ein ähnlicher neutraler Name), `primary_region = "fra"`, Volume `daten` (1 GB) auf `/data`, `force_https`, `auto_stop_machines = "stop"`, `min_machines_running = 0`, Health-Check auf `/healthz`, VM `shared-cpu-1x`, 256 MB.
+- `fly.toml`: App-Name `reflexionsinstrument` (neutral, ohne Personen- oder Schulnamen; von Koschi angelegt), `primary_region = "fra"`, Volume `daten` (1 GB) auf `/data`, `force_https`, `auto_stop_machines = "stop"`, `min_machines_running = 0`, Health-Check auf `/healthz`, VM `shared-cpu-1x`, 256 MB.
 - **Deployment lokal mit `make deploy`** statt über GitHub Actions: So liegt kein fly-Token in GitHub, und das Repo ist öffentlich. Bei einem Betreiber und vier Wochen Laufzeit spart Automatik nichts.
-- Der erste Deploy (App anlegen, Volume, Secret) geht nach aussen und kostet Geld. Davor fragt Claude Koschi einmal. Er steht als letzte, abtrennbare Aufgabe im Plan. Der Pull Request wird erst nach dem Deploy und den Nachweisen auf fly.io gemergt, weil diese zur DoD gehören. Organisation: `personal`, wie alle bestehenden Apps des Betreibers.
+- Der erste Deploy (App anlegen, Volume, Secret) geht nach aussen und kostet Geld. Davor fragt Claude Koschi einmal. Er steht als letzte, abtrennbare Aufgabe im Plan. Der Pull Request wird erst nach dem Deploy und den Nachweisen auf fly.io gemergt, weil diese zur DoD gehören. Organisation: `reflexion`, eigens von Koschi angelegt, damit die Kosten getrennt von seinen übrigen Apps abgerechnet werden.
 
 ## CI
 
