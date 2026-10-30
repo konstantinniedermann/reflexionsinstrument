@@ -47,6 +47,13 @@ def startseite(request: Request, konto: Annotated[Konto | None, Depends(aktuelle
     return _login_seite(request, 200)
 
 
+@router.get("/anmelden")
+@router.get("/abmelden")
+def formularadresse_per_get():
+    """Tab-Wiederherstellung oder Lesezeichen auf eine Formularadresse: zurueck zum Start."""
+    return RedirectResponse("/", status_code=303)
+
+
 @router.post("/anmelden", dependencies=[Depends(pruefe_csrf)])
 def anmelden_senden(
     request: Request,

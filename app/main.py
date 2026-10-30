@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from fastapi import FastAPI, Request
-from fastapi.exception_handlers import http_exception_handler
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -20,6 +20,12 @@ from app.vorlagen import templates
 from app.zugriff import KeinZugriff, NichtAngemeldet
 
 APP_VERZEICHNIS = Path(__file__).parent
+
+FEHLERTEXTE = {
+    404: ("Nicht gefunden", "Diese Seite gibt es nicht."),
+    405: ("Nicht möglich", "Diese Seite gibt es so nicht."),
+}
+FEHLER_ALLGEMEIN = ("Das hat nicht geklappt", "Bitte versuche es später nochmals.")
 
 
 def erstelle_app(einstellungen: Einstellungen | None = None) -> FastAPI:
@@ -56,9 +62,14 @@ def erstelle_app(einstellungen: Einstellungen | None = None) -> FastAPI:
 
     @app.exception_handler(StarletteHTTPException)
     async def http_fehler(request: Request, exc: StarletteHTTPException):
-        if exc.status_code == 404:
-            return fehlerseite(request, 404, "Nicht gefunden", "Diese Seite gibt es nicht.")
-        return await http_exception_handler(request, exc)
+        titel, meldung = FEHLERTEXTE.get(exc.status_code, FEHLER_ALLGEMEIN)
+        antwort = fehlerseite(request, exc.status_code, titel, meldung)
+        antwort.headers.update(exc.headers or {})
+        return antwort
+
+    @app.exception_handler(RequestValidationError)
+    async def ungueltige_anfrage(request: Request, exc: RequestValidationError):
+        return fehlerseite(request, 404, *FEHLERTEXTE[404])
 
     # Zuletzt hinzugefuegt = aeusserste Schicht: Header gelten auch fuer Fehlerantworten.
     app.add_middleware(CookieMiddleware)

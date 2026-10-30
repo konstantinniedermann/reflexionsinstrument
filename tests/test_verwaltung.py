@@ -1,5 +1,6 @@
 import re
 
+import pytest
 from conftest import anmelden, csrf_von
 from fastapi.testclient import TestClient
 
@@ -187,3 +188,18 @@ def test_bestaetigung_nur_aus_fester_liste(client, auftraggeberin):
     als_leitung(client, auftraggeberin)
     text = client.get("/verwaltung/zugaenge?erledigt=<script>").text
     assert "<script>" not in text and "script" not in text.lower()
+
+
+@pytest.mark.parametrize(
+    "pfad",
+    [
+        "/verwaltung/zugaenge/abc/passwort",
+        "/verwaltung/zugaenge/99999999999999999999999/passwort",
+        "/verwaltung/zugaenge/0/loeschen",
+    ],
+)
+def test_ungueltige_id_ist_404_als_seite(client, auftraggeberin, pfad):
+    antwort = als_leitung(client, auftraggeberin).get(pfad)
+    assert antwort.status_code == 404
+    assert antwort.headers["content-type"].startswith("text/html")
+    assert "Diese Seite gibt es nicht." in antwort.text

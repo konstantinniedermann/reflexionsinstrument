@@ -140,3 +140,10 @@ def test_parallele_fehlversuche_werden_gebremst(client, lehrperson, monkeypatch)
         status = list(pool.map(versuch, range(30)))
     assert status.count(400) == 5
     assert status.count(429) == 25
+
+
+@pytest.mark.parametrize("pfad", ["/anmelden", "/abmelden"])
+def test_get_auf_formularadresse_leitet_auf_start(client, pfad):
+    antwort = client.get(pfad)
+    assert antwort.status_code == 303
+    assert antwort.headers["location"] == "/"

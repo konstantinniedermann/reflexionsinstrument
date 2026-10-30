@@ -20,6 +20,7 @@ from app.konten import (
     zaehle_daten,
 )
 from app.sitzung import braucht_auftraggeberin
+from app.typen import Id
 from app.vorlagen import templates
 
 router = APIRouter(prefix="/verwaltung", dependencies=[Depends(braucht_auftraggeberin)])
@@ -96,12 +97,12 @@ def _passwort_seite(request: Request, konto: Konto, status=200, passwort=None, f
 
 
 @router.get("/zugaenge/{konto_id}/passwort")
-def passwort_formular(request: Request, konto_id: int, db: DB):
+def passwort_formular(request: Request, konto_id: Id, db: DB):
     return _passwort_seite(request, _lehrperson_oder_404(db, konto_id))
 
 
 @router.post("/zugaenge/{konto_id}/passwort", dependencies=[Depends(pruefe_csrf)])
-def passwort_setzen(request: Request, konto_id: int, db: DB, passwort: Annotated[str, Form()] = ""):
+def passwort_setzen(request: Request, konto_id: Id, db: DB, passwort: Annotated[str, Form()] = ""):
     konto = _lehrperson_oder_404(db, konto_id)
     try:
         setze_passwort(db, konto.id, passwort)
@@ -115,7 +116,7 @@ def passwort_setzen(request: Request, konto_id: int, db: DB, passwort: Annotated
 
 
 @router.get("/zugaenge/{konto_id}/loeschen")
-def loeschen_formular(request: Request, konto_id: int, db: DB):
+def loeschen_formular(request: Request, konto_id: Id, db: DB):
     konto = _lehrperson_oder_404(db, konto_id)
     zahlen = zaehle_daten(db, konto.id)
     folgen = [
@@ -131,7 +132,7 @@ def loeschen_formular(request: Request, konto_id: int, db: DB):
 
 
 @router.post("/zugaenge/{konto_id}/loeschen", dependencies=[Depends(pruefe_csrf)])
-def loeschen(request: Request, konto_id: int, db: DB):
+def loeschen(request: Request, konto_id: Id, db: DB):
     konto = _lehrperson_oder_404(db, konto_id)
     loesche_konto(db, konto.id, request.app.state.einstellungen.aufnahmen_verzeichnis)
     return RedirectResponse("/verwaltung/zugaenge?erledigt=geloescht", status_code=303)
