@@ -113,8 +113,8 @@ Letzte Auswertung: noch keine
 
 **Fundort:** `app/db.py` (`migriere`), `tests/e2e-pilot.mjs`
 
-**Beobachtung:** `migriere` liest `user_version` vor `BEGIN IMMEDIATE`; zwei gleichzeitig startende Prozesse könnten dieselbe Migration versuchen (der zweite scheitert laut). Ein Dateiname wie `1a_x.sql` führt zu `ValueError`. Im E2E-Skript bricht `pruefe` den Ablauf nicht ab, und die Liste der CDP-Ereignisse wächst unbegrenzt.
+**Beobachtung:** `migriere` liest `user_version` vor `BEGIN IMMEDIATE`; zwei gleichzeitig startende Prozesse könnten dieselbe Migration versuchen (der zweite scheitert laut). Ein Dateiname wie `1a_x.sql` führt zu `ValueError`. Im E2E-Skript wächst die Liste der CDP-Ereignisse unbegrenzt. (Erledigt mit #14: `muss` bricht den Ablauf bei Fehlschlag ab.)
 
 **Ursprung:** Task-Reviews #13
 
-**Einschätzung:** Bei einer Maschine und einem Prozess folgenlos. Die werfende Variante von `pruefe` wird nützlich, sobald Abläufe mit abhängigen Schritten (Login, Formulare) dazukommen.
+**Einschätzung:** Bei einer Maschine und einem Prozess folgenlos. Die Ereignisliste ist bei der heutigen Länge der Abläufe unkritisch.
