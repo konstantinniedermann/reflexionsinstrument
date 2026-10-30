@@ -17,7 +17,7 @@
   <div class="feld">
     <label for="text">Dein Eintrag</label>
     {% if fehler %}<p class="fehler" id="fehler-text">{{ fehler }}</p>{% endif %}
-    <textarea name="text" id="text" rows="10" maxlength="20000"{% if fehler %} aria-describedby="fehler-text"{% endif %}>
+    <textarea name="text" id="text" rows="10" maxlength="20000"{% if fehler %} aria-invalid="true" aria-describedby="fehler-text"{% endif %}>
 {{ text }}</textarea>
   </div>
   <button type="submit" class="knopf">Speichern</button>

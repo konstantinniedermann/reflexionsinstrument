@@ -8,6 +8,7 @@ from conftest import als_lehrperson, csrf_von
 from app.texte import REGISTER
 
 NEU = "/lehrperson/tagebuch/neu"
+FEHLERFELD = 'aria-invalid="true" aria-describedby="fehler-text"'
 
 
 @pytest.fixture
@@ -121,6 +122,7 @@ def test_neu_leer_400(client, db, welt):
     antwort = _anlegen(client, f"{NEU}/frei", "   ")
     assert antwort.status_code == 400
     assert "Der Eintrag ist noch leer." in antwort.text
+    assert FEHLERFELD in antwort.text
     assert _eintraege(db) == []
 
 
@@ -185,6 +187,7 @@ def test_aendern(client, db, welt):
     leer = _anlegen(client, seite, "")
     assert leer.status_code == 400
     assert "Zum Löschen bitte ‹Eintrag löschen› wählen." in leer.text
+    assert FEHLERFELD in leer.text
     assert _eintraege(db)[0]["text"] == "Zweiter Text"
 
 

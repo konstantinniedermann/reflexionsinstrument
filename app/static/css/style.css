@@ -1142,6 +1142,11 @@ input[type="checkbox"] {
   overflow-wrap: anywhere;
 }
 
+.skala__wert input[aria-invalid="true"] + span {
+  border-color: var(--fehler);
+  box-shadow: 0 0 0 1px var(--fehler);
+}
+
 .bereich--eintraege .karte--eintrag {
   margin-bottom: 0.75rem;
 }

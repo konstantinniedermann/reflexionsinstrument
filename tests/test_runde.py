@@ -41,6 +41,12 @@ def _feld(text, name):
     return treffer.group(1)
 
 
+def _feld_tag(text, name):
+    treffer = re.search(rf'<textarea[^>]*name="{name}"[^>]*>', text)
+    assert treffer, name
+    return treffer.group(0)
+
+
 def _gewaehlt(text, name):
     treffer = re.findall(rf'<input type="radio" name="{name}" value="([^"]*)" checked>', text)
     assert len(treffer) == 1, treffer
@@ -197,6 +203,9 @@ def test_fehler_400_behaelt_eingaben(db, client, lehrperson, heute_ist):
     assert "Bitte einen Wert von 1 bis 5 wählen." in text
     assert f'aria-describedby="fehler-antwort_{f2}"' in text
     assert f'id="fehler-antwort_{f2}"' in text
+    # Alle sechs Knoepfe der Skala (1 bis 5 und «Keine Angabe») sind markiert.
+    assert text.count(f'name="antwort_{f2}" aria-invalid="true"') == 6
+    assert "aria-invalid" not in _feld_tag(text, f"antwort_{f1}")
     assert _feld(text, f"antwort_{f1}") == "Neu"
     assert _feld(text, f"antwort_{f3}") == "Dritte"
     assert testdaten.abzug(db) == vorher
@@ -208,6 +217,9 @@ def test_fehler_400_behaelt_eingaben(db, client, lehrperson, heute_ist):
     assert _gewaehlt(antwort.text, f"antwort_{f2}") == "3"
     assert _feld(antwort.text, f"antwort_{f3}") == "Z"
     assert "Der Text ist zu lang" in antwort.text
+    assert f'aria-invalid="true" aria-describedby="fehler-antwort_{f1}"' in _feld_tag(
+        antwort.text, f"antwort_{f1}"
+    )
     assert testdaten.abzug(db) == vorher
 
 
