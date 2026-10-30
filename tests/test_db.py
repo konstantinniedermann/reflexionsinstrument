@@ -47,7 +47,7 @@ def _aufnahme(db, konto):
 
 
 def test_migration_legt_alle_tabellen_an(conn):
-    assert migriere(conn) == 1
+    assert migriere(conn) == 3
     namen = {
         r["name"]
         for r in conn.execute(
@@ -67,12 +67,12 @@ def test_migration_legt_alle_tabellen_an(conn):
         "antworten",
         "tagebucheintraege",
     }
-    assert conn.execute("PRAGMA user_version").fetchone()[0] == 1
+    assert conn.execute("PRAGMA user_version").fetchone()[0] == 3
 
 
 def test_migration_ist_idempotent(conn):
-    assert migriere(conn) == 1
-    assert migriere(conn) == 1
+    assert migriere(conn) == 3
+    assert migriere(conn) == 3
 
 
 def test_pragmas_aktiv(conn):

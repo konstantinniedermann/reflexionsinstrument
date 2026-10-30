@@ -15,7 +15,17 @@ from app.anmeldeschutz import Anmeldeschutz
 from app.config import Einstellungen, lade_einstellungen
 from app.cookies import CookieMiddleware
 from app.db import migriere, verbinde
-from app.routen import allgemein, anmeldung, lehrperson, verwaltung, verwaltung_inhalte
+from app.routen import (
+    allgemein,
+    anmeldung,
+    aufnahmen,
+    gast,
+    lehrperson,
+    verwaltung,
+    verwaltung_eintraege,
+    verwaltung_inhalte,
+    verwaltung_vorschau,
+)
 from app.sicherheit import SicherheitsHeaderMiddleware
 from app.vorlagen import templates
 from app.zugriff import KeinZugriff, NichtAngemeldet
@@ -82,4 +92,8 @@ def erstelle_app(einstellungen: Einstellungen | None = None) -> FastAPI:
     app.include_router(lehrperson.router)
     app.include_router(verwaltung.router)
     app.include_router(verwaltung_inhalte.router)
+    app.include_router(aufnahmen.router)
+    app.include_router(verwaltung_eintraege.router)
+    app.include_router(gast.router)
+    app.include_router(verwaltung_vorschau.router)
     return app

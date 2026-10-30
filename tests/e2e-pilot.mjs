@@ -80,6 +80,8 @@ async function starteChrome() {
       "--no-first-run",
       "--no-default-browser-check",
       "--hide-scrollbars",
+      "--use-fake-ui-for-media-stream",
+      "--use-fake-device-for-media-stream",
       "about:blank",
     ],
     { stdio: "ignore" },
@@ -241,6 +243,22 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
 }
 
 // ---------------------------------------------------------------- Abläufe
+
+async function ablaufLehrperson() {
+  // #16 füllt diese Funktion
+}
+
+async function ablaufAufnahmen() {
+  // #17 füllt diese Funktion
+}
+
+async function ablaufEintraege() {
+  // #18 füllt diese Funktion
+}
+
+async function ablaufGast() {
+  // #19 füllt diese Funktion
+}
 
 async function ablaeufe() {
   const PW_FALSCH = "falsches-passwort";
@@ -566,6 +584,10 @@ try {
   await starteApp();
   await starteChrome();
   await ablaeufe();
+  await ablaufLehrperson();
+  await ablaufAufnahmen();
+  await ablaufEintraege();
+  await ablaufGast();
 } catch (e) {
   abbruch = true;
   console.log(`FEHLER ${e.stack || e}`);

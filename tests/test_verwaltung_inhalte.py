@@ -3,8 +3,9 @@ import re
 from pathlib import Path
 
 import pytest
-from conftest import als_leitung, csrf_von, lege_antwort_an, lege_eintrag_an
+from conftest import als_leitung, csrf_von
 from fastapi.testclient import TestClient
+from testdaten import lege_antwort_an, lege_eintrag_an
 
 from app import inhalte
 from app.texte import REGISTER

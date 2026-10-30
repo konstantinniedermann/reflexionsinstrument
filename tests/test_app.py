@@ -14,7 +14,7 @@ def test_start_legt_datenverzeichnis_an(einstellungen):
     assert einstellungen.daten_verzeichnis.is_dir()
     assert einstellungen.aufnahmen_verzeichnis.is_dir()
     conn = sqlite3.connect(einstellungen.db_pfad)
-    assert conn.execute("PRAGMA user_version").fetchone()[0] == 1
+    assert conn.execute("PRAGMA user_version").fetchone()[0] == 3
     conn.close()
 
 
