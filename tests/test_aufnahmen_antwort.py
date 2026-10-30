@@ -7,7 +7,7 @@ from conftest import als_lehrperson, als_leitung, csrf_von
 
 from app import aufnahmen
 from app.db import transaktion
-from tests import testdaten
+import testdaten
 
 WEBM = b"\x1aE\xdf\xa3" + bytes(60)
 JETZT = "2026-11-24T10:00:00Z"
@@ -223,6 +223,41 @@ def test_antwort_hochladen(client, runde, db, lehrperson):
     assert antwort(db, f1, lehrperson["id"])["text"] == "Getippt"
     assert antwort(db, f1, lehrperson["id"])["aufnahme_id"] is not None
     assert "Die neue Aufnahme ersetzt die bisherige." in client.get(adresse(rid, f1)).text
+
+
+def test_antwort_ueber_einer_mib(client, runde, db, einstellungen, verzeichnis):
+    rid, f1, _ = runde
+    gross = testdaten.WEBM_ANFANG + bytes(int(2.5 * 1024 * 1024))
+    csrf = csrf_von(client, "/lehrperson")
+    r = client.post(
+        adresse(rid, f1),
+        files={"aufnahme": ("a.webm", gross, "audio/webm")},
+        data={"csrf": csrf},
+        follow_redirects=False,
+    )
+    assert r.status_code == 303
+    name = db.execute("SELECT dateiname FROM aufnahmen").fetchone()[0]
+    assert (verzeichnis / name).read_bytes() == gross
+
+
+def test_antwort_fehler_nach_schreiben_raeumt_auf(
+    client, runde, db, lehrperson, verzeichnis, monkeypatch
+):
+    rid, f1, _ = runde
+    testdaten.lege_antwort_an(db, f1, lehrperson["id"], text="Getippt")
+    db.commit()
+
+    def kaputt(*_args, **_kwargs):
+        raise RuntimeError("kaputt")
+
+    monkeypatch.setattr(aufnahmen, "haenge_an_antwort", kaputt)
+    with pytest.raises(RuntimeError):
+        hochladen(client, adresse(rid, f1))
+    assert list(verzeichnis.iterdir()) == []
+    assert anzahl_aufnahmen(db, lehrperson["id"]) == 0
+    zeile = antwort(db, f1, lehrperson["id"])
+    assert zeile["text"] == "Getippt"
+    assert zeile["aufnahme_id"] is None
 
 
 def test_antwort_ungueltig_400(client, runde, einstellungen, db):

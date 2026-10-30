@@ -227,7 +227,14 @@ def test_upload_routen_ohne_body_parameter(einstellungen):
         if any(m.fullmatch(pfad) for m in groesse.UPLOAD_PFADE):
             gefunden += 1
             assert _ohne_body_parameter(r.original_route.dependant), r.path
-    assert gefunden >= 1
+    assert gefunden == 2
+
+
+def test_upload_ueber_einer_mib_tagebuch(lp, db, einstellungen):
+    gross = testdaten.WEBM_ANFANG + bytes(int(2.5 * 1024 * 1024))
+    assert sende(lp, datei(gross)).status_code == 303
+    name = db.execute("SELECT dateiname FROM aufnahmen").fetchone()[0]
+    assert (einstellungen.aufnahmen_verzeichnis / name).read_bytes() == gross
 
 
 def test_eintrag_loeschen_mit_echter_datei(lp, db, einstellungen):
