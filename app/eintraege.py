@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from app import zeit
-from app.aufnahmen import aufnahmen_von_eintraegen, loesche_dateien
+from app.aufnahmen import loesche_dateien
 from app.db import transaktion
 from app.eingaben import InhaltFehler, langer_text
 from app.inhalte import SKALA_MAX, SKALA_MIN
@@ -29,8 +29,8 @@ def antworten_der_runde(
 def _lies_skala(wert: str, feld: str) -> int | None:
     if wert == "":
         return None
-    # Nur ASCII-Ziffern: isdigit() liesse auch andere Schriften zu.
-    if wert.isascii() and wert.isdigit() and SKALA_MIN <= int(wert) <= SKALA_MAX:
+    # Nur die genauen Ziffernfolgen: kein int() auf beliebig langen Eingaben, kein "03".
+    if wert in {str(i) for i in range(SKALA_MIN, SKALA_MAX + 1)}:
         return int(wert)
     raise InhaltFehler(feld, f"Bitte einen Wert von {SKALA_MIN} bis {SKALA_MAX} wählen.")
 
@@ -90,15 +90,21 @@ def speichere_antworten(
     return geaendert
 
 
-def entferne_aufnahmen(db: sqlite3.Connection, aufnahme_ids: list[int]) -> list[str]:
-    """Loescht die Zeilen in `aufnahmen` und gibt die Dateinamen zurueck.
+def entferne_aufnahmen(db: sqlite3.Connection, konto_id: int, aufnahme_ids: list[int]) -> list[str]:
+    """Loescht die Zeilen des Kontos in `aufnahmen` und gibt die Dateinamen zurueck.
 
     Innerhalb der Transaktion aufrufen; die Dateien loescht der Aufrufer erst nach dem COMMIT
-    mit `aufnahmen.loesche_dateien`.
+    mit `aufnahmen.loesche_dateien`. Fremde Aufnahmen bleiben unberuehrt.
     """
-    zeilen = aufnahmen_von_eintraegen(db, aufnahme_ids)
-    for zeile in zeilen:
-        db.execute("DELETE FROM aufnahmen WHERE id = ?", (zeile["id"],))
+    if not aufnahme_ids:
+        return []
+    platzhalter = ", ".join("?" * len(aufnahme_ids))
+    parameter = [konto_id, *aufnahme_ids]
+    zeilen = db.execute(
+        f"SELECT dateiname FROM aufnahmen WHERE konto_id = ? AND id IN ({platzhalter})",
+        parameter,
+    ).fetchall()
+    db.execute(f"DELETE FROM aufnahmen WHERE konto_id = ? AND id IN ({platzhalter})", parameter)
     return [zeile["dateiname"] for zeile in zeilen]
 
 
@@ -115,7 +121,7 @@ def loesche_antworten_der_runde(
         aufnahme_ids = [z["aufnahme_id"] for z in zeilen if z["aufnahme_id"] is not None]
         for zeile in zeilen:
             db.execute("DELETE FROM antworten WHERE id = ?", (zeile["id"],))
-        dateinamen = entferne_aufnahmen(db, aufnahme_ids)
+        dateinamen = entferne_aufnahmen(db, konto_id, aufnahme_ids)
     loesche_dateien(aufnahmen_verzeichnis, dateinamen)
     return len(zeilen)
 

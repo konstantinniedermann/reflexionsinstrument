@@ -46,7 +46,7 @@ def test_fehlendes_feld_bleibt_unberuehrt(db, lehrperson, runde):
     assert antworten_der_runde(db, lehrperson["id"], rid)[f2]["skalawert"] == 3
 
 
-@pytest.mark.parametrize("wert", ["0", "6", "x", "3.0", " 3", "+3", "٣"])
+@pytest.mark.parametrize("wert", ["0", "6", "x", "3.0", " 3", "+3", "٣", "0" * 5000 + "3", "03"])
 def test_skala_ungueltig(runde, wert):
     _, _, f2, fragen = runde
     with pytest.raises(InhaltFehler) as fehler:
@@ -176,3 +176,14 @@ def test_loeschen_in_laufender_transaktion(db, lehrperson, runde, einstellungen)
     rid = runde[0]
     with transaktion(db), pytest.raises(RuntimeError):
         loesche_antworten_der_runde(db, lehrperson["id"], rid, einstellungen.aufnahmen_verzeichnis)
+
+
+def test_fremde_aufnahme_bleibt(db, lehrperson, zweite_lehrperson, runde, einstellungen):
+    rid, f1, _, _ = runde
+    verzeichnis = einstellungen.aufnahmen_verzeichnis
+    fremd = testdaten.lege_aufnahme_an(db, zweite_lehrperson["id"], verzeichnis)
+    name = aufnahmen_von_eintraegen(db, [fremd])[0]["dateiname"]
+    testdaten.lege_antwort_an(db, f1, lehrperson["id"], aufnahme_id=fremd)
+    assert loesche_antworten_der_runde(db, lehrperson["id"], rid, verzeichnis) == 1
+    assert (verzeichnis / name).exists()
+    assert len(aufnahmen_von_eintraegen(db, [fremd])) == 1
