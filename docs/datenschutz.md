@@ -10,11 +10,13 @@ Die Entscheidungen hier hat Claude getroffen (Projektregel «Fragen selbst beant
 |---|---|---|---|
 | Anzeigename, Benutzername, Passwort-Hash (bcrypt), Rolle, Sitzungsversion, Erstelldatum | `konten` | Anmeldung, Zuordnung der Einträge für die Auftraggeberin | ja |
 | Antworten, Tagebucheinträge mit Erstell- und Änderungszeitpunkt | `antworten`, `tagebucheintraege` | Forschungsdaten. Die Zeitpunkte braucht der Export (Woche) | ja, inhaltlich heikel |
-| Sprachaufnahmen | `/data/aufnahmen/`, Verweis in `aufnahmen` | Tagebuch zum Einsprechen | ja, Stimme |
+| Sprachaufnahmen mit Dauer in Sekunden (`aufnahmen.dauer_sekunden`) | `/data/aufnahmen/`, Verweis in `aufnahmen` | Tagebuch und Antworten zum Einsprechen | ja, Stimme |
+| Zwischendatei beim Hochladen einer Aufnahme | temporärer Ordner der Maschine, nicht auf dem Volume | Verarbeitung der Anfrage | ja, Stimme; gelöscht am Ende der Anfrage |
 | Texte der Auftraggeberin (Infoblock, Runden, Fragen, Impulse, Hinweise) | übrige Tabellen | Inhalt | nein |
 | Sitzungs-Cookie im Browser | Browser | angemeldet bleiben. Enthält Konto-ID und Sitzungsversion, signiert. Technisch nötig, kein Tracking | ja (Konto-ID) |
 | Cookie `csrf` im Browser | Browser | Schutz der Formulare vor fremden Seiten. Zufallswert ohne Personenbezug, 30 Tage gültig | nein |
 | Entwurf eines noch nicht gespeicherten Texts | Browser-Tab (`sessionStorage`) | Schutz vor Verlust beim Neuladen | ja, bis gespeichert, verworfen, abgemeldet oder Tab geschlossen |
+| Noch nicht gespeicherte Aufnahme | Arbeitsspeicher des Browser-Tabs | Anhören vor dem Speichern | ja; weg beim Speichern, Neu aufnehmen, Neuladen oder Schliessen |
 | Zähler für Fehlversuche beim Anmelden | nur Arbeitsspeicher der App | Schutz gegen das Durchprobieren von Passwörtern | Client-IP und eingegebener Benutzername |
 
 **Umsetzung in #14:** Für die Begrenzung der Fehlversuche hält die App die Client-IP aus dem Header `Fly-Client-IP` und den eingegebenen Benutzernamen nur im Arbeitsspeicher (höchstens 15 Minuten pro Eintrag; veraltete Einträge räumt jeder Anmeldeversuch weg), ohne sie in die Datenbank oder in Logs zu schreiben. Sie verschwindet beim Neustart der Maschine (spätestens beim automatischen Anhalten bei Inaktivität).
