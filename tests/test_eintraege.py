@@ -116,6 +116,38 @@ def test_leeren_mit_aufnahme_behaelt_zeile(db, lehrperson, runde, einstellungen)
     assert zeile["geaendert"] == T1
 
 
+def _stelle_um(db, frage_id, typ):
+    db.execute("UPDATE fragen SET typ = ? WHERE id = ?", (typ, frage_id))
+
+
+def test_veraltetes_formular_text_bei_skala(db, lehrperson, runde):
+    rid, f1, f2, fragen = runde
+    eingaben = lies_runden_eingaben(fragen, {f"antwort_{f1}": "Text", f"antwort_{f2}": "4"})
+    _stelle_um(db, f1, "skala")  # erlaubter Typwechsel zwischen Anzeigen und Speichern
+    with pytest.raises(InhaltFehler) as fehler:
+        speichere_antworten(db, lehrperson["id"], eingaben)
+    assert fehler.value.feld == f"antwort_{f1}"
+    assert fehler.value.meldung == "Bitte einen Wert von 1 bis 5 wählen."
+    assert antworten_der_runde(db, lehrperson["id"], rid) == {}
+    assert not db.in_transaction
+
+
+def test_veraltetes_formular_skala_bei_freitext(db, lehrperson, runde):
+    rid, f1, f2, fragen = runde
+    eingaben = lies_runden_eingaben(fragen, {f"antwort_{f1}": "Text", f"antwort_{f2}": "4"})
+    _stelle_um(db, f2, "freitext")
+    with pytest.raises(InhaltFehler) as fehler:
+        speichere_antworten(db, lehrperson["id"], eingaben)
+    assert fehler.value.feld == f"antwort_{f2}"
+    assert antworten_der_runde(db, lehrperson["id"], rid) == {}
+
+
+def test_leeren_nach_typwechsel_erlaubt(db, lehrperson, runde):
+    _, f1, _, _ = runde
+    _stelle_um(db, f1, "skala")
+    assert speichere_antworten(db, lehrperson["id"], {f1: (None, None)}) == 0
+
+
 def test_transaktion_des_aufrufers(db, lehrperson, runde):
     rid, f1, _, _ = runde
     with pytest.raises(RuntimeError), transaktion(db):

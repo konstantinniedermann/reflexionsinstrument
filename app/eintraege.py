@@ -28,13 +28,17 @@ def antworten_der_runde(
     return {z["frage_id"]: z for z in zeilen}
 
 
+SKALA_MELDUNG = f"Bitte einen Wert von {SKALA_MIN} bis {SKALA_MAX} wählen."
+GEAENDERT_MELDUNG = "Die Frage wurde inzwischen geändert. Bitte prüfe deine Antwort."
+
+
 def _lies_skala(wert: str, feld: str) -> int | None:
     if wert == "":
         return None
     # Nur die genauen Ziffernfolgen: kein int() auf beliebig langen Eingaben, kein "03".
     if wert in {str(i) for i in range(SKALA_MIN, SKALA_MAX + 1)}:
         return int(wert)
-    raise InhaltFehler(feld, f"Bitte einen Wert von {SKALA_MIN} bis {SKALA_MAX} wählen.")
+    raise InhaltFehler(feld, SKALA_MELDUNG)
 
 
 def lies_runden_eingaben(
@@ -54,17 +58,31 @@ def lies_runden_eingaben(
     return ergebnis
 
 
+def _pruefe_art(db: sqlite3.Connection, frage_id: int, text: str | None, skalawert: int | None):
+    """Skalawert nur bei `skala`, Text nur bei `freitext` (sonst war das Formular veraltet)."""
+    zeile = db.execute("SELECT typ FROM fragen WHERE id = ?", (frage_id,)).fetchone()
+    typ = zeile["typ"] if zeile else None
+    if (skalawert is not None and typ != "skala") or (text is not None and typ != "freitext"):
+        meldung = SKALA_MELDUNG if typ == "skala" else GEAENDERT_MELDUNG
+        raise InhaltFehler(f"antwort_{frage_id}", meldung)
+
+
 def speichere_antworten(
     db: sqlite3.Connection,
     konto_id: int,
     eingaben: dict[int, Eingabe],
     jetzt: str | None = None,
 ) -> int:
-    """Speichert nur Geaendertes; gibt die Anzahl geaenderter Zeilen zurueck."""
+    """Speichert nur Geaendertes; gibt die Anzahl geaenderter Zeilen zurueck.
+
+    Passt eine Eingabe nicht zum aktuellen `fragen.typ`, wirft das `InhaltFehler` und es wird
+    nichts gespeichert.
+    """
     jetzt = jetzt or zeit.zeitstempel()
     geaendert = 0
     with transaktion(db):
         for frage_id, (text, skalawert) in eingaben.items():
+            _pruefe_art(db, frage_id, text, skalawert)
             alt = db.execute(
                 "SELECT id, text, skalawert, aufnahme_id FROM antworten "
                 "WHERE frage_id = ? AND konto_id = ?",

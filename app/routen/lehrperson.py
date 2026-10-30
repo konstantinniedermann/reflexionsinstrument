@@ -10,7 +10,7 @@ from fastapi.responses import RedirectResponse
 from app import inhalte
 from app.ansicht import Ansicht, hole_ansicht_lehrperson
 from app.csrf import pruefe_csrf
-from app.db import hole_db
+from app.db import hole_db, transaktion
 from app.eingaben import InhaltFehler
 from app.eintraege import (
     aendere_tagebucheintrag,
@@ -84,18 +84,20 @@ def runde_anzeigen(request: Request, db: DB, ansicht: ANSICHT, runde_id: Id):
 
 @router.post("/runden/{runde_id}", dependencies=[Depends(pruefe_csrf)])
 async def runde_speichern(request: Request, db: DB, ansicht: ANSICHT, runde_id: Id):
-    if sichtbare_runde(db, runde_id, ansicht.stichtag) is None:
-        raise HTTPException(404)
     formular = {k: v for k, v in (await request.form()).items() if isinstance(v, str)}
-    fragen = inhalte.fragen(db, runde_id)
     try:
-        eingaben = lies_runden_eingaben(fragen, formular)
+        # Sichtbarkeit, Fragetypen und Speichern in einer Transaktion: Ein Typwechsel
+        # dazwischen kann keine unsichtbare Antwort schreiben.
+        with transaktion(db):
+            if sichtbare_runde(db, runde_id, ansicht.stichtag) is None:
+                raise HTTPException(404)
+            fragen = inhalte.fragen(db, runde_id)
+            speichere_antworten(db, ansicht.konto_id, lies_runden_eingaben(fragen, formular))
     except InhaltFehler as e:
         kontext = kontext_runde(
             db, ansicht, runde_id, eingaben=formular, fehler={e.feld: e.meldung}
         )
         return templates.TemplateResponse(request, VORLAGEN["runde"], kontext, status_code=400)
-    speichere_antworten(db, ansicht.konto_id, eingaben)
     pfad = ansicht.url(f"/runden/{runde_id}")
     treffer = ANKER.fullmatch(formular.get("anker", ""))
     if treffer is None:

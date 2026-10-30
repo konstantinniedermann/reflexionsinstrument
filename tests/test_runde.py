@@ -223,6 +223,23 @@ def test_post_nach_datumsaenderung_404(runde, client, db, lehrperson):
     assert _antworten(db, lehrperson["id"]) == []
 
 
+def test_veraltetes_formular_nach_typwechsel(runde, client, db, lehrperson):
+    rid, f1, f2 = runde
+    seite = f"/lehrperson/runden/{rid}"
+    assert client.get(seite).status_code == 200
+    db.execute("UPDATE fragen SET typ = 'skala' WHERE id = ?", (f1,))
+    db.execute("UPDATE fragen SET typ = 'freitext' WHERE id = ?", (f2,))
+    db.commit()
+    antwort = _post(client, rid, {f"antwort_{f1}": "Text A", f"antwort_{f2}": "4"})
+    assert antwort.status_code == 400
+    assert "Bitte einen Wert von 1 bis 5 wählen." in antwort.text
+    assert f'id="fehler-antwort_{f1}"' in antwort.text
+    assert _antworten(db, lehrperson["id"]) == []
+    # Umgekehrt: «4» zur Frage, die jetzt Freitext ist, wird sichtbar als Text gespeichert.
+    assert _post(client, rid, {f"antwort_{f2}": "4"}).status_code == 303
+    assert _antworten(db, lehrperson["id"]) == [(f2, "4", None)]
+
+
 def test_feld_anderer_runde_ignoriert(runde, client, db, lehrperson):
     rid, f1, _ = runde
     _, (fremd, _) = testdaten.lege_runde_an(db, "Andere", "2026-11-23")
