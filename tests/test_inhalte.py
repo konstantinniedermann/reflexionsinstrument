@@ -565,3 +565,26 @@ def test_impuls_mit_eintrag_aendern_und_loeschen(db):
     assert zeile["impuls_id"] is None
     assert zeile["impuls_text"] == "Alt"
     assert impulse(db) == []
+
+
+@pytest.mark.parametrize("datum", ["0026-11-23", "9999-12-31", "2019-12-31", "2100-01-01"])
+def test_unplausibles_datum_abgelehnt(db, datum):
+    with pytest.raises(InhaltFehler) as fehler:
+        lege_runde_an(db, "T", "", datum)
+    assert fehler.value.meldung == "Bitte ein Datum zwischen 2020 und 2099 wählen."
+    with pytest.raises(InhaltFehler):
+        lege_impuls_an(db, "T", datum)
+    assert runden(db) == [] and impulse(db) == []
+
+
+def test_datum_grenzen_erlaubt(db):
+    lege_runde_an(db, "A", "", "2020-01-01")
+    lege_runde_an(db, "B", "", "2099-12-31")
+    assert len(runden(db)) == 2
+
+
+def test_datum_vorschlag_mit_altwert_ohne_absturz(db):
+    db.execute("INSERT INTO runden (titel, freischaltdatum) VALUES ('X', '9999-12-31')")
+    db.execute("INSERT INTO impulse (text, sichtbar_ab) VALUES ('X', '9999-12-31')")
+    assert datum_vorschlag_runde(db) is None
+    assert datum_vorschlag_impuls(db) is None

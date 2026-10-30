@@ -10,6 +10,9 @@ from starlette.requests import Request
 ZEITZONE = ZoneInfo("Europe/Zurich")
 WOCHENTAGE = ("Mo", "Di", "Mi", "Do", "Fr", "Sa", "So")
 
+JAHR_VON = 2020
+JAHR_BIS = 2099
+
 _DATUM = re.compile(r"^\d{4}-\d{2}-\d{2}$")
 
 
@@ -31,6 +34,10 @@ def lies_datum(text: str) -> date | None:
         return date.fromisoformat(text)
     except ValueError:
         return None
+
+
+def ist_plausibel(datum: date) -> bool:
+    return JAHR_VON <= datum.year <= JAHR_BIS
 
 
 def ist_erreicht(datum: date, heute: date) -> bool:

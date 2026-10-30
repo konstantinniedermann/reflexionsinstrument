@@ -221,6 +221,10 @@ def test_runde_anlegen_fehler(client, auftraggeberin, db):
     assert datum.status_code == 400
     assert "Bitte ein Datum wählen." in datum.text
     assert 'aria-describedby="fehler-freischaltdatum"' in datum.text
+    unplausibel = sende(client, RUNDEN, **runde_felder(freischaltdatum="0026-11-23"))
+    assert unplausibel.status_code == 400
+    assert "Bitte ein Datum zwischen 2020 und 2099 wählen." in unplausibel.text
+    assert sende(client, RUNDEN, **runde_felder(freischaltdatum="9999-12-31")).status_code == 400
     assert anzahl(db, "runden") == 0
 
 
@@ -795,6 +799,11 @@ def test_impuls_anlegen_mit_vorschlag(client, auftraggeberin, db):
     assert fehler.status_code == 400 and "Bitte einen Impuls eingeben." in fehler.text
     fehler = sende(client, IMPULSE, IMPULSE, text="x", sichtbar_ab="")
     assert fehler.status_code == 400 and "Bitte ein Datum wählen." in fehler.text
+    for datum in ("0026-11-23", "9999-12-31"):
+        fehler = sende(client, IMPULSE, IMPULSE, text="x", sichtbar_ab=datum)
+        assert fehler.status_code == 400
+        assert "Bitte ein Datum zwischen 2020 und 2099 wählen." in fehler.text
+    assert anzahl(db, "impulse") == 1
 
 
 def test_impulse_gleicher_tag_hinweis(client, auftraggeberin, db):

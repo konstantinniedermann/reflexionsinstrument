@@ -16,7 +16,7 @@ from app.eingaben import (
     langer_text,
 )
 from app.texte import speichere_text
-from app.zeit import lies_datum
+from app.zeit import ist_plausibel, lies_datum
 
 STANDARD_TITEL = "Reflexionsinstrument"
 
@@ -129,11 +129,23 @@ def runde(db: sqlite3.Connection, runde_id: int) -> sqlite3.Row | None:
     return db.execute(f"{_RUNDEN_SQL} WHERE r.id = ?", (runde_id,)).fetchone()
 
 
+def _eine_woche_spaeter(text: str) -> date | None:
+    """Ein Altwert in der Datenbank darf den Vorschlag leeren, nie die Seite zum Absturz bringen."""
+    try:
+        vorschlag = date.fromisoformat(text) + timedelta(days=7)
+    except (ValueError, OverflowError):
+        return None
+    return vorschlag if ist_plausibel(vorschlag) else None
+
+
 def datum_vorschlag_runde(db: sqlite3.Connection) -> date | None:
-    """Eine Woche nach der letzten Runde, ohne Runden der erste Tag, sonst nichts."""
+    """Eine Woche nach der letzten Runde, ohne Runden der erste Tag, sonst nichts.
+
+    Ein unplausibler Altwert ergibt keinen Vorschlag.
+    """
     letzte = db.execute("SELECT MAX(freischaltdatum) FROM runden").fetchone()[0]
     if letzte is not None:
-        return date.fromisoformat(letzte) + timedelta(days=7)
+        return _eine_woche_spaeter(letzte)
     return lies_projektstart(db)
 
 
@@ -412,7 +424,7 @@ def datum_vorschlag_impuls(db: sqlite3.Connection) -> date | None:
     """Eine Woche nach dem letzten Impuls, ohne Impulse der erste Tag, sonst nichts."""
     letzter = db.execute("SELECT MAX(sichtbar_ab) FROM impulse").fetchone()[0]
     if letzter is not None:
-        return date.fromisoformat(letzter) + timedelta(days=7)
+        return _eine_woche_spaeter(letzter)
     return lies_projektstart(db)
 
 

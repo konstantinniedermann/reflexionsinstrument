@@ -2,7 +2,7 @@
 
 import re
 
-from app.zeit import lies_datum
+from app.zeit import ist_plausibel, lies_datum
 
 LAENGE_TITEL_INSTRUMENT = 60
 LAENGE_TITEL = 100
@@ -59,6 +59,8 @@ def datum_feld(wert: str, feld: str, pflicht: bool) -> str | None:
     wert = wert.strip()
     datum = lies_datum(wert)
     if datum is not None:
+        if not ist_plausibel(datum):
+            raise InhaltFehler(feld, "Bitte ein Datum zwischen 2020 und 2099 wählen.")
         return datum.isoformat()
     if not wert and not pflicht:
         return None
