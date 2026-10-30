@@ -13,9 +13,9 @@ Die Entscheidungen hier hat Claude getroffen (Projektregel «Fragen selbst beant
 | Sprachaufnahmen | `/data/aufnahmen/`, Verweis in `aufnahmen` | Tagebuch zum Einsprechen | ja, Stimme |
 | Texte der Auftraggeberin (Infoblock, Runden, Fragen, Impulse, Hinweise) | übrige Tabellen | Inhalt | nein |
 | Sitzungs-Cookie im Browser | Browser | angemeldet bleiben. Enthält Konto-ID und Sitzungsversion, signiert. Technisch nötig, kein Tracking | ja (Konto-ID) |
-| Zähler für Fehlversuche beim Anmelden | nur Arbeitsspeicher der App | Schutz gegen das Durchprobieren von Passwörtern | Client-IP |
+| Zähler für Fehlversuche beim Anmelden | nur Arbeitsspeicher der App | Schutz gegen das Durchprobieren von Passwörtern | Client-IP und eingegebener Benutzername |
 
-**Annahme zu #14:** Für die Begrenzung der Fehlversuche hält die App die Client-IP aus dem Header `Fly-Client-IP` nur im Arbeitsspeicher, ohne sie in die Datenbank oder in Logs zu schreiben. Sie verschwindet beim Neustart der Maschine (spätestens beim automatischen Anhalten bei Inaktivität). Weicht #14 davon ab, wird diese Tabelle nachgeführt.
+**Umsetzung in #14:** Für die Begrenzung der Fehlversuche hält die App die Client-IP aus dem Header `Fly-Client-IP` und den eingegebenen Benutzernamen nur im Arbeitsspeicher (höchstens 15 Minuten pro Eintrag), ohne sie in die Datenbank oder in Logs zu schreiben. Sie verschwindet beim Neustart der Maschine (spätestens beim automatischen Anhalten bei Inaktivität).
 
 **Nicht gespeichert:** E-Mail-Adressen, Telefonnummern, IP-Adressen (dauerhaft), Browser- oder Gerätekennungen, Standort, Nutzungsstatistik. Es gibt keine Benachrichtigungen, deshalb braucht es keine Kontaktdaten.
 
@@ -45,7 +45,7 @@ Stand 30.10.2026 (Grundgerüst aus #13 plus dieses Issue).
 
 **Verworfen:** IP-Adressen im Log kürzen (eigenes Log-Format, mehr Code für wenig Nutzen); Zugriffsprotokoll behalten (siehe oben).
 
-**Nachweis:** Lokal mit denselben Argumenten gestartet: Mit Zugriffsprotokoll erscheint `203.0.113.7:0 - "GET / HTTP/1.1" 200 OK`, mit `--no-access-log` nur noch Start und Stopp. Auf fly.io wirkt es ab dem nächsten Deploy. Danach zuerst die echte Startzeile prüfen (`fly ssh console -C "sh -c 'tr \"\\0\" \" \" < /proc/<pid>/cmdline'"`, enthält `--no-access-log`), dann zeigt `fly logs` keine Zeilen `GET /healthz` mehr. Der Deploy soll vor dem Testlauf (#9) erfolgen, damit nie eine IP-Adresse einer Lehrperson in die Logs gelangt.
+**Nachweis:** Lokal mit denselben Argumenten gestartet: Mit Zugriffsprotokoll erscheint `203.0.113.7:0 - "GET / HTTP/1.1" 200 OK`, mit `--no-access-log` nur noch Start und Stopp. Auf fly.io wirkt es ab dem nächsten Deploy. Danach zuerst die echte Startzeile prüfen (`fly ssh console -C "sh -c 'for f in /proc/[0-9]*/cmdline; do tr \"\\0\" \" \" < \$f; echo; done | grep uvicorn'"`, enthält `--no-access-log`; das Image hat kein `ps`, der Stern löst `sh` auf der Maschine auf), dann zeigt `fly logs` keine Zeilen `GET /healthz` mehr. Der Deploy soll vor dem Testlauf (#9) erfolgen, damit nie eine IP-Adresse einer Lehrperson in die Logs gelangt.
 
 **Regel für alle weiteren Issues:** Eigene Log-Meldungen enthalten keine Inhalte, keine Benutzernamen, keine Passwörter und keine IP-Adressen. Fehlversuche beim Anmelden (#14) werden höchstens als Ereignis ohne diese Angaben geloggt. Muss das Zugriffsprotokoll für eine Fehlersuche während der Laufzeit vorübergehend eingeschaltet werden, kommt das ins Löschprotokoll (#10).
 
@@ -62,7 +62,7 @@ Die Hinweise sind Inhalt, kein Code: Sie liegen in der Tabelle `texte` (`schlues
 | `hinweis_aufnahme` | Neben dem Aufnahmeknopf (#17), im Tagebuch und bei Fragen | Die Stimme ist ein besonders persönliches Merkmal, und beim Sprechen rutscht ein Name leichter heraus | «Die Aufnahme wird gespeichert, und die Projektleiterin hört sie an. Bitte auch beim Sprechen keine Namen nennen.» |
 
 **Für #15 (Eingabemaske):**
-- Die Migration von #15 legt die fünf Schlüssel mit den Platzhaltern an (`INSERT OR IGNORE`, damit vorhandene Texte nicht überschrieben werden). Diese Datei legt bewusst keine Migration an, damit sich die Nummern nicht überschneiden.
+- #15 trägt die fünf Schlüssel mit den Platzhaltern in ein Register fester Texte im Code ein (`app/texte.py`, siehe Design zu #15). Fehlt ein Text in der Tabelle `texte`, gilt der Platzhalter, und die Maske markiert ihn als noch nicht bestätigt. Eine Migration braucht es dafür nicht.
 - In der Eingabemaske stehen sie unter einem eigenen Bereich «Hinweise», jeweils mit dem Ort aus der Spalte «Wo er erscheint» als Erklärung in einfacher Sprache.
 - Ein Hinweis darf nicht leer gespeichert werden. Einfache Formatierung wie bei den anderen Texten.
 - Angezeigt werden sie von #16 (Lehrpersonen-Ansicht), #17 (Aufnahme) und #19 (Gast-Ansicht).

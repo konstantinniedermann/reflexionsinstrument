@@ -79,7 +79,7 @@ Recherche in der Doku von fly.io, Stand 30.10.2026:
 1. Während der Laufzeit bleibt die Aufbewahrung bei **5 Tagen** (`snapshot_retention = 5` in `fly.toml`). Die Snapshots sind die einzige Sicherung, falls auf dem Volume etwas schiefgeht. `fly.toml` wird nicht geändert.
 2. In Stufe 1 setzt der Betreiber die Aufbewahrung auf **1 Tag**. Die Snapshots mit Forschungsdaten (älter als Datum A) laufen damit spätestens 5 Tage nach A ab, alle späteren nach 1 Tag.
 3. Stufe 2 frühestens **6 Tage nach A**. Bis dahin sind alle Snapshots abgelaufen, die vor dem Löschen entstanden sind.
-4. Snapshots sichern das Volume blockweise. Gelöschte Dateien und das Aufräumen der Datenbank geben Blöcke nur frei, ohne sie zu überschreiben. Darum überschreibt Stufe 1 den freien Platz des Volumes mit Nullen (Schritt 1.4). Ohne diesen Schritt könnten auch die Snapshots nach Datum A noch Reste von Aufnahmen enthalten, die sich mit Spezialwerkzeug wiederherstellen liessen.
+4. Annahme (in der fly-Doku nicht belegt, aber für ein Block-Volume üblich): Snapshots sichern das Volume blockweise. Gelöschte Dateien und das Aufräumen der Datenbank geben Blöcke nur frei, ohne sie zu überschreiben. Darum überschreibt Stufe 1 den freien Platz des Volumes mit Nullen (Schritt 1.4). Ohne diesen Schritt könnten auch die Snapshots nach Datum A noch Reste von Aufnahmen enthalten, die sich mit Spezialwerkzeug wiederherstellen liessen.
 5. Die **Volume-ID** wird in Stufe 1 ins Löschprotokoll geschrieben. Ohne sie lassen sich die Snapshots eines gelöschten Volumes nach 24 Stunden nicht mehr auflisten und damit nicht nachweisen.
 6. Ob ein späteres `fly deploy` den Wert aus `fly.toml` (5 Tage) wieder auf das bestehende Volume schreibt, sagt die Doku nicht. Darum nach Stufe 1 nicht mehr deployen, oder nach jedem Deploy mit `fly volumes show` prüfen.
 
@@ -137,7 +137,7 @@ Voraussetzung: Die Auftraggeberin hat den Gesamtexport heruntergeladen, geöffne
    dd if=/dev/zero of=/data/nullen bs=1M; sync; rm /data/nullen; sync
    df -h /data                                        # erwartet: wieder fast alles frei
    ```
-   Die Meldung «No space left on device» von `dd` ist dabei erwartet.
+   Die Meldung «No space left on device» von `dd` ist dabei erwartet. Zeigt `df -h` danach ein volles Volume (Sitzung abgebrochen), die Datei mit `rm -f /data/nullen` entfernen und `df -h /data` wiederholen.
 5. In der App als Auftraggeberin anmelden: Übersicht zeigt keine Lehrpersonen und keine Einträge. Gast-Ansicht funktioniert weiter.
 6. Löschprotokoll in #10: Datum, Volume-ID, Ausgaben aus 2 bis 5.
 
