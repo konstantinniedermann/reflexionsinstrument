@@ -87,3 +87,12 @@ def test_vorhandenes_cookie_wird_nicht_neu_gesetzt(app_client):
     app_client.get("/t/formular")
     antwort = app_client.get("/t/formular")
     assert not antwort.headers.get_list("set-cookie")
+
+
+def test_csrf_fehler_zeigt_abgelaufen_statt_kein_zugriff(app_client):
+    app_client.get("/t/formular")
+    antwort = app_client.post("/t/senden", data={})
+    assert antwort.status_code == 403
+    assert "Formular abgelaufen" in antwort.text
+    assert "Kein Zugriff" not in antwort.text
+    assert "Das Formular ist abgelaufen. Bitte die Seite neu laden." in antwort.text

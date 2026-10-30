@@ -34,4 +34,6 @@ async def pruefe_csrf(request: Request) -> None:
     if not isinstance(eingereicht, str) or not hmac.compare_digest(
         eingereicht.encode("utf-8"), csrf_token(request).encode("utf-8")
     ):
-        raise KeinZugriff("Das Formular ist abgelaufen. Bitte die Seite neu laden.")
+        raise KeinZugriff(
+            "Das Formular ist abgelaufen. Bitte die Seite neu laden.", titel="Formular abgelaufen"
+        )
