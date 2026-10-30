@@ -1,3 +1,4 @@
+import re
 from datetime import UTC, date, datetime
 from pathlib import Path
 
@@ -9,8 +10,11 @@ from app.zeit import (
     heute,
     ist_erreicht,
     lies_datum,
+    lokal,
     woche,
     zeitplan,
+    zeitpunkt_kurz,
+    zeitstempel,
 )
 
 
@@ -85,3 +89,17 @@ def test_hole_heute(client):
         app = client.app
 
     assert zeit.hole_heute(R()) == client.app.state.heute()
+
+
+def test_lokal():
+    assert lokal("2026-11-23T17:40:00Z") == datetime(2026, 11, 23, 18, 40, tzinfo=ZEITZONE)
+
+
+def test_zeitpunkt_kurz():
+    assert zeitpunkt_kurz("2026-11-23T17:40:00Z") == "Mo 23.11.2026, 18:40"
+    assert zeitpunkt_kurz("2026-10-24T22:30:00Z") == "So 25.10.2026, 00:30"
+
+
+def test_zeitstempel():
+    assert zeitstempel(datetime(2026, 11, 23, 18, 40, 5, tzinfo=ZEITZONE)) == "2026-11-23T17:40:05Z"
+    assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", zeitstempel())

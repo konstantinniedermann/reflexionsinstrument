@@ -1,7 +1,7 @@
 """Datum in Zuerich. Einziges Modul, das die Uhr kennt."""
 
 import re
-from datetime import date, datetime
+from datetime import UTC, date, datetime
 from typing import NamedTuple
 from zoneinfo import ZoneInfo
 
@@ -25,6 +25,19 @@ def heute(jetzt: datetime | None = None) -> date:
 
 def hole_heute(request: Request) -> date:
     return request.app.state.heute()
+
+
+def zeitstempel(jetzt: datetime | None = None) -> str:
+    """UTC-Text fuer die Datenbank, z. B. '2026-11-23T17:40:00Z'. Einzige Stelle mit der Uhr."""
+    if jetzt is None:
+        jetzt = datetime.now(UTC)
+    return jetzt.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def lokal(zeitstempel: str) -> datetime:
+    """UTC-Text aus der Datenbank als zeitzonenbewusste Zeit in Europe/Zurich."""
+    utc = datetime.strptime(zeitstempel, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+    return utc.astimezone(ZEITZONE)
 
 
 def lies_datum(text: str) -> date | None:
@@ -54,6 +67,12 @@ def woche(datum: date, projektstart: date) -> int | None:
 def datum_kurz(datum: date, mit_jahr: bool = True) -> str:
     text = f"{WOCHENTAGE[datum.weekday()]} {datum.day:02d}.{datum.month:02d}."
     return f"{text}{datum.year}" if mit_jahr else text
+
+
+def zeitpunkt_kurz(zeitstempel: str) -> str:
+    """'Mo 23.11.2026, 18:40'."""
+    zeit = lokal(zeitstempel)
+    return f"{datum_kurz(zeit.date())}, {zeit:%H:%M}"
 
 
 class Zeitplan(NamedTuple):
