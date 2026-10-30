@@ -12,6 +12,7 @@ from app.csrf import pruefe_csrf
 from app.db import hole_db
 from app.eingaben import Gesperrt, InhaltFehler
 from app.inhalte import (
+    NichtGefunden,
     aendere_frage,
     aendere_runde,
     datum_vorschlag_runde,
@@ -68,7 +69,7 @@ def _vorhanden():
     """Ein Eintrag, der zwischen Anzeige und Absenden verschwunden ist, ergibt 404."""
     try:
         yield
-    except LookupError:
+    except NichtGefunden:
         raise HTTPException(404) from None
 
 
@@ -301,9 +302,11 @@ def _runde_loeschen_seite(request: Request, zeile, antworten: int, status: int =
             "Ihre Angaben und die Texte ihrer Fragen kannst du weiterhin ändern."
         )
     else:
-        kontext["folgen"] = (
-            f"Die Runde und ihre {zahl(zeile['anzahl_fragen'], 'Frage', 'Fragen')} werden gelöscht."
-        )
+        if zeile["anzahl_fragen"]:
+            fragen_text = zahl(zeile["anzahl_fragen"], "Frage", "Fragen")
+            kontext["folgen"] = f"Die Runde und ihre {fragen_text} werden gelöscht."
+        else:
+            kontext["folgen"] = "Die Runde wird gelöscht."
     return _loeschen_seite(request, status, **kontext)
 
 

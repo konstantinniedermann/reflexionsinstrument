@@ -1,3 +1,4 @@
+import sqlite3
 from datetime import date
 
 import pytest
@@ -7,6 +8,7 @@ from app import inhalte
 from app.db import transaktion
 from app.eingaben import Gesperrt, InhaltFehler, kurzer_text
 from app.inhalte import (
+    NichtGefunden,
     aendere_frage,
     aendere_runde,
     datum_vorschlag_runde,
@@ -369,3 +371,16 @@ def test_sicherheitsnetz_runde(db, monkeypatch):
     with pytest.raises(Gesperrt):
         loesche_runde(db, rid)
     assert runde(db, rid) is not None and frage(db, fid) is not None
+
+
+def test_frage_in_fehlende_runde_ist_nicht_gefunden(db):
+    with pytest.raises(NichtGefunden):
+        lege_frage_an(db, 999, "freitext", "Frage", "", "")
+
+
+def test_andere_integrity_error_bleibt_bestehen(db, monkeypatch):
+    rid = _runde(db)
+    monkeypatch.setattr(inhalte, "runde", lambda db, runde_id: {"id": runde_id})
+    with pytest.raises(sqlite3.IntegrityError):
+        lege_frage_an(db, 999, "freitext", "Frage", "", "")
+    assert rid

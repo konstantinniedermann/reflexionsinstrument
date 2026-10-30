@@ -20,6 +20,11 @@ from app.zeit import lies_datum
 
 STANDARD_TITEL = "Reflexionsinstrument"
 
+
+class NichtGefunden(LookupError):
+    """Der Eintrag existiert nicht (mehr), z. B. weil er zwischen Anzeige und Absenden gelöscht wurde."""
+
+
 SKALA_MIN = 1
 SKALA_MAX = 5
 TYPEN = ("freitext", "skala")
@@ -141,7 +146,7 @@ def aendere_runde(
         (*werte, runde_id),
     ).rowcount
     if aenderungen == 0:
-        raise LookupError(runde_id)
+        raise NichtGefunden(runde_id)
 
 
 def _antworten_runde(db: sqlite3.Connection, runde_id: int) -> int:
@@ -169,7 +174,7 @@ def loesche_runde(db: sqlite3.Connection, runde_id: int) -> int:
     """Loescht die Runde samt Fragen; gibt die Zahl der Fragen zurueck. Mit Antworten: Gesperrt."""
     with transaktion(db):
         if runde(db, runde_id) is None:
-            raise LookupError(runde_id)
+            raise NichtGefunden(runde_id)
         anzahl = zaehle_antworten_runde(db, runde_id)
         if anzahl:
             raise Gesperrt(anzahl)
@@ -230,7 +235,9 @@ def lege_frage_an(
             (runde_id, *werte, runde_id),
         ).lastrowid
     except sqlite3.IntegrityError as fehler:
-        raise LookupError(runde_id) from fehler
+        if runde(db, runde_id) is None:
+            raise NichtGefunden(runde_id) from fehler
+        raise
 
 
 def aendere_frage(
@@ -245,7 +252,7 @@ def aendere_frage(
     with transaktion(db):
         bisher = frage(db, frage_id)
         if bisher is None:
-            raise LookupError(frage_id)
+            raise NichtGefunden(frage_id)
         if bisher["typ"] != typ and bisher["anzahl_antworten"]:
             raise InhaltFehler(
                 "typ",
@@ -264,7 +271,7 @@ def loesche_frage(db: sqlite3.Connection, frage_id: int) -> None:
     with transaktion(db):
         bisher = frage(db, frage_id)
         if bisher is None:
-            raise LookupError(frage_id)
+            raise NichtGefunden(frage_id)
         anzahl = zaehle_antworten_frage(db, frage_id)
         if anzahl:
             raise Gesperrt(anzahl)

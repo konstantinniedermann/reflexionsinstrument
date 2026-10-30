@@ -1,6 +1,7 @@
 import re
 from pathlib import Path
 
+import pytest
 from conftest import als_leitung, csrf_von, lege_antwort_an
 from fastapi.testclient import TestClient
 
@@ -566,3 +567,25 @@ def test_neue_frage_in_unbekannte_runde_nicht_angelegt(client, auftraggeberin, d
     antwort = sende(client, f"{RUNDEN}/999/fragen", **frage_felder())
     assert antwort.status_code == 404
     assert anzahl(db, "fragen") == 0
+
+
+def test_programmierfehler_ist_kein_404(client, auftraggeberin, db, monkeypatch):
+    rid = neue_runde(db)
+    melde_an(client, auftraggeberin)
+    pfad = f"{RUNDEN}/{rid}/bearbeiten"
+    token = csrf_von(client, pfad)
+
+    def kaputt(*args):
+        raise KeyError("Programmierfehler")
+
+    monkeypatch.setattr("app.routen.verwaltung_inhalte.aendere_runde", kaputt)
+    with pytest.raises(KeyError):
+        client.post(pfad, data={"csrf": token, **runde_felder()})
+
+
+def test_runde_ohne_fragen_loeschen_text(client, auftraggeberin, db):
+    rid = neue_runde(db)
+    melde_an(client, auftraggeberin)
+    seite = client.get(f"{RUNDEN}/{rid}/loeschen")
+    assert "Die Runde wird gelöscht." in seite.text
+    assert "0 Fragen" not in seite.text
