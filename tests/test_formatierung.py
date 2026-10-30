@@ -98,3 +98,8 @@ def test_filter_registriert():
     assert filters["datum"]("2026-11-30") == "Mo 30.11.2026"
     assert filters["datum"](date(2026, 11, 30), mit_jahr=False) == "Mo 30.11."
     assert templates.env.globals["zeitplan"]
+
+
+@pytest.mark.parametrize("wert", [None, ""])
+def test_datumsfilter_ohne_datum(wert):
+    assert templates.env.filters["datum"](wert) == ""

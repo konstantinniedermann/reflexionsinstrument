@@ -22,7 +22,9 @@ templates.env.globals["konto_von"] = konto_von
 templates.env.globals["csrf_feld"] = csrf_feld
 
 
-def datum_filter(wert: date | str, mit_jahr: bool = True) -> str:
+def datum_filter(wert: date | str | None, mit_jahr: bool = True) -> str:
+    if not wert:
+        return ""
     if isinstance(wert, str):
         wert = date.fromisoformat(wert)
     return datum_kurz(wert, mit_jahr)
