@@ -38,7 +38,7 @@ Lokal (Daten in `.daten/`):
 uv run python -m app.kommandos auftraggeberin-anlegen --benutzername projektleitung --anzeigename Projektleitung
 ```
 
-Auf fly.io, als `appuser`, damit die Datenbankdateien nicht `root` gehören (wird beim ersten Deploy geprüft):
+Auf fly.io, als `appuser`, damit die Datenbankdateien nicht `root` gehören:
 
 ```
 fly ssh console --pty -C "setpriv --reuid=appuser --regid=appuser --init-groups python -m app.kommandos auftraggeberin-anlegen --benutzername … --anzeigename …"
