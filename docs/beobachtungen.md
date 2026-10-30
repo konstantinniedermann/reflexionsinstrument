@@ -69,7 +69,7 @@ Letzte Auswertung: 30.10.2026 (15 Einträge, alle abgeschlossen)
 
 **Ursprung:** #16 (Tasks 3, 4, 5, 6, 8)
 
-**Einschätzung:** Lesbarkeit, kein falsches Verhalten. Verschieben nach `aufnahmen.py` jetzt kollidiert mit #17; dort bei #17 mit erledigen, den Rest bei der nächsten Arbeit an der Datei.
+**Einschätzung:** Lesbarkeit, kein falsches Verhalten. Verschieben nach `aufnahmen.py` jetzt kollidiert mit #17; dort bei #17 mit erledigen, den Rest bei der nächsten Arbeit an der Datei. Nicht in #17 erledigt, siehe Eintrag ‹Doppelte Logik um Aufnahmen›.
 
 ### 2026-10-30 — Lehrpersonen-Ansicht: Kleinigkeiten an der Oberfläche
 
@@ -163,6 +163,42 @@ Letzte Auswertung: 30.10.2026 (15 Einträge, alle abgeschlossen)
 **Ursprung:** Reviews zu #18
 
 **Einschätzung:** Alles klein. Satz zu den Links beim Feedback der Auftraggeberin prüfen (Spec-Entscheid), Löschhinweis in der Oberfläche ergänzen oder bei der Übergabe mitgeben, Rest bei Gelegenheit.
+
+### 2026-10-30 — Doppelte Logik um Aufnahmen
+
+**Thema:** Code-Struktur
+
+**Fundort:** `app/aufnahmen.py` (`_loesche_zeile`, ca. :289), `app/eintraege.py:113` (`entferne_aufnahmen`, Regel ca. :100), `app/seiten_lehrperson.py:230`
+
+**Beobachtung:** `aufnahmen._loesche_zeile` und `eintraege.entferne_aufnahmen` löschen Aufnahmezeilen auf zwei Wegen. Die Regel «Antwortzeile existiert genau dann, wenn Inhalt (Text oder Aufnahme)» steht zweimal (`eintraege.py` ca. :100, `aufnahmen.py` ca. :289). `eigene_aufnahme` wiederholt die Abfrage aus `seiten_lehrperson.py` ca. :230. Zwischen `aufnahmen` und `eintraege` gibt es einen verzögerten Import.
+
+**Ursprung:** #17 (Review)
+
+**Einschätzung:** Lesbarkeit, kein falsches Verhalten. Bei der nächsten Arbeit an diesen Dateien in `aufnahmen.py` zusammenführen (der Plan zu #17 verbot Änderungen an `eintraege.py`).
+
+### 2026-10-30 — Doppelter gesprochener Eintrag bei verlorener Antwort
+
+**Thema:** Betrieb
+
+**Fundort:** `app/routen/aufnahmen.py` (`tagebuch_aufnahme_speichern`), `app/static/js/aufnahme.js`
+
+**Beobachtung:** Speichert der Server, aber die Antwort geht verloren (WLAN-Abbruch, App-Wechsel), sieht die Lehrperson einen Fehler. «Nochmals Speichern» legt dann einen zweiten Tagebucheintrag an. Bei Antworten auf Fragen wird dagegen nur ersetzt.
+
+**Ursprung:** #17 (Review)
+
+**Einschätzung:** Selten; die Lehrperson kann den Eintrag löschen. Abhilfe bei Bedarf: Einmal-Token im Formular.
+
+### 2026-10-30 — Rückfall ohne Aufnahmefähigkeit: Formate
+
+**Thema:** Oberfläche
+
+**Fundort:** Text im Rückfall der Aufnahme-Seiten (Satz «… eine Aufnahme aus einer anderen App hochladen»), `app/aufnahmen.py` (`erkenne_format`)
+
+**Beobachtung:** Der Server nimmt nur MP4/M4A, WebM und Ogg. MP3 oder WAV (manche Android-Rekorder) werden mit «Bitte neu aufnehmen» abgewiesen. In seltenen Browsern ohne Aufnahmefunktion ist das eine Sackgasse.
+
+**Ursprung:** #17 (Review)
+
+**Einschätzung:** Text anpassen oder Formate erweitern (Inhaltsentscheid); ADR-001 «keine Umwandlung» bleibt.
 
 ## Ausgewertet am 30.10.2026
 
