@@ -98,3 +98,29 @@ def als_leitung(client, auftraggeberin):
 def als_lehrperson(client, lehrperson):
     assert anmelden(client, lehrperson["benutzername"], lehrperson["passwort"]).status_code == 303
     return client
+
+
+def lege_antwort_an(db, frage_id, konto_id, text="Antwort", aufnahme_id=None) -> int:
+    """Legt eine Antwort an, wie #16 sie spaeter speichert."""
+    return db.execute(
+        "INSERT INTO antworten (frage_id, konto_id, text, aufnahme_id) VALUES (?, ?, ?, ?)",
+        (frage_id, konto_id, text, aufnahme_id),
+    ).lastrowid
+
+
+def lege_eintrag_an(db, konto_id, art="frei", impuls_id=None, leitfrage_id=None) -> int:
+    """Legt einen Tagebucheintrag an; der Text wird aus der Quelle kopiert wie in #16."""
+    impuls_text = leitfrage_text = None
+    if impuls_id is not None:
+        impuls_text = db.execute("SELECT text FROM impulse WHERE id = ?", (impuls_id,)).fetchone()[
+            0
+        ]
+    if leitfrage_id is not None:
+        leitfrage_text = db.execute(
+            "SELECT text FROM leitfragen WHERE id = ?", (leitfrage_id,)
+        ).fetchone()[0]
+    return db.execute(
+        "INSERT INTO tagebucheintraege (konto_id, art, text, impuls_id, impuls_text, "
+        "leitfrage_id, leitfrage_text) VALUES (?, ?, 'Text', ?, ?, ?, ?)",
+        (konto_id, art, impuls_id, impuls_text, leitfrage_id, leitfrage_text),
+    ).lastrowid

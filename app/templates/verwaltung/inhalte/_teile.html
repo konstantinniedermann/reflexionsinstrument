@@ -9,3 +9,33 @@
 {% macro feldfehler(fehler, feld) -%}
 {% if fehler.get(feld) %}<p class="fehler" id="fehler-{{ feld }}">{{ fehler[feld] }}</p>{% endif %}
 {%- endmacro %}
+
+{% macro zeitangabe(zp, projektstart) -%}
+{{ zp.datum | datum }}{% if zp.woche is not none %} · Woche {{ zp.woche }}{% elif projektstart %} · vor dem Start{% endif %}
+{%- endmacro %}
+
+{% macro sichtbarkeit(zp) -%}
+{% if zp.sichtbar %}<span class="marke marke--erledigt">Sichtbar</span>{% else %}<span class="marke">Ab {{ zp.datum | datum(false) }}</span>{% endif %}
+{%- endmacro %}
+
+{# Braucht den Seitenkontext (request), darum mit "with context" importieren. #}
+{% macro verschieben(pfad, bezeichnung, erster, letzter) -%}
+{% if not (erster and letzter) %}
+<div class="verschieben">
+  {% if not erster %}
+  <form method="post" action="{{ pfad }}/verschieben">
+    {{ csrf_feld(request) }}
+    <input type="hidden" name="richtung" value="hoch">
+    <button type="submit" class="knopf knopf--zweit knopf--klein" aria-label="‹{{ bezeichnung }}› nach oben">↑ Nach oben</button>
+  </form>
+  {% endif %}
+  {% if not letzter %}
+  <form method="post" action="{{ pfad }}/verschieben">
+    {{ csrf_feld(request) }}
+    <input type="hidden" name="richtung" value="runter">
+    <button type="submit" class="knopf knopf--zweit knopf--klein" aria-label="‹{{ bezeichnung }}› nach unten">↓ Nach unten</button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+{%- endmacro %}

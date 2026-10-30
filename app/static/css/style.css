@@ -969,3 +969,18 @@ input[type="date"]:focus {
 .karte > h2:first-child {
   margin-top: 0;
 }
+
+.verschieben {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.verschieben .knopf--klein {
+  min-height: 2.75rem;
+}
+
+.formular > .knopf--leise {
+  justify-self: start;
+}

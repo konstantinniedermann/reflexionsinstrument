@@ -1,0 +1,31 @@
+{% extends "verwaltung/rahmen.html" %}
+{% from "verwaltung/inhalte/_teile.html" import zeitangabe, sichtbarkeit %}
+{% block titel %}Runden – {{ instrument_titel }}{% endblock %}
+{% block inhalt %}
+<p><a class="zurueck" href="/verwaltung/inhalte">‹ Inhalte</a></p>
+<h1>Runden</h1>
+{% if meldung %}
+<p class="hinweis" role="status">{{ meldung }}</p>
+{% endif %}
+<p class="gedaempft">Jede Runde hat ein Fallbeispiel und Fragen. Sie erscheinen in der Reihenfolge ihres Datums.</p>
+<p><a class="knopf" href="/verwaltung/inhalte/runden/neu">Neue Runde</a></p>
+{% if runden %}
+<ul class="liste-ohne">
+  {% for r in runden %}
+  {% set zp = zeitplan(r.freischaltdatum, projektstart, heute) %}
+  <li>
+    <a class="karte karte--link" id="runde-{{ r.id }}" href="/verwaltung/inhalte/runden/{{ r.id }}">
+      <span class="karte__text">
+        <strong>{{ r.titel }}</strong>
+        <span class="gedaempft">{{ zeitangabe(zp, projektstart) }}</span>
+        <span class="gedaempft">{{ zahl(r.anzahl_fragen, "Frage", "Fragen") }}</span>
+      </span>
+      {{ sichtbarkeit(zp) }}
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hinweis">Noch keine Runde. Lege mit «Neue Runde» die erste an.</p>
+{% endif %}
+{% endblock %}
