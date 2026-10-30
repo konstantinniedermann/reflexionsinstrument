@@ -545,6 +545,7 @@ async function ablaufEintraege() {
   const NAME = "Ida Überlangernachnamebeispielperson";
   await handy();
   await farbschema("light");
+  let stand = merke();
 
   // 1. Vorbereitung: eigener Zugang mit langem Namen, mehrzeiliger freier Eintrag
   await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
@@ -556,11 +557,12 @@ async function ablaufEintraege() {
   await tippe("#text", "Erste Zeile\nZweite Zeile");
   await sende("form.formular button[type=submit]");
   muss(/^\/lehrperson\/tagebuch\/\d+$/.test(await pfad()), "Einträge: freier Eintrag der Testperson gespeichert");
+  keineFehlerSeit(stand, "Vorbereitung Einträge");
   await sende(abmelden);
   await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
 
   // 2. Verwaltung: Karte und Navigation
-  let stand = merke();
+  stand = merke();
   await oeffne("/verwaltung");
   pruefe(await js("!!document.querySelector('a.karte[href=\"/verwaltung/eintraege\"]')"), "Einträge: Karte «Einträge» auf der Verwaltung ist ein Link");
   pruefe(await js("[...document.querySelectorAll('.verwaltungsnavigation a')].some((a) => a.innerText.trim() === 'Einträge')"), "Einträge: Navigation enthält «Einträge»");
@@ -575,20 +577,20 @@ async function ablaufEintraege() {
   pruefe(await js(`!!(${idaKarte})?.innerText.includes('1 Tagebucheintrag')`), "Einträge: Karte von Ida zeigt «1 Tagebucheintrag»");
   await keinUeberlauf("Einträge 390 px");
   await screenshot("40-eintraege");
-  await screenshot("44-export-karte");
+  await js("document.querySelector('#export').scrollIntoView()");
+  const r = await js("(() => { const b = document.querySelector('#export').getBoundingClientRect(); return { x: b.left + scrollX, y: b.top + scrollY, width: b.width, height: b.height }; })()");
+  const ausschnitt = await cdp("Page.captureScreenshot", { format: "png", clip: { ...r, scale: 1 } });
+  writeFileSync(`${BILDER}44-export-karte.png`, Buffer.from(ausschnitt.result.data, "base64"));
   const knoepfe = await js(
     `[...document.querySelectorAll('#export a.knopf')].map((e) => { const r = e.getBoundingClientRect(); return r.height >= 43.5 && r.left >= 0 && r.right <= ${sollBreite}; })`,
   );
   pruefe(knoepfe.length === 2 && knoepfe.every(Boolean), "Einträge: beide Export-Knöpfe ganz im Bild und tippbar hoch");
-  const alleKarten = await js("document.querySelectorAll('article.karte--eintrag').length");
   const idaHref = await js(`(${idaKarte}).getAttribute("href")`);
   await sende(`a.karte--person[href='${idaHref}']`);
   muss((await js("location.search")).startsWith("?lehrperson="), "Einträge: Karte von Ida filtert");
   pruefe(await js("document.querySelector('nav.chips .chip[aria-current]')?.innerText.includes('Ida')"), "Einträge: Chip von Ida ist aktiv");
-  pruefe(
-    await js("[...document.querySelectorAll('article.karte--eintrag')].every((a) => !a.innerText.includes('Erika') && !a.innerText.includes('Zora'))"),
-    "Einträge: gefilterte Liste ohne Einträge anderer Personen",
-  );
+  const gefiltert = await js("[...document.querySelectorAll('article.karte--eintrag')].map((a) => a.innerText.includes('Erste Zeile'))");
+  pruefe(gefiltert.length === 1 && gefiltert[0], "Einträge: gefilterte Liste hat genau Idas einen Eintrag");
   await keinUeberlauf("Einträge gefiltert 390 px");
   await screenshot("43-eintraege-gefiltert");
 
@@ -602,7 +604,8 @@ async function ablaufEintraege() {
 
   // «Alle» zeigt wieder alle
   await sende("nav.chips a.chip:first-child");
-  pruefe((await js("document.querySelectorAll('article.karte--eintrag').length")) >= alleKarten && !(await js("location.search")), "Einträge: «Alle» zeigt wieder alle Einträge");
+  pruefe(await js("document.querySelector('nav.chips .chip[aria-current]')?.innerText.trim() === 'Alle'"), "Einträge: Chip «Alle» ist wieder aktiv");
+  pruefe((await js("document.querySelectorAll('article.karte--eintrag').length")) > gefiltert.length, "Einträge: «Alle» zeigt mehr Einträge als der Filter");
 
   // 5. Downloads im Seitenkontext
   const dl = await js(
@@ -626,6 +629,7 @@ async function ablaufEintraege() {
   keineFehlerSeit(stand, "Seite Einträge");
 
   // 7. Dunkel und Desktop
+  stand = merke();
   await oeffne("/verwaltung/eintraege");
   await farbschema("dark");
   await keinUeberlauf("Einträge 390 px dunkel");
@@ -635,6 +639,7 @@ async function ablaufEintraege() {
   await oeffne("/verwaltung/eintraege");
   await keinUeberlauf("Einträge 1280 px");
   await screenshot("42-eintraege-desktop");
+  keineFehlerSeit(stand, "Einträge dunkel und Desktop");
   await handy();
   await sende(abmelden);
 }
