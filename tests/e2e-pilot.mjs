@@ -545,7 +545,156 @@ async function ablaufEintraege() {
 }
 
 async function ablaufGast() {
-  // #19 füllt diese Funktion
+  const inhalt = JSON.parse(readFileSync(new URL("./platzhalter/inhalte.json", import.meta.url), "utf8"));
+  const titel = inhalt.runden.map((r) => r.titel);
+  const frageText = (runde, nr) => inhalt.runden[runde - 1].fragen[nr].text;
+  const abmelden = ".seitenkopf form[action='/abmelden'] button";
+  const dialoge = () => ereignisse.filter((e) => e === "Page.javascriptDialogOpening").length;
+  const dialogeVorher = dialoge();
+  const tag = (basisTag, plus) => {
+    const [j, m, t] = basisTag.split("-").map(Number);
+    return new Date(Date.UTC(j, m - 1, t + plus)).toISOString().slice(0, 10);
+  };
+  const heute = new Intl.DateTimeFormat("sv-SE", { timeZone: "Europe/Zurich" }).format(new Date());
+  const tag3 = tag(heute, 14);
+  const tag3Anzeige = tag3.split("-").reverse().join(".");
+  let stand;
+  let t;
+
+  // 0. Vorbereitung: erster Tag wieder auf heute (der Ablauf von #15 hat ihn in die Zukunft gesetzt)
+  await handy();
+  await farbschema("light");
+  stand = merke();
+  await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
+  muss((await text()).includes("Abmelden"), "Gast-Ablauf: Auftraggeberin angemeldet");
+  await oeffne("/verwaltung/inhalte/allgemein");
+  await tippe("#projektstart", heute);
+  await sende("form.formular button[type=submit]");
+  muss((await js("document.querySelector('#projektstart').value")) === heute, "Gast-Ablauf: erster Tag auf heute gesetzt");
+  await sende(abmelden);
+  await cdp("Network.clearBrowserCookies");
+  keineFehlerSeit(stand, "Gast-Vorbereitung");
+
+  // 1. Login-Seite mit Gast-Karte
+  stand = merke();
+  await oeffne("/");
+  pruefe(await js("document.querySelector(\"a[href='/gast']\")?.offsetHeight > 0"), "Gast: Login-Seite zeigt den Link «Ansehen ohne Konto»");
+  pruefe((await text()).includes("Ansehen ohne Konto"), "Gast: Login-Seite nennt «Ansehen ohne Konto»");
+  await keinUeberlauf("Gast: Login-Seite 390 px");
+  await screenshot("70-gast-login");
+  keineFehlerSeit(stand, "Gast: Login-Seite");
+
+  // 2. Gast-Start
+  stand = merke();
+  await sende("a[href='/gast']");
+  muss((await pfad()) === "/gast", "Gast: Link führt auf /gast");
+  t = await text();
+  pruefe(t.includes("Ansicht ohne Speichern"), "Gast-Start: Band «Ansicht ohne Speichern»");
+  pruefe(t.includes("Willkommen"), "Gast-Start: «Willkommen»");
+  pruefe(t.includes(titel[0]), "Gast-Start: Runde 1 sichtbar");
+  pruefe(t.includes("Nächste Runde ab"), "Gast-Start: «Nächste Runde ab»");
+  pruefe(!t.includes(titel[1]), "Gast-Start: Runde 2 noch nicht sichtbar");
+  pruefe((await js("document.querySelectorAll('.tabs a').length")) === 3, "Gast-Start: Navigation mit drei Einträgen");
+  pruefe(!t.includes("Abmelden"), "Gast-Start: kein «Abmelden»");
+  await keinUeberlauf("Gast-Start 390 px");
+  await screenshot("73-gast-start");
+  keineFehlerSeit(stand, "Gast-Start");
+
+  // 3. Runde 1: Speichern zeigt nur eine Meldung
+  stand = merke();
+  await sende("a[href='/gast/runden/1']");
+  muss((await ueberschrift()) === titel[0], "Gast: Runde 1 geöffnet");
+  const antwort = "Gast-Test: Dieser Text wird nicht gespeichert.";
+  await tippe("textarea", antwort);
+  await sende("form.formular > button.knopf");
+  pruefe((await text()).includes("Nicht gespeichert."), "Gast-Runde: «Nicht gespeichert.» sichtbar");
+  pruefe((await js("document.querySelector('textarea').value")).includes(antwort), "Gast-Runde: Text steht noch im Feld");
+  await keinUeberlauf("Gast-Runde nach Speichern 390 px");
+  await screenshot("74-gast-runde-nicht-gespeichert");
+  keineFehlerSeit(stand, "Gast-Runde speichern");
+
+  // 4. Tagebuch und Info
+  stand = merke();
+  await sende(".tabs a[href='/gast/tagebuch/neu']");
+  await sende("a[href='/gast/tagebuch/neu/frei']");
+  muss((await pfad()) === "/gast/tagebuch/neu/frei", "Gast: Tagebuch «Frei schreiben» geöffnet");
+  await tippe("textarea", "Gast-Test: freier Eintrag.");
+  await sende("form.formular > button.knopf");
+  pruefe((await text()).includes("Nicht gespeichert."), "Gast-Tagebuch: «Nicht gespeichert.» sichtbar");
+  await keinUeberlauf("Gast-Tagebuch 390 px");
+  await sende(".tabs a[href='/gast/info']");
+  pruefe((await js("document.querySelectorAll('details').length")) >= 2, "Gast-Info: Infoblock mit Abschnitten vorhanden");
+  await klick("details:not([open]) summary");
+  pruefe((await js("document.querySelectorAll('details[open]').length")) >= 2, "Gast-Info: weiterer Abschnitt lässt sich öffnen");
+  await keinUeberlauf("Gast-Info 390 px");
+  keineFehlerSeit(stand, "Gast-Tagebuch und Info");
+
+  // 5. Noch nicht freigeschaltete Runde: «Nicht gefunden»
+  stand = merke();
+  await oeffne("/gast/runden/2");
+  pruefe((await ueberschrift()) === "Nicht gefunden", "Gast: Runde 2 über die Adresse ist «Nicht gefunden»");
+  pruefe(!(await text()).includes(frageText(2, 0)), "Gast: Fragen von Runde 2 nicht sichtbar");
+  await keinUeberlauf("Gast: Nicht gefunden 390 px");
+  await screenshot("75-gast-nicht-gefunden");
+  keineFehlerSeit(stand, "Gast: Nicht gefunden", ["status of 404"]);
+
+  // 6. «Anmelden» im Kopf
+  stand = merke();
+  await oeffne("/gast");
+  await sende("a.knopf--kopf");
+  pruefe((await pfad()) === "/", "Gast: «Anmelden» im Kopf führt zur Login-Seite");
+  keineFehlerSeit(stand, "Gast: Anmelden");
+
+  // 7. Vorschau als Auftraggeberin
+  stand = merke();
+  await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
+  await oeffne("/verwaltung");
+  await keinUeberlauf("Verwaltung-Start 390 px");
+  await sende("a.karte--link[href='/verwaltung/vorschau']");
+  muss((await pfad()) === "/verwaltung/vorschau", "Vorschau: Karte «Vorschau» öffnet die Auswahlseite");
+  pruefe(await js("!!document.querySelector('.verwaltungsnavigation')"), "Vorschau: Verwaltungsnavigation sichtbar");
+  await keinUeberlauf("Vorschau-Auswahl 390 px");
+  await screenshot("76-vorschau-auswahl");
+  await sende(`a.karte--link[href='/verwaltung/vorschau/${tag3}']`);
+  t = await text();
+  pruefe(t.includes(titel[2]), "Vorschau: Titel von Runde 3 sichtbar");
+  pruefe(t.includes("Woche 3") && t.includes(tag3Anzeige), "Vorschau: Band nennt «Woche 3» und das Datum");
+  pruefe(t.includes("Es wird nichts gespeichert"), "Vorschau: Band «Es wird nichts gespeichert»");
+  await keinUeberlauf("Vorschau Woche 3 390 px");
+  await screenshot("77-vorschau-woche-3");
+  await oeffne("/verwaltung/inhalte/runden/4");
+  await sende("main a[href^='/verwaltung/vorschau/'][href$='/runden/4']");
+  t = await text();
+  pruefe(t.includes(frageText(4, 0)) && t.includes(frageText(4, 1)), "Vorschau: Fragen von Runde 4 sichtbar");
+  await keinUeberlauf("Vorschau Runde 4 390 px");
+  await screenshot("78-vorschau-kuenftige-runde");
+  await sende("a.knopf--kopf");
+  pruefe((await pfad()) === "/verwaltung/vorschau", "Vorschau: «Vorschau beenden» führt zur Auswahl");
+  await sende(abmelden);
+  keineFehlerSeit(stand, "Vorschau");
+
+  // 8. Dunkel und Desktop
+  stand = merke();
+  await farbschema("dark");
+  await oeffne("/");
+  await keinUeberlauf("Login-Seite 390 px dunkel (Gast)");
+  await screenshot("71-gast-login-dunkel");
+  await oeffne("/gast");
+  await keinUeberlauf("Gast-Start 390 px dunkel");
+  await farbschema("light");
+  await desktop();
+  await oeffne("/");
+  await keinUeberlauf("Login-Seite 1280 px (Gast)");
+  await screenshot("72-gast-login-desktop");
+  await oeffne("/gast");
+  await keinUeberlauf("Gast-Start 1280 px");
+  await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
+  await oeffne("/verwaltung/vorschau");
+  await keinUeberlauf("Vorschau-Auswahl 1280 px");
+  await sende(abmelden);
+  await handy();
+  keineFehlerSeit(stand, "Gast: Dunkel und Desktop");
+  pruefe(dialoge() === dialogeVorher, "Gast-Ablauf: kein JavaScript-Dialog");
 }
 
 async function ablaeufe() {
