@@ -11,7 +11,7 @@ primary_region = "fra"
 [mounts]
   source = "daten"
   destination = "/data"
-  # Die Löschung bei Projektende muss auch die Snapshots des Volumes umfassen (#8).
+  # Snapshots bleiben nach dem Löschen des Volumes bis zum Ablauf erhalten: Ablauf in docs/loeschkonzept.md.
   initial_size = "1gb"
   snapshot_retention = 5
 

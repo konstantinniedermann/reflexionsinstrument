@@ -118,3 +118,15 @@ Letzte Auswertung: noch keine
 **Ursprung:** Task-Reviews #13
 
 **Einschätzung:** Bei einer Maschine und einem Prozess folgenlos. Die Ereignisliste ist bei der heutigen Länge der Abläufe unkritisch.
+
+### 2026-10-30 — Wiederherstellung aus einem Volume-Snapshot nie geprobt
+
+**Thema:** Betrieb
+
+**Fundort:** fly.io, Volume `daten` (`snapshot_retention = 5`)
+
+**Beobachtung:** Während der Laufzeit sind die täglichen Snapshots von fly.io die einzige Sicherung der Einträge und Aufnahmen. Ob und wie schnell sich daraus ein Volume wiederherstellen lässt (neues Volume aus Snapshot, Maschine darauf umhängen), ist nicht ausprobiert.
+
+**Ursprung:** Löschkonzept #8
+
+**Einschätzung:** Eine Probe vor dem Testlauf (#9) mit Testdaten dauert etwa eine halbe Stunde und kostet für ein paar Minuten ein zweites Volume. Ohne Probe bleibt im Ernstfall nur Ausprobieren unter Zeitdruck.

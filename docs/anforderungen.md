@@ -152,8 +152,8 @@ flowchart LR
 
 Die rechtliche Seite (Einwilligung, Vorgaben der Hochschule) klärt die Auftraggeberin selbst (#3). Technisch gilt:
 - Daten liegen in der EU (Region Frankfurt). Der Anbieter ist ein US-Unternehmen, das weiss die Auftraggeberin für ihre Abklärung.
-- Gespeichert werden nur Anzeigename, Benutzername, Passwort-Hash, Einträge und Aufnahmen. Keine E-Mail-Adressen, kein Tracking, keine externen Schriften oder Skripte.
-- Löschung nach Projektende samt Sicherungskopien, Datum von der Auftraggeberin (#8, #10).
+- Gespeichert werden nur Anzeigename, Benutzername, Passwort-Hash, Einträge und Aufnahmen. Keine E-Mail-Adressen, kein Tracking, keine externen Schriften oder Skripte, keine IP-Adressen in den Logs. Einzelheiten und Hinweistexte: [datenschutz.md](datenschutz.md).
+- Löschung nach Projektende samt Sicherungskopien, in zwei Stufen: zuerst die Forschungsdaten, danach die App mit der Gast-Ansicht. Daten von der Auftraggeberin, Ablauf im [Löschkonzept](loeschkonzept.md) (#8, #10).
 
 ## Zeitplan
 
