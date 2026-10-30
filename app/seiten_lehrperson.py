@@ -7,13 +7,22 @@ from fastapi import HTTPException
 
 from app import inhalte
 from app.ansicht import Ansicht
-from app.eintraege import Stand, antworten_der_runde, anzahl_tagebucheintraege, rundenstand
+from app.eintraege import (
+    Eintrag,
+    Stand,
+    antworten_der_runde,
+    anzahl_tagebucheintraege,
+    gruppiere,
+    rundenstand,
+    zeilen_von,
+)
 from app.konten import finde_konto
 from app.sichtbar import (
     aktueller_impuls,
     naechste_freischaltung,
     sichtbare_runde,
     sichtbare_runden,
+    sichtbarer_impuls,
 )
 from app.texte import lies_text
 from app.zeit import woche
@@ -23,6 +32,10 @@ VORLAGEN: dict[str, str] = {
     "info": "lehrperson/info.html",
     "runde": "lehrperson/runde.html",
     "runde_loeschen": "lehrperson/loeschen.html",
+    "tagebuch_wahl": "lehrperson/tagebuch_wahl.html",
+    "tagebuch_neu": "lehrperson/tagebuch_neu.html",
+    "tagebuch_eintrag": "lehrperson/tagebuch_eintrag.html",
+    "eintraege": "lehrperson/eintraege.html",
 }
 
 MELDUNG_FEHLER = "Bitte prüfe die markierten Felder."
@@ -109,4 +122,167 @@ def kontext_runde(
         "antworten": antworten,
         "zuletzt": max((a["geaendert"] for a in antworten.values()), default=None),
         "hinweis": lies_text(db, "hinweis_tagebuch"),
+    }
+
+
+def kontext_tagebuch_wahl(db: sqlite3.Connection, ansicht: Ansicht) -> dict:
+    return {
+        "ansicht": ansicht,
+        "bereich": "tagebuch",
+        "meldung": None,
+        "impuls": aktueller_impuls(db, ansicht.stichtag),
+        "leitfragen": inhalte.leitfragen(db),
+    }
+
+
+ARTEN_NEU = {
+    "frei": "Freier Eintrag",
+    "impuls": "Zum Impuls",
+    "leitfrage": "Zur Leitfrage",
+}
+
+
+def hole_bezug(
+    db: sqlite3.Connection, ansicht: Ansicht, art: str, bezug_id: int | None
+) -> sqlite3.Row | None:
+    """Impuls (am Stichtag sichtbar) oder Leitfrage; unbekannt oder nicht sichtbar: 404."""
+    if art == "frei":
+        return None
+    if bezug_id is None:
+        raise HTTPException(404)
+    if art == "impuls":
+        bezug = sichtbarer_impuls(db, bezug_id, ansicht.stichtag)
+    else:
+        bezug = inhalte.leitfrage(db, bezug_id)
+    if bezug is None:
+        raise HTTPException(404)
+    return bezug
+
+
+def kontext_tagebuch_neu(
+    db: sqlite3.Connection,
+    ansicht: Ansicht,
+    art: str,
+    bezug_id: int | None = None,
+    text: str | None = None,
+    fehler: dict[str, str] | None = None,
+    meldung: str | None = None,
+) -> dict:
+    """Formular fuer einen neuen Eintrag; `art` ist `frei`, `impuls` oder `leitfrage`."""
+    bezug = hole_bezug(db, ansicht, art, bezug_id)
+    fehler = fehler or {}
+    return {
+        "ansicht": ansicht,
+        "bereich": "tagebuch",
+        "meldung": meldung or (MELDUNG_FEHLER if fehler else None),
+        "titel": ARTEN_NEU[art],
+        "bezug": bezug,
+        "aktion": ansicht.url(
+            "/tagebuch/neu/frei" if bezug is None else f"/tagebuch/neu/{art}/{bezug['id']}"
+        ),
+        "text": text or "",
+        "fehler": fehler.get("text"),
+        "hinweis": lies_text(db, "hinweis_tagebuch"),
+    }
+
+
+ARTEN_EINTRAG = {
+    "frei": "Freier Eintrag",
+    "leitfragen": "Zur Leitfrage",
+    "impuls": "Zum Impuls",
+    "aufnahme": "Gesprochener Eintrag",
+}
+
+
+def kontext_tagebuch_eintrag(
+    db: sqlite3.Connection,
+    ansicht: Ansicht,
+    eintrag: sqlite3.Row,
+    text: str | None = None,
+    fehler: dict[str, str] | None = None,
+    meldung: str | None = None,
+) -> dict:
+    """Ein eigener Eintrag; `eintrag` kommt aus `hole_tagebucheintrag` (nur eigene)."""
+    fehler = fehler or {}
+    aufnahme = None
+    if eintrag["aufnahme_id"] is not None:
+        aufnahme = db.execute(
+            "SELECT id, dauer_sekunden FROM aufnahmen WHERE id = ? AND konto_id = ?",
+            (eintrag["aufnahme_id"], ansicht.konto_id),
+        ).fetchone()
+    return {
+        "ansicht": ansicht,
+        "bereich": "tagebuch",
+        "meldung": meldung or (MELDUNG_FEHLER if fehler else None),
+        "eintrag": eintrag,
+        "art_text": ARTEN_EINTRAG[eintrag["art"]],
+        "bezug_text": eintrag["impuls_text"] or eintrag["leitfrage_text"],
+        "aufnahme": aufnahme,
+        "text": (eintrag["text"] or "") if text is None else text,
+        "fehler": fehler.get("text"),
+        "geaendert": eintrag["geaendert"] != eintrag["erstellt"],
+    }
+
+
+def _kurz(text: str | None, laenge: int) -> str:
+    einzeilig = " ".join((text or "").split())
+    return einzeilig if len(einzeilig) <= laenge else einzeilig[: laenge - 1].rstrip() + "…"
+
+
+def _karte(db: sqlite3.Connection, karte: Eintrag) -> dict:
+    """Marke, Titel, Vorschau und Adresse einer Karte von «Meine Einträge»."""
+    z = karte.zeilen[0]
+    basis = {"erstellt": karte.erstellt, "geaendert": karte.geaendert}
+    if karte.art == "runde":
+        fragen = len(inhalte.fragen(db, karte.runde_id))
+        erster = next((a.text for a in karte.zeilen if a.text), None)
+        return basis | {
+            "marke": "Runde",
+            "titel": z.runde_titel,
+            "kopfzeile": f"{len(karte.zeilen)} von {fragen} Fragen beantwortet",
+            "vorschau": _kurz(erster, 200),
+            "pfad": f"/runden/{karte.runde_id}",
+        }
+    pfad = f"/tagebuch/{karte.eintrag_id}"
+    if z.tagebuch_art == "impuls":
+        return basis | {
+            "marke": "Impuls",
+            "titel": f"Zum Impuls: {_kurz(z.frage, 60)}",
+            "vorschau": _kurz(z.text, 200),
+            "pfad": pfad,
+        }
+    if z.tagebuch_art == "leitfragen":
+        titel = f"Zur Leitfrage: {_kurz(z.frage, 60)}"
+    elif z.tagebuch_art == "aufnahme":
+        dauer = z.aufnahme_dauer_sekunden
+        return basis | {
+            "marke": "Tagebuch",
+            "titel": "Gesprochener Eintrag",
+            "aufnahme": True,
+            "dauer": dauer,
+            "vorschau": _kurz(z.text, 200),
+            "pfad": pfad,
+        }
+    else:
+        titel = "Freier Eintrag"
+    return basis | {
+        "marke": "Tagebuch",
+        "titel": titel,
+        "vorschau": _kurz(z.text, 200),
+        "pfad": pfad,
+    }
+
+
+def kontext_eintraege(db: sqlite3.Connection, ansicht: Ansicht, meldung: str | None = None) -> dict:
+    """«Meine Einträge» der angemeldeten Lehrperson, ohne gerade nicht freigeschaltete Runden."""
+    karten = [
+        k
+        for k in gruppiere(zeilen_von(db, ansicht.konto_id))
+        if k.art != "runde" or sichtbare_runde(db, k.runde_id, ansicht.stichtag) is not None
+    ]
+    return {
+        "ansicht": ansicht,
+        "bereich": "eintraege",
+        "meldung": meldung,
+        "karten": [_karte(db, k) for k in karten],
     }

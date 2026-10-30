@@ -35,7 +35,7 @@
 {{ zeile.wert }}</textarea>
     <div class="feld__knoepfe">
       <button type="submit" class="knopf knopf--klein knopf--zweit" name="anker" value="frage-{{ frage.id }}">Speichern</button>
-      {# #17: Antwort einsprechen #}
+      {% if ansicht.speichert %}{# #17: Antwort einsprechen #}{% endif %}
     </div>
   </div>
   {% endif %}

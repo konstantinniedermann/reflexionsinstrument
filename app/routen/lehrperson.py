@@ -4,7 +4,7 @@ import re
 import sqlite3
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 
 from app import inhalte
@@ -13,11 +13,25 @@ from app.csrf import pruefe_csrf
 from app.db import hole_db
 from app.eingaben import InhaltFehler
 from app.eintraege import (
+    aendere_tagebucheintrag,
+    hole_tagebucheintrag,
+    lege_tagebucheintrag_an,
     lies_runden_eingaben,
     loesche_antworten_der_runde,
+    loesche_tagebucheintrag,
     speichere_antworten,
 )
-from app.seiten_lehrperson import VORLAGEN, kontext_info, kontext_runde, kontext_start
+from app.seiten_lehrperson import (
+    VORLAGEN,
+    hole_bezug,
+    kontext_eintraege,
+    kontext_info,
+    kontext_runde,
+    kontext_start,
+    kontext_tagebuch_eintrag,
+    kontext_tagebuch_neu,
+    kontext_tagebuch_wahl,
+)
 from app.sichtbar import sichtbare_runde
 from app.sitzung import braucht_lehrperson
 from app.typen import Id
@@ -123,3 +137,136 @@ def runde_loeschen(request: Request, db: DB, ansicht: ANSICHT, runde_id: Id):
     verzeichnis = request.app.state.einstellungen.aufnahmen_verzeichnis
     loesche_antworten_der_runde(db, ansicht.konto_id, runde_id, verzeichnis)
     return _weiter(ansicht.url("/eintraege"), "geloescht")
+
+
+@router.get("/tagebuch/neu")
+def tagebuch_wahl(request: Request, db: DB, ansicht: ANSICHT):
+    kontext = kontext_tagebuch_wahl(db, ansicht)
+    return templates.TemplateResponse(request, VORLAGEN["tagebuch_wahl"], kontext)
+
+
+# Art im Pfad -> Art in der Datenbank
+ART_IN_DB = {"frei": "frei", "impuls": "impuls", "leitfrage": "leitfragen"}
+
+
+def _neu_anzeigen(request: Request, db, ansicht, art: str, bezug_id: int | None):
+    kontext = kontext_tagebuch_neu(db, ansicht, art, bezug_id)
+    return templates.TemplateResponse(request, VORLAGEN["tagebuch_neu"], kontext)
+
+
+def _neu_anlegen(request: Request, db, ansicht, art: str, bezug_id: int | None, text: str):
+    bezug = hole_bezug(db, ansicht, art, bezug_id)
+    try:
+        neu = lege_tagebucheintrag_an(
+            db,
+            ansicht.konto_id,
+            ART_IN_DB[art],
+            text,
+            impuls=bezug if art == "impuls" else None,
+            leitfrage=bezug if art == "leitfrage" else None,
+        )
+    except InhaltFehler as e:
+        kontext = kontext_tagebuch_neu(
+            db, ansicht, art, bezug_id, text=text, fehler={e.feld: e.meldung}
+        )
+        return templates.TemplateResponse(
+            request, VORLAGEN["tagebuch_neu"], kontext, status_code=400
+        )
+    return _weiter(ansicht.url(f"/tagebuch/{neu}"), "gespeichert")
+
+
+@router.get("/tagebuch/neu/frei")
+def neu_frei_anzeigen(request: Request, db: DB, ansicht: ANSICHT):
+    return _neu_anzeigen(request, db, ansicht, "frei", None)
+
+
+@router.post("/tagebuch/neu/frei", dependencies=[Depends(pruefe_csrf)])
+def neu_frei(request: Request, db: DB, ansicht: ANSICHT, text: Annotated[str, Form()] = ""):
+    return _neu_anlegen(request, db, ansicht, "frei", None, text)
+
+
+@router.get("/tagebuch/neu/impuls/{impuls_id}")
+def neu_impuls_anzeigen(request: Request, db: DB, ansicht: ANSICHT, impuls_id: Id):
+    return _neu_anzeigen(request, db, ansicht, "impuls", impuls_id)
+
+
+@router.post("/tagebuch/neu/impuls/{impuls_id}", dependencies=[Depends(pruefe_csrf)])
+def neu_impuls(
+    request: Request, db: DB, ansicht: ANSICHT, impuls_id: Id, text: Annotated[str, Form()] = ""
+):
+    return _neu_anlegen(request, db, ansicht, "impuls", impuls_id, text)
+
+
+@router.get("/tagebuch/neu/leitfrage/{leitfrage_id}")
+def neu_leitfrage_anzeigen(request: Request, db: DB, ansicht: ANSICHT, leitfrage_id: Id):
+    return _neu_anzeigen(request, db, ansicht, "leitfrage", leitfrage_id)
+
+
+@router.post("/tagebuch/neu/leitfrage/{leitfrage_id}", dependencies=[Depends(pruefe_csrf)])
+def neu_leitfrage(
+    request: Request, db: DB, ansicht: ANSICHT, leitfrage_id: Id, text: Annotated[str, Form()] = ""
+):
+    return _neu_anlegen(request, db, ansicht, "leitfrage", leitfrage_id, text)
+
+
+def _eigener_eintrag(db, ansicht: Ansicht, eintrag_id: int):
+    eintrag = hole_tagebucheintrag(db, ansicht.konto_id, eintrag_id)
+    if eintrag is None:
+        raise HTTPException(404)
+    return eintrag
+
+
+@router.get("/tagebuch/{eintrag_id}")
+def eintrag_anzeigen(request: Request, db: DB, ansicht: ANSICHT, eintrag_id: Id):
+    eintrag = _eigener_eintrag(db, ansicht, eintrag_id)
+    kontext = kontext_tagebuch_eintrag(db, ansicht, eintrag, meldung=_meldung(request))
+    return templates.TemplateResponse(request, VORLAGEN["tagebuch_eintrag"], kontext)
+
+
+@router.post("/tagebuch/{eintrag_id}", dependencies=[Depends(pruefe_csrf)])
+def eintrag_aendern(
+    request: Request, db: DB, ansicht: ANSICHT, eintrag_id: Id, text: Annotated[str, Form()] = ""
+):
+    eintrag = _eigener_eintrag(db, ansicht, eintrag_id)
+    try:
+        aendere_tagebucheintrag(db, ansicht.konto_id, eintrag_id, text)
+    except InhaltFehler as e:
+        meldung = e.meldung if text.strip() else ZUM_LOESCHEN
+        kontext = kontext_tagebuch_eintrag(
+            db, ansicht, eintrag, text=text, fehler={e.feld: meldung}
+        )
+        return templates.TemplateResponse(
+            request, VORLAGEN["tagebuch_eintrag"], kontext, status_code=400
+        )
+    return _weiter(ansicht.url(f"/tagebuch/{eintrag_id}"), "gespeichert")
+
+
+ZUM_LOESCHEN = "Zum Löschen bitte ‹Eintrag löschen› wählen."
+
+
+@router.get("/tagebuch/{eintrag_id}/loeschen")
+def eintrag_loeschen_fragen(request: Request, db: DB, ansicht: ANSICHT, eintrag_id: Id):
+    _eigener_eintrag(db, ansicht, eintrag_id)
+    kontext = {
+        "ansicht": ansicht,
+        "bereich": "tagebuch",
+        "meldung": None,
+        "frage_text": "Diesen Eintrag löschen? Das lässt sich nicht rückgängig machen.",
+        "aktion": ansicht.url(f"/tagebuch/{eintrag_id}/loeschen"),
+        "zurueck": ansicht.url(f"/tagebuch/{eintrag_id}"),
+    }
+    return templates.TemplateResponse(request, VORLAGEN["runde_loeschen"], kontext)
+
+
+@router.post("/tagebuch/{eintrag_id}/loeschen", dependencies=[Depends(pruefe_csrf)])
+def eintrag_loeschen(request: Request, db: DB, ansicht: ANSICHT, eintrag_id: Id):
+    verzeichnis = request.app.state.einstellungen.aufnahmen_verzeichnis
+    if not loesche_tagebucheintrag(db, ansicht.konto_id, eintrag_id, verzeichnis):
+        raise HTTPException(404)
+    return _weiter(ansicht.url("/eintraege"), "geloescht")
+
+
+@router.get("/eintraege")
+def eintraege(request: Request, db: DB, ansicht: ANSICHT):
+    kontext = kontext_eintraege(db, ansicht, meldung=_meldung(request))
+    return templates.TemplateResponse(request, VORLAGEN["eintraege"], kontext)

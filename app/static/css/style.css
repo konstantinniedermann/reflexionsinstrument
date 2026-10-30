@@ -1092,6 +1092,37 @@ input[type="checkbox"] {
   height: 1.25rem;
 }
 
+.bereich--tagebuch .karte--link,
+.bereich--eintraege .karte--eintrag {
+  min-height: 2.75rem;
+}
+
+.wahl__titel {
+  display: block;
+  font-weight: 600;
+}
+
+.wahl__text {
+  display: block;
+  overflow-wrap: anywhere;
+}
+
+.bereich--tagebuch .karte--impuls .impuls__text {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.bereich--eintraege .eintrag__vorschau,
+.bereich--eintraege .eintrag__titel {
+  font-weight: 600;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.bereich--eintraege .karte--eintrag {
+  margin-bottom: 0.75rem;
+}
+
 /* Pilot: Aufnahmen (#17) */
 
 /* Ende #17 */

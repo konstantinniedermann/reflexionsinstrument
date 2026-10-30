@@ -53,11 +53,22 @@ def seiten_client(einstellungen):
 
     from app.db import hole_db
     from app.main import erstelle_app
-    from app.seiten_lehrperson import VORLAGEN, kontext_info, kontext_runde, kontext_start
+    from app.seiten_lehrperson import (
+        VORLAGEN,
+        kontext_info,
+        kontext_runde,
+        kontext_start,
+        kontext_tagebuch_neu,
+        kontext_tagebuch_wahl,
+    )
     from app.vorlagen import templates
     from app.zeit import hole_heute, lies_datum
 
-    kontexte = {"start": kontext_start, "info": kontext_info}
+    kontexte = {
+        "start": kontext_start,
+        "info": kontext_info,
+        "tagebuch_wahl": kontext_tagebuch_wahl,
+    }
     app = erstelle_app(einstellungen)
 
     @app.get("/test-gast/runde/{runde_id}")
@@ -90,6 +101,34 @@ def seiten_client(einstellungen):
             meldung="Nicht gespeichert.",
         )
         return templates.TemplateResponse(request, VORLAGEN["runde"], kontext)
+
+    @app.get("/test-gast/tagebuch/impuls/{impuls_id}")
+    def test_gast_tagebuch_impuls(
+        request: Request,
+        impuls_id: int,
+        db: Annotated[sqlite3.Connection, Depends(hole_db)],
+        heute: Annotated[date, Depends(hole_heute)],
+    ):
+        ansicht = fuer_gast(heute, "Band Gast", ("Anmelden", "/"))
+        kontext = kontext_tagebuch_neu(db, ansicht, "impuls", impuls_id)
+        return templates.TemplateResponse(request, VORLAGEN["tagebuch_neu"], kontext)
+
+    @app.get("/test-meldung/tagebuch")
+    def test_tagebuch_meldung(
+        request: Request,
+        db: Annotated[sqlite3.Connection, Depends(hole_db)],
+        heute: Annotated[date, Depends(hole_heute)],
+    ):
+        ansicht = fuer_gast(heute, "Band Gast", ("Anmelden", "/"))
+        kontext = kontext_tagebuch_neu(
+            db,
+            ansicht,
+            "frei",
+            text="Mein Text",
+            fehler={"text": "Der Eintrag ist noch leer."},
+            meldung="Nicht gespeichert.",
+        )
+        return templates.TemplateResponse(request, VORLAGEN["tagebuch_neu"], kontext)
 
     @app.get("/test-gast/{seite}")
     def test_gast(
@@ -188,3 +227,29 @@ def test_kontext_runde_eingaben_fehler_meldung(seiten_client, db):
     assert f'aria-describedby="fehler-antwort_{f1}"' in text
     assert re.search(rf'id="fehler-antwort_{f1}">Zu lang<', text)
     assert re.search(r'role="status">Nicht gespeichert\.<', text)
+
+
+def test_gast_tagebuch(seiten_client, db):
+    import testdaten
+
+    imp = testdaten.lege_impuls_an(db, "Impuls Eins", "2026-11-23")
+    testdaten.lege_leitfrage_an(db, "Leitfrage Eins")
+    db.commit()
+    seiten_client.app.state.heute = lambda: date(2026, 11, 24)
+    wahl = seiten_client.get("/test-gast/tagebuch_wahl").text
+    assert f'href="/gast/tagebuch/neu/impuls/{imp}"' in wahl
+    assert 'href="/gast/tagebuch/neu/frei"' in wahl
+    assert 'href="/gast/tagebuch/neu/leitfrage/1"' in wahl
+    assert "/lehrperson" not in wahl
+    formular = seiten_client.get(f"/test-gast/tagebuch/impuls/{imp}").text
+    assert 'action="/gast/tagebuch/neu/impuls/' in formular
+    assert 'name="csrf"' in formular
+    assert "data-entwurf" not in formular
+    assert "Impuls Eins" in formular
+
+
+def test_tagebuch_meldung_und_fehler(seiten_client):
+    text = seiten_client.get("/test-meldung/tagebuch").text
+    assert "Mein Text" in text
+    assert "Der Eintrag ist noch leer." in text
+    assert "Nicht gespeichert." in text
