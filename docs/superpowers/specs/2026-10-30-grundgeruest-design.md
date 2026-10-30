@@ -59,7 +59,7 @@ Die Python-Tests liegen in `tests/` neben den Tests des Prototyps. pytest sammel
 |---|---|---|---|
 | `DATEN_VERZEICHNIS` | Ordner für `reflexion.db` und `aufnahmen/` | `./.daten` (gitignored) | `/data` (Volume) |
 | `GEHEIMER_SCHLUESSEL` | Signatur der Sitzungs-Cookies (wird ab #14 gebraucht) | fester Entwicklungswert, mit Warnung | `fly secrets set` |
-| `PRODUKTION` | `1` schaltet HSTS ein und verweigert den Start ohne `GEHEIMER_SCHLUESSEL` | aus | `1` in `fly.toml` |
+| `PRODUKTION` | `1` schaltet HSTS ein und verweigert den Start ohne `GEHEIMER_SCHLUESSEL` oder mit einem Schlüssel unter 32 Zeichen | aus | `1` in `fly.toml` |
 
 `config.py` liest diese einmal und stellt ein unveränderliches Einstellungs-Objekt bereit. Tests setzen ein eigenes Datenverzeichnis.
 

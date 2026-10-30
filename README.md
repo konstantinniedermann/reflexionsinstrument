@@ -26,7 +26,7 @@ Voraussetzung: [uv](https://docs.astral.sh/uv/). Alle Befehle stehen in `make he
 | `make deploy` | Auf fly.io veröffentlichen (Frankfurt), braucht die fly-CLI und eine Anmeldung |
 | `make logs`, `make ssh` | Logs ansehen bzw. Shell auf der Maschine öffnen |
 
-Einstellungen über Umgebungsvariablen: `DATEN_VERZEICHNIS` (Ablage der Datenbank), `GEHEIMER_SCHLUESSEL` (Sitzungen) und `PRODUKTION`. `PRODUKTION` gilt nur beim genauen Wert `1` als eingeschaltet. Im Produktionsbetrieb startet die App ohne `GEHEIMER_SCHLUESSEL` nicht. Den Schlüssel auf fly.io einmalig mit `fly secrets set GEHEIMER_SCHLUESSEL=...` setzen.
+Einstellungen über Umgebungsvariablen: `DATEN_VERZEICHNIS` (Ablage der Datenbank), `GEHEIMER_SCHLUESSEL` (Sitzungen) und `PRODUKTION`. `PRODUKTION` gilt nur beim genauen Wert `1` als eingeschaltet. Im Produktionsbetrieb startet die App ohne `GEHEIMER_SCHLUESSEL` oder mit einem Schlüssel unter 32 Zeichen nicht. Den Schlüssel auf fly.io einmalig mit `fly secrets set GEHEIMER_SCHLUESSEL=...` setzen (zufällig, z. B. `python3 -c "import secrets; print(secrets.token_urlsafe(48))"`).
 
 ## Prüfen (Prototyp)
 

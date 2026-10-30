@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 ENTWICKLUNGS_SCHLUESSEL = "nur-fuer-entwicklung"
+MINDESTLAENGE_SCHLUESSEL = 32
 
 
 @dataclass(frozen=True)
@@ -36,6 +37,11 @@ def lade_einstellungen(umgebung: Mapping[str, str] | None = None) -> Einstellung
             stacklevel=2,
         )
         schluessel = ENTWICKLUNGS_SCHLUESSEL
+    elif produktion and len(schluessel) < MINDESTLAENGE_SCHLUESSEL:
+        raise RuntimeError(
+            f"GEHEIMER_SCHLUESSEL muss in Produktion mindestens {MINDESTLAENGE_SCHLUESSEL}"
+            " Zeichen lang sein."
+        )
     return Einstellungen(
         daten_verzeichnis=Path(umgebung.get("DATEN_VERZEICHNIS", ".daten")),
         geheimer_schluessel=schluessel,

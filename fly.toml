@@ -1,5 +1,5 @@
 # Deploy lokal mit `make deploy`.
-# Geheimer Schlüssel einmalig setzen: fly secrets set GEHEIMER_SCHLUESSEL=...
+# Geheimer Schlüssel einmalig setzen (mindestens 32 Zeichen): fly secrets set GEHEIMER_SCHLUESSEL=...
 
 app = "reflexionsinstrument"
 primary_region = "fra"

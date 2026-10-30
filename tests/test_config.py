@@ -4,6 +4,8 @@ import pytest
 
 from app.config import lade_einstellungen
 
+GUELTIGER_SCHLUESSEL = "s" * 32
+
 
 def test_standardwerte_ohne_umgebung():
     with pytest.warns(UserWarning):
@@ -32,9 +34,18 @@ def test_produktion_mit_leerem_schluessel_schlaegt_fehl():
         lade_einstellungen({"PRODUKTION": "1", "GEHEIMER_SCHLUESSEL": ""})
 
 
+def test_produktion_mit_zu_kurzem_schluessel_schlaegt_fehl():
+    with pytest.raises(RuntimeError, match="32"):
+        lade_einstellungen({"PRODUKTION": "1", "GEHEIMER_SCHLUESSEL": "s" * 31})
+
+
 def test_produktion_mit_schluessel():
     e = lade_einstellungen(
-        {"PRODUKTION": "1", "GEHEIMER_SCHLUESSEL": "x", "DATEN_VERZEICHNIS": "/data"}
+        {
+            "PRODUKTION": "1",
+            "GEHEIMER_SCHLUESSEL": GUELTIGER_SCHLUESSEL,
+            "DATEN_VERZEICHNIS": "/data",
+        }
     )
     assert e.produktion is True
     assert e.daten_verzeichnis == Path("/data")
