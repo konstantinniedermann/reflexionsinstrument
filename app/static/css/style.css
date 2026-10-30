@@ -984,3 +984,9 @@ input[type="date"]:focus {
 .formular > .knopf--leise {
   justify-self: start;
 }
+
+.seitenkopf__titel {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
