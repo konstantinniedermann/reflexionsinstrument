@@ -37,7 +37,8 @@ Entwurf der Frage an die Auftraggeberin: `intern/frage-loeschdatum.md` (nicht im
 |---|---|---|---|---|---|
 | `reflexion.db` auf dem Volume `daten` | Konten, Antworten, Tagebucheinträge, Inhalte der Auftraggeberin | ja | Betreiber | A (Forschungsdaten), B (Rest) | Stufe 1 per SQL, Stufe 2 mit dem Volume |
 | `/data/aufnahmen/` auf dem Volume | Sprachaufnahmen (Stimme) | ja, besonders | Betreiber | A | Stufe 1 |
-| Volume `daten` | beides oben | ja | Betreiber | B | `fly volumes destroy` |
+| Volume `daten` | beides oben | ja | Betreiber | B | `fly volumes destroy`; fly.io hält es danach noch 24 Stunden als «pending_destroy» wiederherstellbar |
+| Alte Kopie eines Volumes, das fly.io selbst auf einen anderen Server verschoben hat | Stand zum Zeitpunkt der Verschiebung | ja | niemand, ausserhalb unseres Einflusses | 1 Woche nach der Verschiebung | nur bei einer Verschiebung durch fly.io, sichtbar ist sie für uns nicht |
 | Automatische Volume-Snapshots bei fly.io | tägliche Kopie des Volumes | ja | niemand direkt, laufen ab | A + 5 Tage bzw. B + 1 Tag | Aufbewahrung verkürzen, ablaufen lassen (siehe [Snapshots](#snapshots-bei-flyio)) |
 | Maschine der App | keine Daten ausser im Arbeitsspeicher (z. B. Zähler für Fehlversuche, #14) | flüchtig | Betreiber | B | `fly machine destroy` |
 | Secret `GEHEIMER_SCHLUESSEL` | Schlüssel für Sitzungs-Cookies | nein | Betreiber | B | mit der App; lokale Kopie beim Betreiber löschen |
@@ -57,7 +58,7 @@ Entwurf der Frage an die Auftraggeberin: `intern/frage-loeschdatum.md` (nicht im
 
 ## Löschen während der Laufzeit
 
-- **Einzelne Einträge und Aufnahmen**, die eine Lehrperson löscht, sind sofort weg aus der App. In der Datenbankdatei überschreibt SQLite den Inhalt (`PRAGMA secure_delete = ON` in `app/db.py`, mit Test). Die Datei der Aufnahme löscht die App (#17). In den Snapshots stehen sie noch bis zu 5 Tage.
+- **Einzelne Einträge und Aufnahmen**, die eine Lehrperson löscht, sind sofort weg aus der App. In `reflexion.db` überschreibt SQLite den Inhalt (`PRAGMA secure_delete = ON` in `app/db.py`, mit Test). Ältere Bereiche der Begleitdatei `reflexion.db-wal` können den Text noch enthalten, bis SQLite sie wiederverwendet. Die Datei der Aufnahme löscht die App (#17); ihre Blöcke auf dem Volume werden dabei nur freigegeben, nicht überschrieben. In den Snapshots stehen beide noch bis zu 5 Tage. Endgültig weg sind sie mit Stufe 2.
 - **Testkonten** der Auftraggeberin (#9) löscht sie vor dem Start selbst. Das Löschen eines Kontos entfernt alle seine Einträge (Kaskade in der Datenbank) und Aufnahmen.
 
 ## Snapshots bei fly.io
@@ -68,7 +69,7 @@ Recherche in der Doku von fly.io, Stand 30.10.2026:
 |---|---|
 | Gibt es automatische Snapshots? | Ja, täglich, standardmässig eingeschaltet. |
 | Wie lange bleiben sie? | Standard 5 Tage, einstellbar von 1 bis 60 Tagen. Eine neue Aufbewahrung gilt nur für **neue** Snapshots, bestehende behalten ihre bisherige. |
-| Werden sie mit `fly volumes destroy` gelöscht? | **Nein.** Snapshots eines gelöschten Volumes bleiben bis zum Ende ihrer Aufbewahrung und lassen sich in dieser Zeit sogar zu einem neuen Volume wiederherstellen. Die ID des gelöschten Volumes zeigt `fly volumes list --all` nur noch 24 Stunden lang an. |
+| Werden sie mit `fly volumes destroy` gelöscht? | **Nein.** Snapshots eines gelöschten Volumes bleiben bis zum Ende ihrer Aufbewahrung und lassen sich in dieser Zeit sogar zu einem neuen Volume wiederherstellen. Die ID des gelöschten Volumes zeigt `fly volumes list --all` nur noch 24 Stunden lang an. Das Volume selbst ist so lange «pending_destroy» (vorläufig gelöscht) und erst danach endgültig weg. |
 | Werden sie mit `fly apps destroy` gelöscht? | Die Doku sagt dazu nichts. Annahme: auch nicht, sie laufen ab. Darum wird die App erst nach dem Nachweis gelöscht. |
 | Lassen sie sich einzeln löschen? | **Nein.** Weder `flyctl` (v0.5.0 kennt nur `create` und `list`) noch die Doku bieten das an: «snapshots are only removed at the end of their retention periods». |
 | Was bewirkt das Ausschalten? | `--scheduled-snapshots=false` verhindert neue Snapshots, bestehende bleiben bis zum Ablauf. |
@@ -77,9 +78,10 @@ Recherche in der Doku von fly.io, Stand 30.10.2026:
 **Konsequenz:**
 1. Während der Laufzeit bleibt die Aufbewahrung bei **5 Tagen** (`snapshot_retention = 5` in `fly.toml`). Die Snapshots sind die einzige Sicherung, falls auf dem Volume etwas schiefgeht. `fly.toml` wird nicht geändert.
 2. In Stufe 1 setzt der Betreiber die Aufbewahrung auf **1 Tag**. Die Snapshots mit Forschungsdaten (älter als Datum A) laufen damit spätestens 5 Tage nach A ab, alle späteren nach 1 Tag.
-3. Stufe 2 frühestens **6 Tage nach A**. Bis dahin enthalten die verbleibenden Snapshots nur noch die Texte und das Konto der Auftraggeberin.
-4. Die **Volume-ID** wird in Stufe 1 ins Löschprotokoll geschrieben. Ohne sie lassen sich die Snapshots eines gelöschten Volumes nach 24 Stunden nicht mehr auflisten und damit nicht nachweisen.
-5. Ob ein späteres `fly deploy` den Wert aus `fly.toml` (5 Tage) wieder auf das bestehende Volume schreibt, sagt die Doku nicht. Darum nach Stufe 1 nicht mehr deployen, oder nach jedem Deploy mit `fly volumes show` prüfen.
+3. Stufe 2 frühestens **6 Tage nach A**. Bis dahin sind alle Snapshots abgelaufen, die vor dem Löschen entstanden sind.
+4. Snapshots sichern das Volume blockweise. Gelöschte Dateien und das Aufräumen der Datenbank geben Blöcke nur frei, ohne sie zu überschreiben. Darum überschreibt Stufe 1 den freien Platz des Volumes mit Nullen (Schritt 1.4). Ohne diesen Schritt könnten auch die Snapshots nach Datum A noch Reste von Aufnahmen enthalten, die sich mit Spezialwerkzeug wiederherstellen liessen.
+5. Die **Volume-ID** wird in Stufe 1 ins Löschprotokoll geschrieben. Ohne sie lassen sich die Snapshots eines gelöschten Volumes nach 24 Stunden nicht mehr auflisten und damit nicht nachweisen.
+6. Ob ein späteres `fly deploy` den Wert aus `fly.toml` (5 Tage) wieder auf das bestehende Volume schreibt, sagt die Doku nicht. Darum nach Stufe 1 nicht mehr deployen, oder nach jedem Deploy mit `fly volumes show` prüfen.
 
 ## Logs bei fly.io
 
@@ -118,7 +120,7 @@ Voraussetzung: Die Auftraggeberin hat den Gesamtexport heruntergeladen, geöffne
    conn = verbinde(Path("/data/reflexion.db"))
    conn.execute("DELETE FROM konten WHERE rolle = 'lehrperson'")
    conn.execute("VACUUM")
-   conn.execute("PRAGMA wal_checkpoint(TRUNCATE)")
+   print(conn.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()[0])  # erwartet: 0
    for t in ("konten", "antworten", "tagebucheintraege", "aufnahmen"):
        print(t, conn.execute(f"SELECT count(*) FROM {t}").fetchone()[0])
    conn.close()
@@ -128,16 +130,23 @@ Voraussetzung: Die Auftraggeberin hat den Gesamtexport heruntergeladen, geöffne
    find /data/aufnahmen -type f -delete
    ls -A /data/aufnahmen                              # erwartet: leer
    ```
-   Erwartet: `antworten`, `tagebucheintraege` und `aufnahmen` 0, `konten` nur noch die Konten der Auftraggeberin. Die Befehle sind lokal an einer Testdatenbank geprobt (30.10.2026): Kaskade greift, Inhalte und Fragen der Auftraggeberin bleiben, gelöschte Texte stehen nicht mehr in der Datei.
-4. In der App als Auftraggeberin anmelden: Übersicht zeigt keine Lehrpersonen und keine Einträge. Gast-Ansicht funktioniert weiter.
-5. Löschprotokoll in #10: Datum, Volume-ID, Ausgaben aus 2 bis 4.
+   Erwartet: Checkpoint 0 (sonst kurz warten und wiederholen), `antworten`, `tagebucheintraege` und `aufnahmen` 0, `konten` nur noch die Konten der Auftraggeberin. Die Auftraggeberin selbst schreibt keine Einträge und macht keine Aufnahmen; darum dürfen alle Dateien in `/data/aufnahmen/` weg. Die Befehle sind lokal an einer Testdatenbank geprobt (30.10.2026): Kaskade greift, Inhalte und Fragen der Auftraggeberin bleiben, gelöschte Texte stehen nicht mehr in der Datei.
+4. Freien Platz auf dem Volume überschreiben, damit gelöschte Aufnahmen und alte Datenbankblöcke auch in künftigen Snapshots nicht mehr stehen (dauert bei 1 GB Sekunden; die App kann währenddessen kurz nicht schreiben, nach der Laufzeit unkritisch):
+   ```sh
+   # weiter auf der Maschine:
+   dd if=/dev/zero of=/data/nullen bs=1M; sync; rm /data/nullen; sync
+   df -h /data                                        # erwartet: wieder fast alles frei
+   ```
+   Die Meldung «No space left on device» von `dd` ist dabei erwartet.
+5. In der App als Auftraggeberin anmelden: Übersicht zeigt keine Lehrpersonen und keine Einträge. Gast-Ansicht funktioniert weiter.
+6. Löschprotokoll in #10: Datum, Volume-ID, Ausgaben aus 2 bis 5.
 
 ### Nachweis 1 (frühestens A + 6 Tage)
 
 ```sh
 fly volumes snapshots list <VOLUME_ID> -a reflexionsinstrument
 ```
-Erwartet: nur Snapshots mit Erstelldatum nach Datum A. Ausgabe ins Löschprotokoll.
+Erwartet: nur Snapshots mit Erstelldatum nach Datum A (bzw. nach Schritt 1.4). Ausgabe ins Löschprotokoll. Restrisiko: Was fly.io auf seinen Servern mit freigegebenen Blöcken macht, lässt sich von aussen nicht prüfen. Mit Stufe 2 und dem Ablauf der letzten Snapshots ist auch das erledigt.
 
 ### Stufe 2: Abbau (Datum B)
 
@@ -146,7 +155,7 @@ Erwartet: nur Snapshots mit Erstelldatum nach Datum A. Ausgabe ins Löschprotoko
    fly volumes update <VOLUME_ID> --scheduled-snapshots=false -a reflexionsinstrument
    fly machine destroy <MASCHINEN_ID> --force -a reflexionsinstrument
    fly volumes destroy <VOLUME_ID> -y -a reflexionsinstrument
-   fly volumes list --all -a reflexionsinstrument     # erwartet: Volume im Zustand «destroyed»
+   fly volumes list --all -a reflexionsinstrument     # erwartet: Volume «pending_destroy», nach 24 Stunden nicht mehr aufgeführt
    ```
 2. Zwei Tage warten, dann:
    ```sh
@@ -164,12 +173,13 @@ Erwartet: nur Snapshots mit Erstelldatum nach Datum A. Ausgabe ins Löschprotoko
 
 ### Variante: ein Löschtag
 
-Will die Auftraggeberin die Gast-Ansicht nicht länger behalten, fallen A und B zusammen. Damit am Löschtag keine Snapshots mit Forschungsdaten 5 Tage weiterleben, wird Schritt 1.2 (Aufbewahrung auf 1 Tag) **mindestens 5 Tage vorher** ausgeführt, sobald der Export bestätigt ist. Am Löschtag folgen 1.3 bis 1.5 und gleich danach Stufe 2. Vollständig gelöscht ist dann 2 Tage nach dem Löschtag.
+Will die Auftraggeberin die Gast-Ansicht nicht länger behalten, fallen A und B zusammen. Damit am Löschtag keine Snapshots mit Forschungsdaten 5 Tage weiterleben, wird Schritt 1.2 (Aufbewahrung auf 1 Tag) **mindestens 5 Tage vorher** ausgeführt, sobald der Export bestätigt ist. Am Löschtag folgen 1.3 bis 1.5 und gleich danach Stufe 2. Vollständig gelöscht ist dann 2 Tage nach dem Löschtag. Schritt 1.4 (Nullen) entfällt in dieser Variante nicht, er kostet nichts.
 
 ## Quellen
 
 - fly.io, Volume-Snapshots: https://docs.fly.io/volumes/snapshots (Aufbewahrung 1 bis 60 Tage, Standard 5; neue Aufbewahrung nur für neue Snapshots; Ausschalten entfernt bestehende nicht; «only removed at the end of their retention periods»)
 - fly.io, Volumes verwalten: https://docs.fly.io/volumes/volume-manage (Löschen ist endgültig; angehängte Volumes lassen sich nicht löschen; gelöschte Volumes aus Snapshots wiederherstellen; Volume-ID 24 Stunden in `fly volumes list --all`)
+- fly.io, Zustände eines Volumes: https://docs.fly.io/volumes/volume-states (vorläufig gelöscht «pending_destroy» 24 Stunden, nach einer Verschiebung durch fly.io 1 Woche)
 - fly.io, Konfiguration `[mounts]`: https://docs.fly.io/reference/configuration (`snapshot_retention`, `scheduled_snapshots`)
 - fly.io, Logs: https://docs.fly.io/metrics-and-logs/logs («retains logs for 7 days»)
 - fly.io, Preise: https://docs.fly.io/about/pricing (Snapshots 0.08 USD pro GB und Monat, 10 GB frei)

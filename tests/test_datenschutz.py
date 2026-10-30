@@ -54,6 +54,9 @@ def test_vorlagen_und_css_laden_nichts_von_aussen():
     verboten = re.compile(
         r"https?://|(?:src|href)\s*=\s*['\"]?//|url\(\s*['\"]?//|@import\s+(?:url\()?['\"]?//"
     )
+    # Namensraum-Angaben in eingebettetem SVG laden nichts.
+    namensraum = re.compile(r"xmlns(?::\w+)?=\"http://www\.w3\.org/[^\"]*\"")
     for datei in dateien:
-        treffer = verboten.search(datei.read_text(encoding="utf-8"))
+        text = namensraum.sub("", datei.read_text(encoding="utf-8"))
+        treffer = verboten.search(text)
         assert treffer is None, f"{datei.relative_to(PROJEKT)}: {treffer.group(0)!r}"

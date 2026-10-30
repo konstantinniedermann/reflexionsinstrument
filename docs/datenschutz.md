@@ -30,7 +30,7 @@ Stand 30.10.2026 (Grundgerüst aus #13 plus dieses Issue).
 | Keine externen Ressourcen | Templates und CSS laden nichts von aussen. Schriften sind Systemschriften (`system-ui`, `Georgia` usw.), kein `@import`, kein `url(…)` | Test `test_vorlagen_und_css_laden_nichts_von_aussen` (alle Templates und CSS-Dateien, auch künftige), Test `test_startseite_ohne_externe_quellen`, CSP `default-src 'self'` |
 | Keine Weitergabe beim Verlassen der Seite | Kein Referrer an fremde Seiten | `Referrer-Policy: no-referrer` |
 | Keine IP-Adressen in Logs | Bis jetzt protokollierte uvicorn jede Anfrage mit echter Client-IP und Pfad, auch die Health-Checks alle 30 Sekunden. Abgeschaltet, siehe [Logs](#logs) | Test `test_produktion_schreibt_keine_zugriffsprotokolle` |
-| Gelöschte Einträge sind wirklich weg | Ohne Einstellung bleibt der Text eines gelöschten Eintrags als freier Speicher in der Datenbankdatei. Jetzt überschreibt SQLite ihn (`PRAGMA secure_delete = ON`) | Test `test_geloeschter_eintrag_ist_aus_der_datei_entfernt` |
+| Gelöschte Einträge sind wirklich weg | Ohne Einstellung bleibt der Text eines gelöschten Eintrags als freier Speicher in der Datenbankdatei. Jetzt überschreibt SQLite ihn (`PRAGMA secure_delete = ON`). Reste in der Begleitdatei `-wal` und in Snapshots behandelt das [Löschkonzept](loeschkonzept.md#löschen-während-der-laufzeit) | Test `test_geloeschter_eintrag_ist_aus_der_datei_entfernt` |
 | Aufnahmen ohne Zusatzangaben | Der Browser liefert WebM/Opus bzw. MP4/AAC; die App wandelt nichts um und schickt nichts weiter | #17 prüft an einer Testaufnahme, dass keine Geräte- oder Ortsangaben in der Datei stehen |
 | Daten in der EU | Region Frankfurt (`primary_region = "fra"`) | `fly.toml` |
 
@@ -45,7 +45,7 @@ Stand 30.10.2026 (Grundgerüst aus #13 plus dieses Issue).
 
 **Verworfen:** IP-Adressen im Log kürzen (eigenes Log-Format, mehr Code für wenig Nutzen); Zugriffsprotokoll behalten (siehe oben).
 
-**Nachweis:** Lokal mit denselben Argumenten gestartet: Mit Zugriffsprotokoll erscheint `203.0.113.7:0 - "GET / HTTP/1.1" 200 OK`, mit `--no-access-log` nur noch Start und Stopp. Auf fly.io wirkt es ab dem nächsten Deploy. Danach zeigt `fly logs` keine Zeilen `GET /healthz` mehr.
+**Nachweis:** Lokal mit denselben Argumenten gestartet: Mit Zugriffsprotokoll erscheint `203.0.113.7:0 - "GET / HTTP/1.1" 200 OK`, mit `--no-access-log` nur noch Start und Stopp. Auf fly.io wirkt es ab dem nächsten Deploy. Danach zuerst die echte Startzeile prüfen (`fly ssh console -C "sh -c 'tr \"\\0\" \" \" < /proc/<pid>/cmdline'"`, enthält `--no-access-log`), dann zeigt `fly logs` keine Zeilen `GET /healthz` mehr. Der Deploy soll vor dem Testlauf (#9) erfolgen, damit nie eine IP-Adresse einer Lehrperson in die Logs gelangt.
 
 **Regel für alle weiteren Issues:** Eigene Log-Meldungen enthalten keine Inhalte, keine Benutzernamen, keine Passwörter und keine IP-Adressen. Fehlversuche beim Anmelden (#14) werden höchstens als Ereignis ohne diese Angaben geloggt. Muss das Zugriffsprotokoll für eine Fehlersuche während der Laufzeit vorübergehend eingeschaltet werden, kommt das ins Löschprotokoll (#10).
 
