@@ -143,3 +143,21 @@ def test_gruppiere_zwei_lehrpersonen_eine_runde(db, lehrperson, zweite_lehrperso
     karten = gruppiere(alle_zeilen(db))
     assert len(karten) == 2
     assert {k.konto_id for k in karten} == {lehrperson["id"], zweite_lehrperson["id"]}
+
+
+def test_fremde_aufnahme_nicht_in_zeilen(db, lehrperson, zweite_lehrperson, einstellungen):
+    konto = lehrperson["id"]
+    verzeichnis = einstellungen.daten_verzeichnis / "aufnahmen"
+    fremd = testdaten.lege_aufnahme_an(db, zweite_lehrperson["id"], verzeichnis, dauer_sekunden=5)
+    _, (f1, _) = testdaten.lege_runde_an(db)
+    testdaten.lege_antwort_an(db, f1, konto, "Text", aufnahme_id=fremd)
+    testdaten.lege_eintrag_an(db, konto, "aufnahme", None, aufnahme_id=fremd)
+    zeilen = zeilen_von(db, konto)
+    assert len(zeilen) == 2
+    for z in zeilen:
+        assert z.aufnahme_id == fremd
+        assert (z.aufnahme_dateiname, z.aufnahme_mime_typ, z.aufnahme_dauer_sekunden) == (
+            None,
+            None,
+            None,
+        )

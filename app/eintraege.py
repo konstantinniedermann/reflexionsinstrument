@@ -339,7 +339,7 @@ SELECT * FROM (
     JOIN fragen f ON f.id = a.frage_id
     JOIN runden r ON r.id = f.runde_id
     JOIN konten k ON k.id = a.konto_id
-    LEFT JOIN aufnahmen au ON au.id = a.aufnahme_id
+    LEFT JOIN aufnahmen au ON au.id = a.aufnahme_id AND au.konto_id = a.konto_id
     UNION ALL
     SELECT 'tagebuch', t.id, t.konto_id, k.anzeigename,
            CASE t.art WHEN 'impuls' THEN 'impuls' ELSE 'tagebuch' END, t.art,
@@ -348,7 +348,7 @@ SELECT * FROM (
            t.erstellt, t.geaendert
     FROM tagebucheintraege t
     JOIN konten k ON k.id = t.konto_id
-    LEFT JOIN aufnahmen au ON au.id = t.aufnahme_id
+    LEFT JOIN aufnahmen au ON au.id = t.aufnahme_id AND au.konto_id = t.konto_id
 )
 """
 
