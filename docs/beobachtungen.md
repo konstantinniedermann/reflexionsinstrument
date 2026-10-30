@@ -142,6 +142,7 @@ Letzte Auswertung: 30.10.2026 (15 Einträge, alle abgeschlossen)
 - Der Satz «Die Links in der Tabelle öffnen die Aufnahme, wenn du angemeldet bist.» verspricht einen Klick, Excel macht aus der Adresse aber keinen Link.
 - Ein Hinweis zum Löschen des Exports nach Projektende (Löschkonzept) steht nicht in der Oberfläche.
 - Filter-Chips am Desktop: waagrechtes Scrollen mit der Maus ist nicht sichtbar, spätere Chips sind abgeschnitten; alle Personen sind über die Karten erreichbar.
+- Personen-Karten unter etwa 360 px Breite nur einspaltig (`minmax(10rem, 1fr)`); bei Bedarf `minmax(min(10rem, 100%), 1fr)`.
 - `eintraege.csv` im ZIP trägt das Datum 01.01.1980.
 - Der Strom liefert gelegentlich leere Byte-Stücke (harmlos).
 - Testlücken: Lesefehler mitten im Kopieren nicht getestet; `test_zip_dateien` vergleicht Instant statt Zürcher Wandzeit; `test_exportzeilen_zeitzone` prüft die Stunde nur über die CSV; Personen-Asserts in `test_uebersicht_personen` nicht an die Karte gebunden; «ohne Woche» über CSS-Klasse geprüft; lose Substring-Prüfungen in `test_verwaltung_eintraege_liste.py`; kein Listen-Test für «1 von 2»; ZIP-Tabelle nicht zeilenweise mit `tabelle.csv` verglichen; der Screenshot-Clip im E2E dupliziert die Dateinamenlogik.
