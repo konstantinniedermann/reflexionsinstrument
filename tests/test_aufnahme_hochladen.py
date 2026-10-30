@@ -136,6 +136,17 @@ def test_zu_gross_ohne_parsen(lp, monkeypatch):
     assert "Zu gross" in r.text
 
 
+def test_sehr_lange_content_length_413(lp, monkeypatch):
+    _kein_parsen(monkeypatch)
+    r = lp.post(
+        SEITE,
+        content=b"x",
+        headers={"content-type": "multipart/form-data; boundary=x", "content-length": "9" * 5000},
+    )
+    assert r.status_code == 413
+    assert "Zu gross" in r.text
+
+
 def test_ohne_anmeldung_ohne_parsen(client, monkeypatch):
     _kein_parsen(monkeypatch)
     r = client.post(SEITE, files=datei(), data={"csrf": "x"})
@@ -233,3 +244,18 @@ def test_auftraggeberin_403(client, auftraggeberin):
 
     als_leitung(client, auftraggeberin)
     assert client.get(SEITE).status_code == 403
+
+
+def test_aufraeumen_fehler_aendert_nichts(lp, db, einstellungen, monkeypatch, caplog):
+    def kaputt(*args, **kwargs):
+        raise OSError("kaputt")
+
+    monkeypatch.setattr(aufnahmen.os, "scandir", kaputt)
+    with caplog.at_level("WARNING"):
+        r = sende(lp, datei())
+    monkeypatch.undo()
+    assert r.status_code == 303
+    assert db.execute("SELECT COUNT(*) FROM tagebucheintraege").fetchone()[0] == 1
+    assert len(ordner(einstellungen)) == 1
+    meldungen = [x.getMessage() for x in caplog.records if "Aufraeumen" in x.getMessage()]
+    assert meldungen == ["Aufraeumen der Aufnahmen fehlgeschlagen"]

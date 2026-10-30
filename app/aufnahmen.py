@@ -124,7 +124,18 @@ def schreibe_datei(quelle: BinaryIO, verzeichnis: Path) -> Datei:
 
 
 def raeume_waisen(db: sqlite3.Connection, verzeichnis: Path, jetzt: float | None = None) -> int:
-    """Loescht alte Dateien mit Aufnahme-Namen, die keine Zeile hat; Rueckgabe: Anzahl."""
+    """Loescht alte Dateien mit Aufnahme-Namen, die keine Zeile hat; Rueckgabe: Anzahl.
+
+    Best effort: Das Speichern ist da schon abgeschlossen, ein Fehler hier wird nur geloggt.
+    """
+    try:
+        return _raeume_waisen(db, verzeichnis, jetzt)
+    except (OSError, sqlite3.Error):
+        _log.warning("Aufraeumen der Aufnahmen fehlgeschlagen")
+        return 0
+
+
+def _raeume_waisen(db: sqlite3.Connection, verzeichnis: Path, jetzt: float | None) -> int:
     grenze = (time.time() if jetzt is None else jetzt) - WAISEN_ALTER_SEKUNDEN
     bekannt = {r["dateiname"] for r in db.execute("SELECT dateiname FROM aufnahmen")}
     geloescht = 0

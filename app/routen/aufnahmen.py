@@ -9,7 +9,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import FileResponse, RedirectResponse
 from starlette.datastructures import UploadFile
 
-from app import aufnahmen, eintraege
+from app import aufnahmen, eintraege, groesse
 from app.ansicht import Ansicht, hole_ansicht_lehrperson
 from app.aufnahmen import AufnahmeFehler, aufnahme, aufnahme_pfad, eigene_aufnahme
 from app.csrf import pruefe_csrf
@@ -36,7 +36,12 @@ async def begrenze_upload(request: Request) -> None:
     laenge = request.headers.get("content-length")
     if laenge is None:
         raise HTTPException(411)
-    if not re.fullmatch(r"[0-9]+", laenge) or int(laenge) > aufnahmen.MAX_ANFRAGE_BYTES:
+    # Ziffernzahl vor int() begrenzen: int() lehnt sehr lange Ziffernfolgen mit ValueError ab.
+    if (
+        len(laenge) > groesse.ZIFFERN_HOECHSTENS
+        or not re.fullmatch(r"[0-9]+", laenge)
+        or int(laenge) > aufnahmen.MAX_ANFRAGE_BYTES
+    ):
         raise ZuGross()
     await request.form(max_files=1, max_fields=5)
 
