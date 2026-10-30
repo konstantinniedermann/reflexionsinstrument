@@ -17,15 +17,16 @@ from app.zeit import datum_kurz, zeitplan
 def instrument_titel(request: Request) -> dict[str, str]:
     """Titel des Instruments fuer jede Seite, auch Fehlerseiten: darf nie selbst scheitern."""
     titel = STANDARD_TITEL
-    try:
-        conn = verbinde(request.app.state.einstellungen.db_pfad)
+    einstellungen = getattr(request.app.state, "einstellungen", None)
+    if einstellungen is not None:
         try:
-            titel = lies_titel(conn)
-        finally:
-            conn.close()
-    except (AttributeError, sqlite3.Error):
-        pass
-    request.state.instrument_titel = titel
+            conn = verbinde(einstellungen.db_pfad)
+            try:
+                titel = lies_titel(conn)
+            finally:
+                conn.close()
+        except sqlite3.Error:
+            pass
     return {"instrument_titel": titel}
 
 

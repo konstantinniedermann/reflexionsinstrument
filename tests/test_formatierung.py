@@ -25,7 +25,7 @@ def test_crlf():
     assert f("a\r\nb\r\n\r\nc") == "<p>a<br>b</p><p>c</p>"
 
 
-@pytest.mark.parametrize("text", ["- x", "* x", "• x", "-\tx", "•\tx", "  - x"])
+@pytest.mark.parametrize("text", ["- x", "* x", "• x", "-\tx", "•\tx", "  - x", "– x", "–\tx"])
 def test_liste_zeichen(text):
     assert f(text) == "<ul><li>x</li></ul>"
 

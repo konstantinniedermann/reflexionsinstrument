@@ -4,7 +4,7 @@ import re
 
 from markupsafe import Markup, escape
 
-_LISTENZEILE = re.compile(r"^\s*[-*•][ \t]+(\S.*)$")
+_LISTENZEILE = re.compile(r"^\s*[-*•–][ \t]+(\S.*)$")
 _FETT = re.compile(r"\*\*(\S(?:.*?\S)?)\*\*")
 _LEERZEILE = re.compile(r"\n\s*\n")
 

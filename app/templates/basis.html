@@ -17,7 +17,7 @@
         <span class="gedaempft">{{ konto.anzeigename }}</span>
         <form method="post" action="/abmelden">
           {{ csrf_feld(request) }}
-          <button type="submit" class="knopf knopf--klein">Abmelden</button>
+          <button type="submit" class="knopf knopf--klein knopf--kopf">Abmelden</button>
         </form>
         {% endif %}
         {% endblock %}

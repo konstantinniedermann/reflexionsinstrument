@@ -39,6 +39,7 @@
       {{ feldfehler(fehler, "projektstart") }}
     </div>
     <button type="submit" class="knopf">Speichern</button>
+    {% if not stand.bestaetigt %}<p class="hilfe">Mit Speichern bestätigst du auch die Begrüssung.</p>{% endif %}
   </form>
 </section>
 {% endblock %}

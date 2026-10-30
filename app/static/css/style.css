@@ -992,3 +992,12 @@ input[type="date"]:focus {
   max-width: 100%;
   overflow-wrap: anywhere;
 }
+
+.knopf--kopf {
+  min-height: 2.75rem;
+}
+
+input[type="radio"],
+input[type="checkbox"] {
+  accent-color: var(--akzent);
+}

@@ -61,6 +61,7 @@ def test_allgemein_zeigt_vorschlag_markiert(client, auftraggeberin):
     feld = re.search(r'<textarea[^>]*name="begruessung"[^>]*>(.*?)</textarea>', text, re.DOTALL)
     assert feld and REGISTER["begruessung"].vorschlag in feld.group(1)
     assert "Vorschlag, noch nicht von dir bestätigt" in text
+    assert "Mit Speichern bestätigst du auch die Begrüssung." in text
 
 
 def test_allgemein_speichern(client, auftraggeberin):
@@ -71,6 +72,7 @@ def test_allgemein_speichern(client, auftraggeberin):
     text = client.get(antwort.headers["location"]).text
     assert "Gespeichert." in text
     assert "noch nicht von dir bestätigt" not in text
+    assert "Mit Speichern bestätigst du auch die Begrüssung." not in text
     anzeige = re.search(r'id="begruessung-anzeige".*?</section>', text, re.DOTALL).group(0)
     assert "<p>Hallo</p><ul><li>a</li><li><strong>b</strong></li></ul>" in anzeige
     assert re.search(r"<title>[^<]*Lernheft", text)
