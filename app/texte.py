@@ -29,8 +29,8 @@ _VORLAGEN = [
         "Begrüssung",
         "Auf der Startseite, ganz oben.",
         "allgemein",
-        "Willkommen im Reflexionsinstrument. Hier hältst du Gedanken zu deinem Unterricht "
-        "fest und beantwortest Fragen, die nach und nach freigeschaltet werden.",
+        "Willkommen im Reflexionsinstrument. Hier lassen sich Gedanken zum Unterricht "
+        "festhalten und Fragen beantworten, die nach und nach freigeschaltet werden.",
     ),
     Textvorlage(
         "hinweis_tagebuch",
