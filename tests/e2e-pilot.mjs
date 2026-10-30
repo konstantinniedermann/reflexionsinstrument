@@ -541,7 +541,102 @@ async function ablaufAufnahmen() {
 }
 
 async function ablaufEintraege() {
-  // #18 füllt diese Funktion
+  const abmelden = ".seitenkopf form[action='/abmelden'] button";
+  const NAME = "Ida Überlangernachnamebeispielperson";
+  await handy();
+  await farbschema("light");
+
+  // 1. Vorbereitung: eigener Zugang mit langem Namen, mehrzeiliger freier Eintrag
+  await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
+  muss((await text()).includes("Abmelden"), "Einträge: Auftraggeberin angemeldet");
+  const pwIda = await legeZugangAn(NAME, "lp.e2e.export");
+  await sende(abmelden);
+  await meldeAn("lp.e2e.export", pwIda);
+  await oeffne("/lehrperson/tagebuch/neu/frei");
+  await tippe("#text", "Erste Zeile\nZweite Zeile");
+  await sende("form.formular button[type=submit]");
+  muss(/^\/lehrperson\/tagebuch\/\d+$/.test(await pfad()), "Einträge: freier Eintrag der Testperson gespeichert");
+  await sende(abmelden);
+  await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
+
+  // 2. Verwaltung: Karte und Navigation
+  let stand = merke();
+  await oeffne("/verwaltung");
+  pruefe(await js("!!document.querySelector('a.karte[href=\"/verwaltung/eintraege\"]')"), "Einträge: Karte «Einträge» auf der Verwaltung ist ein Link");
+  pruefe(await js("[...document.querySelectorAll('.verwaltungsnavigation a')].some((a) => a.innerText.trim() === 'Einträge')"), "Einträge: Navigation enthält «Einträge»");
+  await keinUeberlauf("Verwaltung mit Navigation 390 px");
+  keineFehlerSeit(stand, "Verwaltung mit Einträgen");
+
+  // 3. Seite Einträge, Filter
+  stand = merke();
+  await sende("a.karte[href='/verwaltung/eintraege']");
+  muss((await pfad()) === "/verwaltung/eintraege", "Einträge: Karte führt auf die Seite Einträge");
+  const idaKarte = `[...document.querySelectorAll('a.karte--person')].find((a) => a.innerText.includes('Ida'))`;
+  pruefe(await js(`!!(${idaKarte})?.innerText.includes('1 Tagebucheintrag')`), "Einträge: Karte von Ida zeigt «1 Tagebucheintrag»");
+  await keinUeberlauf("Einträge 390 px");
+  await screenshot("40-eintraege");
+  await screenshot("44-export-karte");
+  const knoepfe = await js(
+    `[...document.querySelectorAll('#export a.knopf')].map((e) => { const r = e.getBoundingClientRect(); return r.height >= 43.5 && r.left >= 0 && r.right <= ${sollBreite}; })`,
+  );
+  pruefe(knoepfe.length === 2 && knoepfe.every(Boolean), "Einträge: beide Export-Knöpfe ganz im Bild und tippbar hoch");
+  const alleKarten = await js("document.querySelectorAll('article.karte--eintrag').length");
+  const idaHref = await js(`(${idaKarte}).getAttribute("href")`);
+  await sende(`a.karte--person[href='${idaHref}']`);
+  muss((await js("location.search")).startsWith("?lehrperson="), "Einträge: Karte von Ida filtert");
+  pruefe(await js("document.querySelector('nav.chips .chip[aria-current]')?.innerText.includes('Ida')"), "Einträge: Chip von Ida ist aktiv");
+  pruefe(
+    await js("[...document.querySelectorAll('article.karte--eintrag')].every((a) => !a.innerText.includes('Erika') && !a.innerText.includes('Zora'))"),
+    "Einträge: gefilterte Liste ohne Einträge anderer Personen",
+  );
+  await keinUeberlauf("Einträge gefiltert 390 px");
+  await screenshot("43-eintraege-gefiltert");
+
+  // 4. Zeilenumbruch im Eintrag
+  const umbruch = await js(
+    `(() => { const el = [...document.querySelectorAll('article.karte--eintrag .antwort__text')].find((e) => e.textContent.includes('Erste Zeile')); return el ? { ws: getComputedStyle(el).whiteSpace, t: el.innerText } : null; })()`,
+  );
+  muss(umbruch !== null, "Einträge: Eintrag von Ida steht in der Liste");
+  pruefe(umbruch.ws === "pre-wrap", "Einträge: Text mit white-space pre-wrap");
+  pruefe(/Erste Zeile\s*\n\s*Zweite Zeile/.test(umbruch.t), "Einträge: Zeilenumbruch bleibt sichtbar");
+
+  // «Alle» zeigt wieder alle
+  await sende("nav.chips a.chip:first-child");
+  pruefe((await js("document.querySelectorAll('article.karte--eintrag').length")) >= alleKarten && !(await js("location.search")), "Einträge: «Alle» zeigt wieder alle Einträge");
+
+  // 5. Downloads im Seitenkontext
+  const dl = await js(
+    `(async () => {
+      const t = await fetch("/verwaltung/eintraege/tabelle.csv");
+      const tb = new Uint8Array(await t.arrayBuffer());
+      const z = await fetch("/verwaltung/eintraege/gesamtexport.zip");
+      const zb = new Uint8Array(await z.arrayBuffer());
+      return { ts: t.status, kopf: [...tb.slice(0, 3)], zs: z.status, pk: String.fromCharCode(zb[0], zb[1]) };
+    })()`,
+  );
+  pruefe(dl.ts === 200 && dl.kopf.join() === "239,187,191", "Einträge: Tabelle 200 und beginnt mit EF BB BF");
+  pruefe(dl.zs === 200 && dl.pk === "PK", "Einträge: Gesamtexport 200 und beginnt mit PK");
+
+  // 6. Aufnahme (nur wenn eine auf der Seite steht)
+  const audio = await js("document.querySelector('audio')?.src ?? null");
+  if (audio) {
+    const a = await js(`(async () => { const r = await fetch(${JSON.stringify(audio)}); return { s: r.status, t: r.headers.get("content-type") }; })()`);
+    pruefe(a.s === 200 && a.t.startsWith("audio/"), "Einträge: Aufnahme lädt mit Typ audio/…");
+  }
+  keineFehlerSeit(stand, "Seite Einträge");
+
+  // 7. Dunkel und Desktop
+  await oeffne("/verwaltung/eintraege");
+  await farbschema("dark");
+  await keinUeberlauf("Einträge 390 px dunkel");
+  await screenshot("41-eintraege-dunkel");
+  await farbschema("light");
+  await desktop();
+  await oeffne("/verwaltung/eintraege");
+  await keinUeberlauf("Einträge 1280 px");
+  await screenshot("42-eintraege-desktop");
+  await handy();
+  await sende(abmelden);
 }
 
 async function ablaufGast() {

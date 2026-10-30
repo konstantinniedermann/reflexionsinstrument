@@ -4,7 +4,7 @@ Eine einfache Anwendung, mit der Lehrpersonen zu mehreren Zeitpunkten ein Reflex
 
 ## Stand
 
-Die Anforderungen an die Pilot-Version stehen in [docs/anforderungen.md](docs/anforderungen.md), die Technik in [docs/adr/ADR-001-technik-pilot.md](docs/adr/ADR-001-technik-pilot.md). Die Pilot-Version ist im Aufbau: Das Grundgerüst läuft unter https://reflexionsinstrument.fly.dev. Es gibt die Anmeldung (Login und Abmelden), die Verwaltung der Zugänge für Lehrpersonen und die Eingabemaske für alle Inhalte (Titel und Begrüssung, Infoblock, Runden mit Fragen, Leitfragen, Impulse, Hinweise) durch die Auftraggeberin sowie die Lehrpersonen-Ansicht (Runden, Tagebuch, Meine Einträge).
+Die Anforderungen an die Pilot-Version stehen in [docs/anforderungen.md](docs/anforderungen.md), die Technik in [docs/adr/ADR-001-technik-pilot.md](docs/adr/ADR-001-technik-pilot.md). Die Pilot-Version ist im Aufbau: Das Grundgerüst läuft unter https://reflexionsinstrument.fly.dev. Es gibt die Anmeldung (Login und Abmelden), die Verwaltung der Zugänge für Lehrpersonen und die Eingabemaske für alle Inhalte (Titel und Begrüssung, Infoblock, Runden mit Fragen, Leitfragen, Impulse, Hinweise) durch die Auftraggeberin die Lehrpersonen-Ansicht (Runden, Tagebuch, Meine Einträge) sowie die Ansicht der Auftraggeberin: Einträge lesen, Tabelle und Gesamtexport.
 
 Der **klickbare Wegwerf-Prototyp** hat dazu gedient, Feedback zu holen. Er ist nicht die Pilot-Version. Aufbau und Entscheidungen: [docs/prototyp.md](docs/prototyp.md).
 
