@@ -839,6 +839,18 @@ async function ablaufAufnahmen() {
   pruefe(!dateien().includes(neu[0]), "Eintrag gelöscht: Datei nicht mehr im Ordner");
   keineFehlerSeit(stand, "Gesprochenen Eintrag löschen", ["status of 404"]);
   await sende(abmelden);
+
+  // 10. Eine Aufnahme bleibt stehen, damit der Ablauf «Einträge» (#18) den Player der Verwaltung prüft
+  stand = merke();
+  await meldeAn("lp.e2e.aufnahme2", pwBen);
+  await oeffne(SEITE);
+  await nimmAuf(2);
+  await sende('[data-aktion="speichern"]');
+  pruefe(/^\/lehrperson\/tagebuch\/\d+$/.test(await pfad()) && (await meldung()).includes("Gespeichert."), "Zweite Lehrperson: gesprochener Eintrag gespeichert (bleibt für die Auswertung)");
+  keineFehlerSeit(stand, "Aufnahme für die Auswertung");
+  await handy();
+  await farbschema("light");
+  await sende(abmelden);
 }
 
 async function ablaufEintraege() {
