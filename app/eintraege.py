@@ -142,3 +142,234 @@ def rundenstand(db: sqlite3.Connection, konto_id: int) -> dict[int, Stand]:
         (konto_id,),
     ).fetchall()
     return {z["runde_id"]: Stand(z["beantwortet"], z["fragen"]) for z in zeilen}
+
+
+# --- Tagebuch ---
+
+TAGEBUCH_ARTEN = ("frei", "leitfragen", "impuls", "aufnahme")
+
+
+def lies_tagebuchtext(text: str | None, pflicht: bool = True) -> str | None:
+    """Normalisiert den Text eines Eintrags; leer ist nur ohne `pflicht` erlaubt (dann `None`)."""
+    return langer_text(text or "", "text", "Der Eintrag ist noch leer." if pflicht else None)
+
+
+def anzahl_tagebucheintraege(db: sqlite3.Connection, konto_id: int) -> int:
+    return db.execute(
+        "SELECT COUNT(*) FROM tagebucheintraege WHERE konto_id = ?", (konto_id,)
+    ).fetchone()[0]
+
+
+def lege_tagebucheintrag_an(
+    db: sqlite3.Connection,
+    konto_id: int,
+    art: str,
+    text: str | None,
+    *,
+    impuls: sqlite3.Row | None = None,
+    leitfrage: sqlite3.Row | None = None,
+    aufnahme_id: int | None = None,
+    jetzt: str | None = None,
+) -> int:
+    """Legt einen Eintrag an; der Bezugstext wird kopiert. Gibt die neue `id` zurueck.
+
+    Eine Kombination, die nicht zur Art passt, ist ein Programmierfehler (`ValueError`);
+    ein ungueltiger Text wirft `InhaltFehler`.
+    """
+    if art not in TAGEBUCH_ARTEN:
+        raise ValueError(f"Unbekannte Art: {art!r}")
+    erwartet = (art == "impuls", art == "leitfragen", art == "aufnahme")
+    gegeben = (impuls is not None, leitfrage is not None, aufnahme_id is not None)
+    if erwartet != gegeben:
+        raise ValueError(f"Bezug passt nicht zur Art {art!r}")
+    text = lies_tagebuchtext(text, pflicht=art != "aufnahme")
+    jetzt = jetzt or zeit.zeitstempel()
+    with transaktion(db):
+        return db.execute(
+            "INSERT INTO tagebucheintraege (konto_id, art, text, impuls_id, impuls_text, "
+            "leitfrage_id, leitfrage_text, aufnahme_id, erstellt, geaendert) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                konto_id,
+                art,
+                text,
+                impuls["id"] if impuls else None,
+                impuls["text"] if impuls else None,
+                leitfrage["id"] if leitfrage else None,
+                leitfrage["text"] if leitfrage else None,
+                aufnahme_id,
+                jetzt,
+                jetzt,
+            ),
+        ).lastrowid
+
+
+def hole_tagebucheintrag(
+    db: sqlite3.Connection, konto_id: int, eintrag_id: int
+) -> sqlite3.Row | None:
+    return db.execute(
+        "SELECT * FROM tagebucheintraege WHERE id = ? AND konto_id = ?", (eintrag_id, konto_id)
+    ).fetchone()
+
+
+def aendere_tagebucheintrag(
+    db: sqlite3.Connection, konto_id: int, eintrag_id: int, text: str | None
+) -> bool:
+    """Aendert den Text; `geaendert` nur bei geaendertem Text. Fremd oder unbekannt: `False`."""
+    with transaktion(db):
+        alt = hole_tagebucheintrag(db, konto_id, eintrag_id)
+        if alt is None:
+            return False
+        neu = lies_tagebuchtext(text, pflicht=alt["art"] != "aufnahme")
+        if neu != alt["text"]:
+            db.execute(
+                "UPDATE tagebucheintraege SET text = ?, geaendert = ? "
+                "WHERE id = ? AND konto_id = ?",
+                (neu, zeit.zeitstempel(), eintrag_id, konto_id),
+            )
+    return True
+
+
+def loesche_tagebucheintrag(
+    db: sqlite3.Connection, konto_id: int, eintrag_id: int, aufnahmen_verzeichnis: Path
+) -> bool:
+    """Loescht den Eintrag samt Aufnahme; fremd oder unbekannt: `False`, nichts geaendert."""
+    if db.in_transaction:
+        raise RuntimeError(
+            "Dateien werden erst nach dem COMMIT geloescht; keine laufende Transaktion"
+        )
+    with transaktion(db):
+        eintrag = hole_tagebucheintrag(db, konto_id, eintrag_id)
+        if eintrag is None:
+            return False
+        db.execute(
+            "DELETE FROM tagebucheintraege WHERE id = ? AND konto_id = ?", (eintrag_id, konto_id)
+        )
+        aufnahme_ids = [] if eintrag["aufnahme_id"] is None else [eintrag["aufnahme_id"]]
+        dateinamen = entferne_aufnahmen(db, konto_id, aufnahme_ids)
+    loesche_dateien(aufnahmen_verzeichnis, dateinamen)
+    return True
+
+
+# --- Zeilen und Gruppierung ---
+
+
+@dataclass(frozen=True)
+class Zeile:
+    """Eine Antwort oder ein Tagebucheintrag, flach (Grundlage fuer Liste und Export)."""
+
+    quelle: str  # "antwort" | "tagebuch"
+    id: int
+    konto_id: int
+    anzeigename: str
+    art: str  # "runde" | "tagebuch" | "impuls"
+    tagebuch_art: str | None  # frei | leitfragen | impuls | aufnahme
+    angeleitet: bool  # True genau bei art == "runde"
+    runde_id: int | None
+    runde_titel: str | None
+    runde_freischaltdatum: str | None
+    frage_id: int | None
+    frage: str | None  # aktueller Fragetext; bei Tagebuch der kopierte Bezugstext
+    frage_typ: str | None
+    frage_reihenfolge: int | None
+    text: str | None
+    skalawert: int | None
+    aufnahme_id: int | None
+    aufnahme_dateiname: str | None
+    aufnahme_mime_typ: str | None
+    aufnahme_dauer_sekunden: int | None
+    erstellt: str  # UTC-Text
+    geaendert: str  # gleich erstellt, solange nie geaendert
+
+
+_ZEILEN_SQL = """
+SELECT * FROM (
+    SELECT 'antwort' AS quelle, a.id AS id, a.konto_id AS konto_id,
+           k.anzeigename AS anzeigename, 'runde' AS art, NULL AS tagebuch_art,
+           r.id AS runde_id, r.titel AS runde_titel,
+           r.freischaltdatum AS runde_freischaltdatum,
+           f.id AS frage_id, f.text AS frage, f.typ AS frage_typ,
+           f.reihenfolge AS frage_reihenfolge, a.text AS text, a.skalawert AS skalawert,
+           a.aufnahme_id AS aufnahme_id, au.dateiname AS aufnahme_dateiname,
+           au.mime_typ AS aufnahme_mime_typ, au.dauer_sekunden AS aufnahme_dauer_sekunden,
+           a.erstellt AS erstellt, a.geaendert AS geaendert
+    FROM antworten a
+    JOIN fragen f ON f.id = a.frage_id
+    JOIN runden r ON r.id = f.runde_id
+    JOIN konten k ON k.id = a.konto_id
+    LEFT JOIN aufnahmen au ON au.id = a.aufnahme_id
+    UNION ALL
+    SELECT 'tagebuch', t.id, t.konto_id, k.anzeigename,
+           CASE t.art WHEN 'impuls' THEN 'impuls' ELSE 'tagebuch' END, t.art,
+           NULL, NULL, NULL, NULL, COALESCE(t.leitfrage_text, t.impuls_text), NULL, NULL,
+           t.text, NULL, t.aufnahme_id, au.dateiname, au.mime_typ, au.dauer_sekunden,
+           t.erstellt, t.geaendert
+    FROM tagebucheintraege t
+    JOIN konten k ON k.id = t.konto_id
+    LEFT JOIN aufnahmen au ON au.id = t.aufnahme_id
+)
+"""
+
+
+def _zeile(row: sqlite3.Row) -> Zeile:
+    werte = dict(row)
+    return Zeile(angeleitet=werte["art"] == "runde", **werte)
+
+
+def zeilen_von(db: sqlite3.Connection, konto_id: int) -> list[Zeile]:
+    """Alle Antworten und Eintraege des Kontos, ungefiltert nach Freischaltung."""
+    zeilen = db.execute(
+        _ZEILEN_SQL + " WHERE konto_id = ? ORDER BY erstellt, quelle, id", (konto_id,)
+    ).fetchall()
+    return [_zeile(z) for z in zeilen]
+
+
+def alle_zeilen(db: sqlite3.Connection) -> list[Zeile]:
+    """Alle Zeilen aller Konten; nur fuer die Auftraggeberin (#18)."""
+    zeilen = db.execute(_ZEILEN_SQL + " ORDER BY erstellt, quelle, id").fetchall()
+    return [_zeile(z) for z in zeilen]
+
+
+@dataclass(frozen=True)
+class Eintrag:
+    """Was in einer Liste als eine Karte erscheint."""
+
+    art: str  # "runde" | "tagebuch" | "impuls"
+    konto_id: int
+    anzeigename: str
+    runde_id: int | None  # bei Runde
+    eintrag_id: int | None  # bei Tagebuch
+    erstellt: str  # Runde: fruehste Antwort
+    geaendert: str  # Runde: spaeteste Antwort
+    zeilen: list[Zeile]  # Runde: Antworten nach Fragenreihenfolge; Tagebuch: eine Zeile
+
+
+def gruppiere(zeilen: list[Zeile]) -> list[Eintrag]:
+    """Antworten einer Runde je Konto zu einer Karte, Tagebuch je Eintrag; neueste zuerst."""
+    runden: dict[tuple[int, int], list[Zeile]] = {}
+    karten: list[Eintrag] = []
+    for z in zeilen:
+        if z.quelle == "antwort":
+            runden.setdefault((z.konto_id, z.runde_id), []).append(z)
+        else:
+            karten.append(
+                Eintrag(z.art, z.konto_id, z.anzeigename, None, z.id, z.erstellt, z.geaendert, [z])
+            )
+    for (konto_id, runde_id), gruppe in runden.items():
+        gruppe.sort(key=lambda z: (z.frage_reihenfolge, z.frage_id))
+        karten.append(
+            Eintrag(
+                "runde",
+                konto_id,
+                gruppe[0].anzeigename,
+                runde_id,
+                None,
+                min(z.erstellt for z in gruppe),
+                max(z.geaendert for z in gruppe),
+                gruppe,
+            )
+        )
+    karten.sort(
+        key=lambda k: (k.erstellt, k.art != "runde", k.runde_id or k.eintrag_id), reverse=True
+    )
+    return karten
