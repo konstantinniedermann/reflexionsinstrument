@@ -198,7 +198,43 @@ Letzte Auswertung: 30.10.2026 (15 Einträge, alle abgeschlossen)
 
 **Ursprung:** #17 (Review)
 
-**Einschätzung:** Text anpassen oder Formate erweitern (Inhaltsentscheid); ADR-001 «keine Umwandlung» bleibt.
+**Einschätzung:** Text anpassen oder Formate erweitern (Inhaltsentscheid); ADR-001 «keine Umwandlung» bleibt. Dazu: Die Meldung «Dieser Browser kann hier nicht aufnehmen …» erklärt das daneben sichtbare Dateifeld nicht, und die Fehlermeldung «Bitte neu aufnehmen.» passt nicht, wenn jemand eine Datei hochgeladen hat.
+
+### 2026-10-30 — Aufnahme-Seiten: kleine Bedienpunkte
+
+**Thema:** Oberfläche
+
+**Fundort:** `app/static/js/aufnahme.js`, `app/templates/lehrperson/_aufnehmen.html`, `app/routen/aufnahmen.py`
+
+**Beobachtung:** Die gemessene Dauer liegt etwa eine Sekunde über der Aufnahme (2 s werden als «3 Sek.» gespeichert; Messung vor dem `start`-Ereignis, aufgerundet). Im Zustand «Bereit» fehlt mit JavaScript der Link «Stattdessen schreiben» (nur «‹ Tagebuch»). Ohne JavaScript geht der getippte Zusatztext nach einer 400-Meldung verloren.
+
+**Ursprung:** #17 (Task-Reviews 3 und 4)
+
+**Einschätzung:** Kosmetik bzw. seltener Rückfallweg; bei der Gestaltung (#20) oder nach dem Gerätetest mitnehmen.
+
+### 2026-10-30 — Aufnahmen: Testlücken ohne bekannten Fehler
+
+**Thema:** Tests
+
+**Fundort:** `tests/test_aufnahmen.py`, `tests/test_aufnahmen_routen.py`, `tests/test_aufnahme_hochladen.py`, `tests/test_aufnahmen_antwort.py`
+
+**Beobachtung:** Nicht eigens geprüft: Reihenfolge 413 vor 503 vor 400 in `schreibe_datei`; dass die 404-Antworten (fremd, unbekannt, Datei fehlt) gleich aussehen; Range auf `/verwaltung/aufnahmen/…`; Multipart ohne Dateiteil; beide Hinweistexte vollständig formatiert; `sqlite3.Error` im Aufräumen; Datenbankfehler nach dem `UPDATE` in `haenge_an_antwort`; Schreibfehler (503) auf Ebene der Route. Zwei Tests haben unbenutzte Fixture-Parameter.
+
+**Ursprung:** #17 (Task-Reviews und Gesamtreview, als «kann bleiben» eingestuft)
+
+**Einschätzung:** Abdeckung, kein falsches Verhalten bekannt.
+
+### 2026-10-30 — Aufnahmen: kleine Robustheitspunkte
+
+**Thema:** Code-Struktur
+
+**Fundort:** `app/static/js/aufnahme.js` (`bildschirmAn`, `beendet`), `app/aufnahmen.py` (`schreibe_datei`), `app/routen/aufnahmen.py` (`_ausliefern`, `_speichere_upload`)
+
+**Beobachtung:** `bildschirmAn` wird nicht abgewartet; bei sehr schnellem Stopp und Neustart könnte eine Bildschirmsperre bis zum Verlassen der Seite bestehen bleiben. `beendet()` prüft `recorder` nicht auf `null`. Kein `fsync` vor `os.replace`. `_ausliefern` prüft mit `is_file()`, das symbolischen Links folgt (nur die App schreibt in den Ordner). Das Aufräumen von Waisen läuft auch nach einer 400-Antwort.
+
+**Ursprung:** #17 (Task-Reviews 4 und 6, Gesamtreview)
+
+**Einschätzung:** Heute ohne Folgen; bei der nächsten Arbeit an den Dateien mitnehmen.
 
 ## Ausgewertet am 30.10.2026
 
