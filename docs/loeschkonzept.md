@@ -128,7 +128,7 @@ Voraussetzung: Die Auftraggeberin hat den Gesamtexport heruntergeladen, geöffne
    find /data/aufnahmen -type f -delete
    ls -A /data/aufnahmen                              # erwartet: leer
    ```
-   Erwartet: `antworten`, `tagebucheintraege` und `aufnahmen` 0, `konten` nur noch die Konten der Auftraggeberin.
+   Erwartet: `antworten`, `tagebucheintraege` und `aufnahmen` 0, `konten` nur noch die Konten der Auftraggeberin. Die Befehle sind lokal an einer Testdatenbank geprobt (30.10.2026): Kaskade greift, Inhalte und Fragen der Auftraggeberin bleiben, gelöschte Texte stehen nicht mehr in der Datei.
 4. In der App als Auftraggeberin anmelden: Übersicht zeigt keine Lehrpersonen und keine Einträge. Gast-Ansicht funktioniert weiter.
 5. Löschprotokoll in #10: Datum, Volume-ID, Ausgaben aus 2 bis 4.
 
