@@ -1,4 +1,7 @@
+import re
+import sqlite3
 from datetime import date
+from typing import Annotated
 
 import pytest
 
@@ -41,3 +44,87 @@ def test_fuer_vorschau():
     ansicht = fuer_vorschau(date(2026, 12, 7), "B", ("Vorschau beenden", "/verwaltung/vorschau"))
     assert ansicht.url("/info") == "/verwaltung/vorschau/2026-12-07/info"
     assert not ansicht.zeigt_eintraege
+
+
+@pytest.fixture
+def seiten_client(einstellungen):
+    from fastapi import Depends, Request
+    from fastapi.testclient import TestClient
+
+    from app.db import hole_db
+    from app.main import erstelle_app
+    from app.seiten_lehrperson import VORLAGEN, kontext_info, kontext_start
+    from app.vorlagen import templates
+    from app.zeit import hole_heute, lies_datum
+
+    kontexte = {"start": kontext_start, "info": kontext_info}
+    app = erstelle_app(einstellungen)
+
+    @app.get("/test-gast/{seite}")
+    def test_gast(
+        request: Request,
+        seite: str,
+        db: Annotated[sqlite3.Connection, Depends(hole_db)],
+        heute: Annotated[date, Depends(hole_heute)],
+    ):
+        ansicht = fuer_gast(heute, "Band Gast", ("Anmelden", "/"))
+        return templates.TemplateResponse(request, VORLAGEN[seite], kontexte[seite](db, ansicht))
+
+    @app.get("/test-vorschau/{am}/{seite}")
+    def test_vorschau(
+        request: Request, am: str, seite: str, db: Annotated[sqlite3.Connection, Depends(hole_db)]
+    ):
+        ansicht = fuer_vorschau(
+            lies_datum(am), "Band Vorschau", ("Vorschau beenden", "/verwaltung/vorschau")
+        )
+        return templates.TemplateResponse(request, VORLAGEN[seite], kontexte[seite](db, ansicht))
+
+    with TestClient(app, follow_redirects=False) as c:
+        yield c
+
+
+def test_gast_start_ohne_persoenliches(seiten_client, db, lehrperson, heute_ist):
+    import testdaten
+
+    _, frage_ids = testdaten.lege_runde_an(db, "Runde Eins", "2026-11-23")
+    testdaten.lege_antwort_an(db, frage_ids[0], lehrperson["id"])
+    testdaten.lege_eintrag_an(db, lehrperson["id"])
+    db.commit()
+    seiten_client.app.state.heute = lambda: date(2026, 11, 24)
+    text = seiten_client.get("/test-gast/start").text
+    assert "Willkommen" in text
+    assert "Band Gast" in text
+    assert re.search(r'href="/"[^>]*>\s*Anmelden', text)
+    assert "Anna Beispiel" not in text
+    assert "Eintrag" not in text
+    assert "Angefangen" not in text
+    assert "/lehrperson/eintraege" not in text and "/gast/eintraege" not in text
+    links = re.findall(r'href="(/[^"]*)"', text)
+    assert any(link.startswith("/gast") for link in links)
+    for link in links:
+        assert link in ("/", "/static/css/style.css") or link.startswith("/gast"), link
+
+
+def test_vorschau_rechnet_mit_stichtag(seiten_client, db):
+    import testdaten
+
+    db.execute("INSERT INTO einstellungen (schluessel, wert) VALUES ('projektstart', '2026-11-23')")
+    testdaten.lege_runde_an(db, "Runde Eins", "2026-11-23")
+    testdaten.lege_runde_an(db, "Runde Drei", "2026-12-07")
+    testdaten.lege_runde_an(db, "Runde Vier", "2026-12-14")
+    db.commit()
+    seiten_client.app.state.heute = lambda: date(2026, 11, 24)
+    text = seiten_client.get("/test-vorschau/2026-12-07/start").text
+    assert "Woche 3" in text
+    assert "Runde Drei" in text
+    assert "Runde Vier" not in text
+    assert "Nächste Runde ab Mo 14.12." in text
+    links = re.findall(r'href="(/[^"]*)"', text)
+    app_links = [
+        link
+        for link in links
+        if link not in ("/", "/static/css/style.css") and "verwaltung" in link
+    ]
+    assert app_links
+    assert all(link.startswith("/verwaltung/vorschau") for link in app_links)
+    assert "/lehrperson" not in text

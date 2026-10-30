@@ -1,8 +1,51 @@
-{% extends "basis.html" %}
+{% extends "lehrperson/_rahmen.html" %}
 {% block titel %}Start – {{ instrument_titel }}{% endblock %}
-{% block inhalt %}
-<h1>Hallo, {{ konto.anzeigename }}</h1>
-<section class="karte">
-  <p>Bald erscheinen hier die Runden und dein Tagebuch.</p>
+{% block seite %}
+<header>
+  {% if woche %}<p class="ueberzeile">Woche {{ woche }}</p>{% endif %}
+  <h1>{% if anzeigename %}Hallo, {{ anzeigename }}{% else %}Willkommen{% endif %}</h1>
+  <div class="formatiert lead">{{ begruessung | formatiert }}</div>
+</header>
+<div class="hinweis formatiert">{{ hinweis | formatiert }}</div>
+{% if impuls %}
+<section class="karte karte--impuls" aria-labelledby="impuls-titel">
+  <p class="ueberzeile" id="impuls-titel">Impuls dieser Woche</p>
+  <p class="impuls__text">{{ impuls.text }}</p>
+  <a class="knopf" href="{{ ansicht.url('/tagebuch/neu/impuls/' ~ impuls.id) }}">Dazu schreiben</a>
 </section>
+{% endif %}
+<section class="karte" aria-labelledby="runden-titel">
+  <h2 id="runden-titel">Runden</h2>
+  {% if runden %}
+  <ul class="runden">
+    {% for eintrag in runden %}
+    <li>
+      <a class="runde{% if eintrag.marke and eintrag.marke[1] == 'marke--offen' %} runde--offen{% endif %}" href="{{ ansicht.url('/runden/' ~ eintrag.runde.id) }}">
+        <span class="runde__titel">{{ eintrag.runde.titel }}</span>
+        {% if eintrag.marke %}<span class="marke {{ eintrag.marke[1] }}">{{ eintrag.marke[0] }}</span>{% else %}<span class="gedaempft">seit {{ eintrag.runde.freischaltdatum | datum(false) }}</span>{% endif %}
+        <span class="pfeil" aria-hidden="true">›</span>
+      </a>
+    </li>
+    {% endfor %}
+  </ul>
+  {% if naechste %}
+  <p class="runde runde--gesperrt naechste">Nächste Runde ab {{ naechste | datum(false) }}</p>
+  {% endif %}
+  {% elif naechste %}
+  <p>Die erste Runde erscheint am {{ naechste | datum(false) }}</p>
+  {% else %}
+  <p>Noch keine Runde.</p>
+  {% endif %}
+</section>
+<section class="karte" aria-labelledby="tagebuch-titel">
+  <h2 id="tagebuch-titel">Tagebuch</h2>
+  <p>
+    {% if anzahl_eintraege is not none %}{{ zahl(anzahl_eintraege, "Eintrag", "Einträge") }} · {% endif %}Halte fest, was dir auffällt.
+  </p>
+  <a class="knopf knopf--zweit" href="{{ ansicht.url('/tagebuch/neu') }}">Neuer Tagebucheintrag</a>
+</section>
+<a class="karte karte--link" href="{{ ansicht.url('/info') }}">
+  <span>Worum es geht</span>
+  <span class="pfeil" aria-hidden="true">›</span>
+</a>
 {% endblock %}

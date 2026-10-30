@@ -1,0 +1,6 @@
+{# Parameter: aufnahme (Zeile oder Zeile-Objekt), url #}
+{% set sekunden = aufnahme.aufnahme_dauer_sekunden if aufnahme.aufnahme_dauer_sekunden is defined else aufnahme.dauer_sekunden %}
+<div class="aufnahme">
+  <audio controls preload="none" src="{{ url }}"></audio>
+  {% if sekunden %}<span class="gedaempft">{{ sekunden | dauer }}</span>{% endif %}
+</div>

@@ -1004,6 +1004,57 @@ input[type="checkbox"] {
 
 /* Pilot: Lehrpersonen-Ansicht */
 
+.tabs {
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+}
+
+.tabs a {
+  min-height: 2.75rem;
+  align-content: center;
+}
+
+.tabs a[aria-current="page"] {
+  color: var(--akzent);
+}
+
+.meldung {
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: 10px;
+  background: var(--erledigt-sanft);
+  color: var(--erledigt);
+  font-weight: 600;
+}
+
+.runde {
+  min-height: 2.75rem;
+}
+
+.naechste {
+  margin: 0.5rem 0 0;
+  font-size: 0.95rem;
+}
+
+.bereich--start .karte .knopf,
+.bereich--info .aufklapp summary {
+  min-height: 2.75rem;
+}
+
+.aufnahme {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+.aufnahme audio {
+  flex: 1 1 14rem;
+  min-width: 0;
+  max-width: 100%;
+}
+
 /* Pilot: Aufnahmen (#17) */
 
 /* Ende #17 */

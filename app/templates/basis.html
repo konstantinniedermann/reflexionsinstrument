@@ -24,7 +24,7 @@
       </div>
     </header>
     {% block navigation %}{% endblock %}
-    <main class="inhalt">
+    <main class="inhalt{% block main_klasse %}{% endblock %}">
       {% block inhalt %}{% endblock %}
     </main>
   </body>
