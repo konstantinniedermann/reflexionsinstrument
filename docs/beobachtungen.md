@@ -33,7 +33,7 @@ Alle 15 Einträge gegen `main` (Stand nach #29) geprüft, Laufzeit-Aussagen gege
 
 ### Abgehakt mit Trigger
 
-- 2026-10-15 — GitHub Actions über Tags statt Commit-SHAs eingebunden → betrifft nur noch `prototyp.yml` (`ci.yml` ist gepinnt; dort auch die Warnung «Node.js 20 is deprecated»). Der Prototyp wird laut ADR-001 abgelöst, sobald die Pilot-Version läuft. Trigger: beim Pilotstart Workflow und Prototyp entfernen oder, falls er öffentlich bleiben soll, auf aktuelle Versionen per SHA umstellen.
+- 2026-10-15 — GitHub Actions über Tags statt Commit-SHAs eingebunden → betrifft nur noch `prototyp.yml` (`ci.yml` ist gepinnt). Dazu kommt in `prototyp.yml` die Warnung «Node.js 20 is deprecated». Der Prototyp wird laut ADR-001 abgelöst, sobald die Pilot-Version läuft. Trigger: beim Pilotstart Workflow und Prototyp entfernen oder, falls er öffentlich bleiben soll, auf aktuelle Versionen per SHA umstellen.
 - 2026-10-15 — Test-Server der E2E-Prüfung stürzt bei Verzeichnis-Anfragen ab → belegt, im heutigen Ablauf unerreichbar. Trigger: wie oben, entfällt mit dem Prototyp.
 - 2026-10-15 — E2E-Prüfung läuft nur lokal auf macOS → bewusst so (Nicht-Ziel im Grundgerüst-Design); `e2e-pilot.mjs` liest den Chrome-Pfad schon aus `CHROME_PFAD`. Trigger: eine zweite Person entwickelt mit, oder ein Merge geht ohne lokalen E2E-Lauf durch.
 - 2026-10-30 — TestClient warnt: httpx durch httpx2 ersetzen → Starlette 1.10 unterstützt httpx noch. Trigger: Starlette entfernt die Unterstützung; dann Freigabe für httpx2 als neue Dependency einholen.
@@ -45,7 +45,7 @@ Alle 15 Einträge gegen `main` (Stand nach #29) geprüft, Laufzeit-Aussagen gege
 
 ### Verworfen
 
-- 2026-10-30 — Kommando rechnet mit ungeprüftem Datum → Die Kernaussage trifft nicht zu: `platzhalter-laden` ruft zuerst `speichere_allgemein` auf, das über `datum_feld` → `ist_plausibel` (`app/eingaben.py`) prüft. `--projektstart 9999-12-30` endet mit «Bitte ein Datum zwischen 2020 und 2099 wählen.» und Exit 1, ohne `OverflowError`. Richtig ist nur, dass `lies_projektstart` einen Altwert ungeprüft liefert; der entsteht aber nur durch eine Änderung direkt in der Datenbank.
+- 2026-10-30 — Kommando rechnet mit ungeprüftem Datum → Die Kernaussage trifft nicht zu: `platzhalter-laden` ruft zuerst `speichere_allgemein` auf, das über `datum_feld` (`app/eingaben.py`) → `ist_plausibel` (`app/zeit.py`) prüft. `--projektstart 9999-12-30` endet mit «Bitte ein Datum zwischen 2020 und 2099 wählen.» und Exit 1, ohne `OverflowError`. Richtig ist nur, dass `lies_projektstart` einen Altwert ungeprüft liefert; der entsteht aber nur durch eine Änderung direkt in der Datenbank.
 
 ### Falsche Prämissen
 
