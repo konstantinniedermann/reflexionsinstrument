@@ -1,0 +1,57 @@
+{% extends "verwaltung/rahmen.html" %}
+{% from "verwaltung/inhalte/_teile.html" import fehlerkopf, feldfehler %}
+{% block titel %}{{ ueberschrift }} – {{ instrument_titel }}{% endblock %}
+{% block inhalt %}
+<p><a class="zurueck" href="{{ abbrechen }}">‹ Zurück</a></p>
+<h1>{{ ueberschrift }}</h1>
+{% if anzahl_antworten %}
+<p class="hinweis" id="beantwortet">Diese Frage wurde schon {{ anzahl_antworten }}-mal beantwortet. Die Antworten bleiben erhalten und stehen danach unter dem neuen Text.</p>
+{% endif %}
+<section class="karte">
+  <form method="post" action="{{ aktion }}" class="formular">
+    {{ csrf_feld(request) }}
+    {{ fehlerkopf(fehler) }}
+    <fieldset class="feld"{% if fehler.typ %} aria-describedby="fehler-typ"{% endif %}>
+      <legend>Art der Antwort</legend>
+      {% if anzahl_antworten %}
+      {# Gesperrte Knöpfe schickt der Browser nicht mit; das versteckte Feld trägt die bisherige Art. #}
+      <input type="hidden" name="typ" value="{{ bisherige_art }}">
+      {% endif %}
+      <label class="auswahl">
+        <input type="radio" name="typ" value="freitext"{% if (bisherige_art if anzahl_antworten else werte.typ) == "freitext" %} checked{% endif %}{% if anzahl_antworten %} disabled{% endif %} />
+        Antwort als Text
+      </label>
+      <label class="auswahl">
+        <input type="radio" name="typ" value="skala"{% if (bisherige_art if anzahl_antworten else werte.typ) == "skala" %} checked{% endif %}{% if anzahl_antworten %} disabled{% endif %} />
+        Antwort auf einer Skala von 1 bis 5
+      </label>
+      {% if anzahl_antworten %}
+      <p class="hilfe">Die Art lässt sich nicht mehr ändern, weil die Frage schon beantwortet wurde. Lege bei Bedarf eine neue Frage an.</p>
+      {% endif %}
+      {{ feldfehler(fehler, "typ") }}
+    </fieldset>
+    <div class="feld">
+      <label for="text">Frage</label>
+      <textarea id="text" name="text" rows="3"{% if fehler.text %} aria-describedby="fehler-text"{% endif %}>{{ werte.text }}</textarea>
+      <p class="hilfe">Höchstens 500 Zeichen.</p>
+      {{ feldfehler(fehler, "text") }}
+    </div>
+    <div class="feld">
+      <label for="skala_min_text">Beschriftung bei 1</label>
+      <input type="text" id="skala_min_text" name="skala_min_text" value="{{ werte.skala_min_text }}" maxlength="60"
+             autocomplete="off"{% if fehler.skala_min_text %} aria-describedby="fehler-skala_min_text"{% endif %} />
+      <p class="hilfe">Nur bei der Skala nötig.</p>
+      {{ feldfehler(fehler, "skala_min_text") }}
+    </div>
+    <div class="feld">
+      <label for="skala_max_text">Beschriftung bei 5</label>
+      <input type="text" id="skala_max_text" name="skala_max_text" value="{{ werte.skala_max_text }}" maxlength="60"
+             autocomplete="off"{% if fehler.skala_max_text %} aria-describedby="fehler-skala_max_text"{% endif %} />
+      <p class="hilfe">Nur bei der Skala nötig.</p>
+      {{ feldfehler(fehler, "skala_max_text") }}
+    </div>
+    <button type="submit" class="knopf">Speichern</button>
+    <a class="knopf knopf--leise" href="{{ abbrechen }}">Abbrechen</a>
+  </form>
+</section>
+{% endblock %}

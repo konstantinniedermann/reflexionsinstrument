@@ -1,0 +1,76 @@
+{
+  "titel": "Reflexionsheft",
+  "begruessung": "Platzhalter: Schön, dass du dabei bist. Hier steht später eine kurze Begrüssung.\n\nDas Heft begleitet dich vier Wochen lang. Nimm dir für jede Runde etwa 15 Minuten Zeit.",
+  "info": [
+    {
+      "titel": "Worum es geht",
+      "inhalt": "Platzhalter: Hier steht später eine kurze Einführung ins Thema.\n\nIm Unterricht entscheiden wir vieles schnell und aus dem Bauch heraus. Dieses Heft lädt dich ein, solche Momente im Nachhinein in Ruhe anzuschauen. Es geht **nicht um richtig oder falsch**."
+    },
+    {
+      "titel": "So funktioniert das Heft",
+      "inhalt": "Während vier Wochen gibt es:\n\n- vier angeleitete **Runden** mit Fragen\n- ein **Tagebuch** für Beobachtungen aus dem Alltag\n- ab und zu einen kurzen **Impuls** als Anregung\n\nJede Runde dauert etwa 15 Minuten."
+    },
+    {
+      "titel": "Hintergrund",
+      "inhalt": "Platzhalter: Hier können kurze, verständlich aufbereitete Texte aus dem Theorieteil stehen, zum Beispiel Begriffe, die im Heft vorkommen."
+    },
+    {
+      "titel": "Warum reflektieren?",
+      "inhalt": "Wer die eigenen Gewohnheiten kennt, kann bewusster entscheiden: im Unterricht, in der Planung und im Gespräch mit dem Team. Reflexion braucht dafür Zeit und einen geschützten Rahmen."
+    }
+  ],
+  "runden": [
+    {
+      "titel": "Runde 1: Einstieg",
+      "fallbeispiel": "Platzhalter-Fallbeispiel. Ein Kind bringt zum dritten Mal in Folge die Hausaufgaben nicht mit. Es sagt, es habe sie vergessen.\n\nEine Kollegin meint: «Da musst du jetzt konsequent sein, sonst machen es bald alle so.»",
+      "tag": 0,
+      "fragen": [
+        {"typ": "freitext", "text": "Was ist dein erster Gedanke zu dieser Situation?"},
+        {"typ": "freitext", "text": "Welche Annahmen stecken in der Situation?"},
+        {"typ": "freitext", "text": "Wie würdest du handeln? Was wäre eine Alternative?"},
+        {"typ": "skala", "text": "Wie vertraut sind dir solche Situationen aus deinem Alltag?", "skala_min_text": "gar nicht", "skala_max_text": "sehr"}
+      ]
+    },
+    {
+      "titel": "Runde 2: Unterwegs",
+      "fallbeispiel": "Platzhalter-Fallbeispiel. Nach einer Prüfung schreibst du kurze Rückmeldungen. Beim Durchlesen merkst du, dass einige ausführlich und ermutigend sind, andere knapp.\n\nDu fragst dich, woran das liegt.",
+      "tag": 7,
+      "fragen": [
+        {"typ": "freitext", "text": "Was löst diese Situation bei dir aus?"},
+        {"typ": "freitext", "text": "Kennst du einen ähnlichen Moment aus deinem eigenen Unterricht?"},
+        {"typ": "skala", "text": "Wie bewusst achtest du zurzeit auf solche Momente?", "skala_min_text": "kaum", "skala_max_text": "sehr"}
+      ]
+    },
+    {
+      "titel": "Runde 3: Perspektivenwechsel",
+      "fallbeispiel": "Platzhalter-Fallbeispiel. Für den Wandertag verteilst du Aufgaben: Karte lesen, Znüni organisieren, Fotos machen.\n\nSpäter fällt dir auf, dass du die Aufgaben fast gleich verteilt hast wie im letzten Jahr, ohne die Kinder zu fragen.",
+      "tag": 14,
+      "fragen": [
+        {"typ": "freitext", "text": "Was würden die Kinder zu dieser Verteilung sagen?"},
+        {"typ": "freitext", "text": "Was hat dich bei der Verteilung geleitet?"},
+        {"typ": "skala", "text": "Wie offen bist du für andere Lösungen?", "skala_min_text": "wenig", "skala_max_text": "sehr"}
+      ]
+    },
+    {
+      "titel": "Runde 4: Rückblick",
+      "fallbeispiel": null,
+      "tag": 21,
+      "fragen": [
+        {"typ": "freitext", "text": "Wenn du deine ersten Antworten liest: Was fällt dir auf?"},
+        {"typ": "freitext", "text": "Hat sich in deinem Unterricht oder deiner Planung etwas verändert?"},
+        {"typ": "skala", "text": "Wie sehr hat dich das Heft zum Nachdenken angeregt?", "skala_min_text": "gar nicht", "skala_max_text": "sehr"}
+      ]
+    }
+  ],
+  "leitfragen": [
+    "Was ist passiert?",
+    "Was habe ich gedacht oder gefühlt?",
+    "Was nehme ich mit?"
+  ],
+  "impulse": [
+    {"text": "Gab es heute einen Moment im Unterricht, über den du noch nachdenkst?", "tag": 0},
+    {"text": "Welche Entscheidung hast du diese Woche aus Gewohnheit getroffen?", "tag": 7},
+    {"text": "Hat dich diese Woche ein Kind überrascht? Was hattest du vorher erwartet?", "tag": 14},
+    {"text": "Welche Situation aus diesen vier Wochen wirst du nicht so schnell vergessen?", "tag": 21}
+  ]
+}

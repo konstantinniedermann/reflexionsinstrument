@@ -1,0 +1,56 @@
+{% extends "verwaltung/rahmen.html" %}
+{% from "verwaltung/inhalte/_teile.html" import zeitangabe, sichtbarkeit %}
+{% from "verwaltung/inhalte/_teile.html" import verschieben with context %}
+{% block titel %}{{ runde.titel }} – {{ instrument_titel }}{% endblock %}
+{% block inhalt %}
+<p><a class="zurueck" href="/verwaltung/inhalte/runden">‹ Runden</a></p>
+<h1>{{ runde.titel }}</h1>
+{% if meldung %}
+<p class="hinweis" role="status">{{ meldung }}</p>
+{% endif %}
+<section class="karte" id="runde-angaben">
+  <p>
+    <strong>Sichtbar ab:</strong> {{ zeitangabe(zp, projektstart) }}
+    {{ sichtbarkeit(zp) }}
+  </p>
+  <h2>Fallbeispiel</h2>
+  {% if runde.fallbeispiel %}
+  <div class="formatiert">{{ runde.fallbeispiel | formatiert }}</div>
+  {% else %}
+  <p class="gedaempft">Kein Fallbeispiel.</p>
+  {% endif %}
+  <div class="aktionen">
+    <a href="/verwaltung/inhalte/runden/{{ runde.id }}/bearbeiten">Angaben bearbeiten</a>
+    <a href="/verwaltung/inhalte/runden/{{ runde.id }}/loeschen">Runde löschen</a>
+  </div>
+  {# #19: Vorschau-Link #}
+</section>
+
+<h2>Fragen</h2>
+{% if fragen %}
+<ul class="liste-ohne">
+  {% for f in fragen %}
+  <li>
+    <article class="karte" id="frage-{{ f.id }}">
+      <p>
+        <span class="marke">{% if f.typ == "skala" %}Skala von 1 bis 5{% else %}Antwort als Text{% endif %}</span>
+        {% if f.anzahl_antworten %}<span class="marke marke--runde">{{ f.anzahl_antworten }}-mal beantwortet</span>{% endif %}
+      </p>
+      <p><strong>{{ f.text }}</strong></p>
+      {% if f.typ == "skala" %}
+      <p class="gedaempft">1 = {{ f.skala_min_text }} · 5 = {{ f.skala_max_text }}</p>
+      {% endif %}
+      <div class="aktionen">
+        <a href="/verwaltung/inhalte/fragen/{{ f.id }}">Bearbeiten</a>
+        <a href="/verwaltung/inhalte/fragen/{{ f.id }}/loeschen">Löschen</a>
+      </div>
+      {{ verschieben("/verwaltung/inhalte/fragen/" ~ f.id, f.text, loop.first, loop.last) }}
+    </article>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hinweis">Diese Runde hat noch keine Fragen.</p>
+{% endif %}
+<p><a class="knopf" href="/verwaltung/inhalte/runden/{{ runde.id }}/fragen/neu">Neue Frage</a></p>
+{% endblock %}

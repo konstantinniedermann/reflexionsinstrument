@@ -1,4 +1,5 @@
 import re
+from datetime import date
 
 import pytest
 from fastapi.testclient import TestClient
@@ -68,3 +69,58 @@ def anmelden(client, benutzername, passwort, dauerhaft=True, headers=None):
     if dauerhaft:
         daten["dauerhaft"] = "1"
     return client.post("/anmelden", data=daten, headers=headers, follow_redirects=False)
+
+
+@pytest.fixture
+def festes_heute(client) -> date:
+    """Setzt den Stichtag der App auf einen Montag und gibt ihn zurueck."""
+    fest = date(2026, 11, 30)
+    client.app.state.heute = lambda: fest
+    return fest
+
+
+@pytest.fixture
+def db(einstellungen, client):
+    """Verbindung zur Test-Datenbank; die Migration hat `client` schon ausgefuehrt."""
+    conn = verbinde(einstellungen.db_pfad)
+    yield conn
+    conn.close()
+
+
+def als_leitung(client, auftraggeberin):
+    assert (
+        anmelden(client, auftraggeberin["benutzername"], auftraggeberin["passwort"]).status_code
+        == 303
+    )
+    return client
+
+
+def als_lehrperson(client, lehrperson):
+    assert anmelden(client, lehrperson["benutzername"], lehrperson["passwort"]).status_code == 303
+    return client
+
+
+def lege_antwort_an(db, frage_id, konto_id, text="Antwort", aufnahme_id=None) -> int:
+    """Legt eine Antwort an, wie #16 sie spaeter speichert."""
+    return db.execute(
+        "INSERT INTO antworten (frage_id, konto_id, text, aufnahme_id) VALUES (?, ?, ?, ?)",
+        (frage_id, konto_id, text, aufnahme_id),
+    ).lastrowid
+
+
+def lege_eintrag_an(db, konto_id, art="frei", impuls_id=None, leitfrage_id=None) -> int:
+    """Legt einen Tagebucheintrag an; der Text wird aus der Quelle kopiert wie in #16."""
+    impuls_text = leitfrage_text = None
+    if impuls_id is not None:
+        impuls_text = db.execute("SELECT text FROM impulse WHERE id = ?", (impuls_id,)).fetchone()[
+            0
+        ]
+    if leitfrage_id is not None:
+        leitfrage_text = db.execute(
+            "SELECT text FROM leitfragen WHERE id = ?", (leitfrage_id,)
+        ).fetchone()[0]
+    return db.execute(
+        "INSERT INTO tagebucheintraege (konto_id, art, text, impuls_id, impuls_text, "
+        "leitfrage_id, leitfrage_text) VALUES (?, ?, 'Text', ?, ?, ?, ?)",
+        (konto_id, art, impuls_id, impuls_text, leitfrage_id, leitfrage_text),
+    ).lastrowid

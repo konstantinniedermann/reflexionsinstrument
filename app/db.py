@@ -2,6 +2,7 @@
 
 import sqlite3
 from collections.abc import Iterator
+from contextlib import contextmanager
 from pathlib import Path
 
 from fastapi import Request
@@ -72,3 +73,18 @@ def hole_db(request: Request) -> Iterator[sqlite3.Connection]:
         yield conn
     finally:
         conn.close()
+
+
+@contextmanager
+def transaktion(db: sqlite3.Connection) -> Iterator[None]:
+    """Alles oder nichts. Laeuft schon eine Transaktion, entscheidet die aeussere."""
+    if db.in_transaction:
+        yield
+        return
+    db.execute("BEGIN IMMEDIATE")
+    try:
+        yield
+    except BaseException:
+        db.execute("ROLLBACK")
+        raise
+    db.execute("COMMIT")

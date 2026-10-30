@@ -1,0 +1,24 @@
+{% extends "verwaltung/rahmen.html" %}
+{% from "verwaltung/inhalte/_teile.html" import fehlerkopf, feldfehler %}
+{% block titel %}{{ ueberschrift }} – {{ instrument_titel }}{% endblock %}
+{% block inhalt %}
+<p><a class="zurueck" href="{{ abbrechen }}">‹ Zurück</a></p>
+<h1>{{ ueberschrift }}</h1>
+{% if anzahl_eintraege %}
+<p class="hinweis" id="mit-eintraegen">{% if anzahl_eintraege == 1 %}1 Tagebucheintrag bezieht sich darauf.{% else %}{{ anzahl_eintraege }} Tagebucheinträge beziehen sich darauf.{% endif %} Sie behalten den Text, den die Lehrperson damals gesehen hat.</p>
+{% endif %}
+<section class="karte">
+  <form method="post" action="{{ aktion }}" class="formular">
+    {{ csrf_feld(request) }}
+    {{ fehlerkopf(fehler) }}
+    <div class="feld">
+      <label for="text">Leitfrage</label>
+      <textarea id="text" name="text" rows="3"{% if fehler.text %} aria-describedby="fehler-text"{% endif %}>{{ werte.text }}</textarea>
+      <p class="hilfe">Höchstens 500 Zeichen.</p>
+      {{ feldfehler(fehler, "text") }}
+    </div>
+    <button type="submit" class="knopf">Speichern</button>
+    <a class="knopf knopf--leise" href="{{ abbrechen }}">Abbrechen</a>
+  </form>
+</section>
+{% endblock %}

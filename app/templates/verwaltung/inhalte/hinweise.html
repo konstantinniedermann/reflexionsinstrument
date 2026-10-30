@@ -1,0 +1,25 @@
+{% extends "verwaltung/rahmen.html" %}
+{% block titel %}Hinweise – {{ instrument_titel }}{% endblock %}
+{% block inhalt %}
+<p><a class="zurueck" href="/verwaltung/inhalte">‹ Inhalte</a></p>
+<h1>Hinweise</h1>
+{% if meldung %}
+<p class="hinweis" role="status">{{ meldung }}</p>
+{% endif %}
+<p class="gedaempft">Diese Texte erklären den Lehrpersonen, was mit ihren Angaben geschieht. Bis du einen Text bestätigst, gilt unser Vorschlag. Bestätigen heisst speichern, auch unverändert.</p>
+<ul class="liste-ohne">
+  {% for h in hinweise %}
+  <li>
+    <article class="karte" id="hinweis-{{ h.vorlage.schluessel }}">
+      <h2>{{ h.vorlage.bezeichnung }}</h2>
+      <p class="gedaempft">Erscheint: {{ h.vorlage.ort }}</p>
+      <p>{% if h.bestaetigt %}<span class="marke marke--erledigt">Bestätigt</span>{% else %}<span class="marke marke--offen">Vorschlag, noch nicht von dir bestätigt</span>{% endif %}</p>
+      <div class="formatiert">{{ h.inhalt | formatiert }}</div>
+      <div class="aktionen">
+        <a href="/verwaltung/inhalte/hinweise/{{ h.vorlage.schluessel }}">Bearbeiten</a>
+      </div>
+    </article>
+  </li>
+  {% endfor %}
+</ul>
+{% endblock %}

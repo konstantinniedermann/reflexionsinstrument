@@ -1,0 +1,37 @@
+{% extends "verwaltung/rahmen.html" %}
+{% from "verwaltung/inhalte/_teile.html" import zeitangabe, sichtbarkeit %}
+{% block titel %}Impulse – {{ instrument_titel }}{% endblock %}
+{% block inhalt %}
+<p><a class="zurueck" href="/verwaltung/inhalte">‹ Inhalte</a></p>
+<h1>Impulse</h1>
+{% if meldung %}
+<p class="hinweis" role="status">{{ meldung }}</p>
+{% endif %}
+<p class="gedaempft">Ein Impuls ist eine Anregung für zwischendurch. Auf der Startseite steht immer der aktuelle, ab dem gewählten Tag. Die Liste ist nach diesem Tag geordnet.</p>
+<p><a class="knopf" href="/verwaltung/inhalte/impulse/neu">Neuer Impuls</a></p>
+{% if impulse %}
+<ul class="liste-ohne">
+  {% for i in impulse %}
+  {% set zp = zeitplan(i.sichtbar_ab, projektstart, heute) %}
+  <li>
+    <article class="karte" id="impuls-{{ i.id }}">
+      <p><strong>{{ i.text }}</strong></p>
+      <p class="gedaempft">{{ zeitangabe(zp, projektstart) }} {{ sichtbarkeit(zp) }}</p>
+      {% if i.sichtbar_ab in doppelte_tage %}
+      <p class="hinweis">Am selben Tag gibt es noch einen Impuls. Auf der Startseite erscheint der zuletzt erfasste.</p>
+      {% endif %}
+      {% if i.anzahl_eintraege %}
+      <p class="gedaempft">{{ zahl(i.anzahl_eintraege, "Tagebucheintrag", "Tagebucheinträge") }}</p>
+      {% endif %}
+      <div class="aktionen">
+        <a href="/verwaltung/inhalte/impulse/{{ i.id }}">Bearbeiten</a>
+        <a href="/verwaltung/inhalte/impulse/{{ i.id }}/loeschen">Löschen</a>
+      </div>
+    </article>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hinweis">Noch kein Impuls. Lege mit «Neuer Impuls» den ersten an.</p>
+{% endif %}
+{% endblock %}
