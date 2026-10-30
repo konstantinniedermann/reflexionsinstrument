@@ -911,6 +911,7 @@ textarea:focus {
 /* Pilot: Eingabemaske */
 
 input[type="text"],
+input[type="password"],
 input[type="date"] {
   width: 100%;
   min-width: 0;
@@ -929,6 +930,7 @@ input[type="date"] {
 }
 
 input[type="text"]:focus,
+input[type="password"]:focus,
 input[type="date"]:focus {
   outline: 2px solid var(--akzent);
   outline-offset: 0;
