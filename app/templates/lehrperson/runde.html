@@ -1,0 +1,53 @@
+{% extends "lehrperson/_rahmen.html" %}
+{% block titel %}{{ runde.titel }} – {{ instrument_titel }}{% endblock %}
+{% block seite %}
+<p><a href="{{ ansicht.url() }}">‹ Start</a></p>
+<header>
+  <h1>{{ runde.titel }}</h1>
+  <p class="gedaempft">seit {{ runde.freischaltdatum | datum(false) }}{% if zuletzt %} · Zuletzt gespeichert: {{ zuletzt | zeitpunkt }}{% endif %}</p>
+</header>
+{% if runde.fallbeispiel %}
+<section class="fall formatiert" aria-label="Fallbeispiel">{{ runde.fallbeispiel | formatiert }}</section>
+{% endif %}
+{% if zeilen %}
+<div class="hinweis formatiert">{{ hinweis | formatiert }}</div>
+<form class="formular" method="post" action="{{ ansicht.url('/runden/' ~ runde.id) }}"{% if entwurf %} data-entwurf="{{ entwurf }}"{% endif %}>
+  {{ csrf_feld(request) }}
+  {% include "lehrperson/_entwurf_hinweis.html" %}
+  {% for zeile in zeilen %}
+  {% set frage = zeile.frage %}
+  {% if frage.typ == "skala" %}
+  <fieldset class="feld"{% if zeile.fehler %} aria-describedby="fehler-{{ zeile.feld }}"{% endif %}>
+    <legend>{{ frage.text }}</legend>
+    {% if zeile.fehler %}<p class="fehler" id="fehler-{{ zeile.feld }}">{{ zeile.fehler }}</p>{% endif %}
+    <div class="skala">
+      {% for i in range(1, 6) %}
+      <label class="skala__wert"><input type="radio" name="{{ zeile.feld }}"{% if zeile.fehler %} aria-invalid="true"{% endif %} value="{{ i }}"{% if zeile.wert == i | string %} checked{% endif %}><span>{{ i }}</span></label>
+      {% endfor %}
+    </div>
+    <div class="skala__pole"><span>{{ frage.skala_min_text }}</span><span>{{ frage.skala_max_text }}</span></div>
+    <label class="keine-angabe"><input type="radio" name="{{ zeile.feld }}"{% if zeile.fehler %} aria-invalid="true"{% endif %} value=""{% if zeile.wert not in ("1", "2", "3", "4", "5") %} checked{% endif %}> Keine Angabe</label>
+  </fieldset>
+  {% else %}
+  <div class="feld">
+    <label for="frage-{{ frage.id }}">{{ frage.text }}</label>
+    {% if zeile.fehler %}<p class="fehler" id="fehler-{{ zeile.feld }}">{{ zeile.fehler }}</p>{% endif %}
+    <textarea name="{{ zeile.feld }}" id="frage-{{ frage.id }}" rows="5" maxlength="20000"{% if zeile.fehler %} aria-invalid="true" aria-describedby="fehler-{{ zeile.feld }}"{% endif %}>
+{{ zeile.wert }}</textarea>
+    <div class="feld__knoepfe">
+      <button type="submit" class="knopf knopf--klein knopf--zweit" name="anker" value="frage-{{ frage.id }}">Speichern</button>
+      {% if ansicht.speichert %}{# #17: Antwort einsprechen #}{% endif %}
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+  <button type="submit" class="knopf">Speichern</button>
+</form>
+<p class="gedaempft">Du kannst jederzeit zurückkommen und deine Antworten ändern.</p>
+{% if ansicht.speichert and antworten %}
+<p><a href="{{ ansicht.url('/runden/' ~ runde.id ~ '/loeschen') }}">Meine Antworten zu dieser Runde löschen</a></p>
+{% endif %}
+{% else %}
+<p>Zu dieser Runde gibt es noch keine Fragen.</p>
+{% endif %}
+{% endblock %}

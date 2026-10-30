@@ -1,0 +1,25 @@
+{% extends "lehrperson/_rahmen.html" %}
+{% block titel %}Meine Einträge – {{ instrument_titel }}{% endblock %}
+{% block seite %}
+<header>
+  <h1>Meine Einträge</h1>
+  <p class="gedaempft">Nur du und die Projektleiterin sehen sie.</p>
+</header>
+{% for k in karten %}
+<a class="karte karte--eintrag" href="{{ ansicht.url(k.pfad) }}">
+  <div class="eintrag__kopf">
+    <span class="marke{% if k.marke == 'Runde' %} marke--runde{% endif %}">{{ k.marke }}</span>
+    <span class="gedaempft">{{ k.erstellt | zeitpunkt }}{% if k.geaendert != k.erstellt %} · geändert {{ k.geaendert | zeitpunkt }}{% endif %}</span>
+  </div>
+  <span class="eintrag__titel">{{ k.titel }}</span>
+  {% if k.kopfzeile %}<span class="gedaempft">{{ k.kopfzeile }}</span>{% endif %}
+  {% if k.aufnahme %}<span class="gedaempft">Aufnahme{% if k.dauer is not none %}, {{ k.dauer | dauer }}{% endif %}</span>{% endif %}
+  {% if k.vorschau %}<span class="eintrag__vorschau">{{ k.vorschau }}</span>{% endif %}
+</a>
+{% else %}
+<section class="karte">
+  <p>Noch keine Einträge.</p>
+  <a class="knopf" href="{{ ansicht.url('/tagebuch/neu') }}">Ersten Tagebucheintrag schreiben</a>
+</section>
+{% endfor %}
+{% endblock %}

@@ -11,7 +11,7 @@ from app.csrf import csrf_feld
 from app.db import verbinde
 from app.formatierung import formatiere
 from app.inhalte import STANDARD_TITEL, lies_titel
-from app.zeit import datum_kurz, zeitplan
+from app.zeit import datum_kurz, zeitplan, zeitpunkt_kurz
 
 
 def instrument_titel(request: Request) -> dict[str, str]:
@@ -54,6 +54,23 @@ def datum_filter(wert: date | str | None, mit_jahr: bool = True) -> str:
 
 templates.env.filters["formatiert"] = formatiere
 templates.env.filters["datum"] = datum_filter
+
+
+def zeitpunkt_filter(wert: str | None) -> str:
+    return zeitpunkt_kurz(wert) if wert else ""
+
+
+def dauer_filter(sekunden: int | None) -> str:
+    """'45 Sek.'; ab 60 Sekunden ganze Minuten, aufgerundet."""
+    if sekunden is None:
+        return ""
+    if sekunden < 60:
+        return f"{sekunden} Sek."
+    return f"{-(-sekunden // 60)} Min."
+
+
+templates.env.filters["zeitpunkt"] = zeitpunkt_filter
+templates.env.filters["dauer"] = dauer_filter
 templates.env.globals["zeitplan"] = zeitplan
 
 

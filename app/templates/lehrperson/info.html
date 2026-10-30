@@ -1,0 +1,15 @@
+{% extends "lehrperson/_rahmen.html" %}
+{% block titel %}Worum es geht – {{ instrument_titel }}{% endblock %}
+{% block seite %}
+<h1>Worum es geht</h1>
+{% for abschnitt in abschnitte %}
+<details class="karte aufklapp"{% if loop.first %} open{% endif %}>
+  <summary>{{ abschnitt.titel }}</summary>
+  <div class="aufklapp__inhalt formatiert">{{ abschnitt.inhalt | formatiert }}</div>
+</details>
+{% endfor %}
+<details class="karte aufklapp"{% if not abschnitte %} open{% endif %}>
+  <summary>Datenschutz</summary>
+  <div class="aufklapp__inhalt formatiert">{{ datenschutz | formatiert }}</div>
+</details>
+{% endblock %}

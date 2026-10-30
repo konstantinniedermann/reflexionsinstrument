@@ -2,7 +2,7 @@ import sqlite3
 from datetime import date
 
 import pytest
-from conftest import lege_antwort_an, lege_eintrag_an
+from testdaten import lege_antwort_an, lege_eintrag_an
 
 from app import inhalte
 from app.db import transaktion

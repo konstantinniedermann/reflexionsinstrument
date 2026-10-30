@@ -785,7 +785,7 @@ tests/
 3. Runde 1: erste Frage tippen, kleinen «Speichern»-Knopf tippen → «Gespeichert.», Seite steht bei der Frage; Seite neu laden → Text da (**Akzeptanzkriterium unterbrochene Eingabe**). Skala wählen, unten speichern; Startseite zeigt «Angefangen» bzw. «Beantwortet».
 4. Adresse von Runde 2 (`/lehrperson/runden/2`) direkt öffnen → «Nicht gefunden» (**Akzeptanzkriterium Freischaltung**).
 5. Tagebuch: frei schreiben, speichern; aus dem Impuls schreiben; zu einer Leitfrage schreiben. «Meine Einträge» zeigt alle vier Karten (Runde, Tagebuch, Impuls, Tagebuch) mit Datum; einen Eintrag ändern → «geändert»; einen löschen über die Bestätigung.
-6. Entwurfsschutz (falls gebaut): Text tippen, ohne Speichern neu laden → Text wiederhergestellt mit Hinweis; «Verwerfen» leert ihn.
+6. Entwurfsschutz (falls gebaut): Text tippen, ohne Speichern neu laden → Text wiederhergestellt mit Hinweis; «Verwerfen» setzt das Feld auf den gespeicherten Stand zurück.
 7. Zweite Lehrperson öffnet die Adresse eines Eintrags der ersten → «Nicht gefunden».
 8. Auftraggeberin versucht, eine beantwortete Frage zu löschen → Erklärung statt Knopf (Übergabe aus #15).
 9. Screenshots: Start (hell, dunkel, 1280 px), Infoblock, Runde mit Fallbeispiel, Runde nach «Gespeichert.», Tagebuch-Wahl, Formular zum Impuls, Meine Einträge, Bestätigung Löschen, Nicht gefunden.
@@ -852,6 +852,14 @@ Eingearbeitet aus dem «Bedarf an #16» der Designs #17–#19, der Entscheidung 
 - `testdaten.lege_antwort_an(db, frage_id, konto_id, …)` und `testdaten.lege_eintrag_an(db, konto_id, art, …)` übernehmen Namen und Reihenfolge der Helfer aus #15 und ersetzen sie in `conftest.py`; `lege_runde_an(…, freischaltdatum=…)` statt `datum`.
 - «Woche N» über `zeit.woche(stichtag, inhalte.lies_projektstart(db))`, Zahlwörter über das Global `zahl`.
 - E2E nutzt die Platzhalter, die der E2E-Lauf von #15 schon lädt (erster Tag = heute), statt `--projektstart <heute − 7 Tage>`: Runde 1 sichtbar, Runde 2 nicht, Woche 1.
+
+**Aus der Umsetzung von #16 (Stand für #17 bis #19)**
+- `antworten_der_runde`-Zeilen tragen zusätzlich `aufnahme_dauer_sekunden` (LEFT JOIN `aufnahmen`, gefiltert nach `konto_id`); `kontext_runde` übergibt `antworten` an `runde.html`.
+- «Meine Einträge» zeigt «Aufnahme» ohne Dauer, wenn sie NULL ist.
+- Der Platzhalter für #17 in `runde.html` steht innerhalb von `{% if ansicht.speichert %}`.
+- `tests/test_geruest.py` verlangt weder leere Router noch «folgt» auf der Startseite der Verwaltung, damit #17 bis #19 den Test nicht gemeinsam ändern müssen.
+- Doppelt abgesendetes Tagebuch-Formular: Hat dasselbe Konto in den letzten 10 Sekunden schon einen Eintrag gleicher Art mit gleichem Bezug und gleichem normalisiertem Text angelegt, legt `lege_tagebucheintrag_an` in derselben Transaktion keinen neuen an und gibt dessen `id` zurück; die Route leitet wie beim Anlegen um. Antworten zu Runden sind ein Upsert und brauchen das nicht.
+- Typprüfung (Nachtrag unten): `speichere_antworten` wirft `InhaltFehler`, wenn eine Eingabe nicht zum aktuellen `fragen.typ` passt, und speichert dann nichts; `POST /lehrperson/runden/{id}` liest Sichtbarkeit und Fragen und speichert in einer Transaktion, im Fehlerfall 400 mit der Meldung am Feld.
 
 ## Nachträge aus dem Gesamt-Review von #15 (Orchestrator)
 

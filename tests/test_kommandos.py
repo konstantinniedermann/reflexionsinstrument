@@ -4,7 +4,7 @@ from datetime import date
 from pathlib import Path
 
 import pytest
-from conftest import lege_antwort_an
+from testdaten import lege_antwort_an
 
 from app.db import migriere, verbinde
 from app.inhalte import zaehle_inhalte

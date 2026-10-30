@@ -15,11 +15,16 @@
       <span class="gedaempft">Titel, Begrüssung, Infoblock, Runden, Fragen, Impulse und Hinweise.</span>
     </a>
   </li>
-  {% for name in ["Einträge", "Vorschau"] %}
+  {# #18: Link Einträge #}
   <li class="karte karte--ruhend">
-    <strong>{{ name }}</strong>
+    <strong>Einträge</strong>
     <span class="gedaempft">folgt</span>
   </li>
-  {% endfor %}
+  {# Trennzeile zwischen #18 und #19, nicht ändern #}
+  {# #19: Link Vorschau #}
+  <li class="karte karte--ruhend">
+    <strong>Vorschau</strong>
+    <span class="gedaempft">folgt</span>
+  </li>
 </ul>
 {% endblock %}

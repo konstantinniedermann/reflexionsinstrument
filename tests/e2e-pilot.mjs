@@ -8,7 +8,7 @@
 // screenshot() und pruefe().
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:net";
-import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { setTimeout as warte } from "node:timers/promises";
 
 const HIER = new URL("./.e2e/", import.meta.url).pathname;
@@ -80,6 +80,8 @@ async function starteChrome() {
       "--no-first-run",
       "--no-default-browser-check",
       "--hide-scrollbars",
+      "--use-fake-ui-for-media-stream",
+      "--use-fake-device-for-media-stream",
       "about:blank",
     ],
     { stdio: "ignore" },
@@ -241,6 +243,310 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
 }
 
 // ---------------------------------------------------------------- Abläufe
+
+/** Meldet ein Konto an (vorher Cookies löschen, damit keine alte Sitzung stört). */
+async function meldeAn(benutzername, passwort) {
+  await cdp("Network.clearBrowserCookies");
+  await oeffne("/");
+  await tippe("#benutzername", benutzername);
+  await tippe("#passwort", passwort);
+  await sende("form[action='/anmelden'] button[type=submit]");
+}
+
+/** Als Auftraggeberin angemeldet: legt einen Zugang an und gibt das Passwort von der Bestätigungsseite zurück. */
+async function legeZugangAn(anzeigename, benutzername) {
+  await oeffne("/verwaltung/zugaenge");
+  await tippe("#anzeigename", anzeigename);
+  await tippe("#benutzername", benutzername);
+  await sende("form[action='/verwaltung/zugaenge'] button[type=submit]");
+  muss((await text()).includes(benutzername), `Zugang ${benutzername} angelegt`);
+  return js("document.querySelector('dl.zugangsdaten dd:last-of-type').innerText.trim()");
+}
+
+async function ablaufLehrperson() {
+  const platzhalter = JSON.parse(readFileSync(`${PROJEKT}tests/platzhalter/inhalte.json`, "utf8"));
+  const titelRunde1 = platzhalter.runden[0].titel;
+  const titelRunde2 = platzhalter.runden[1].titel;
+  const impuls1 = platzhalter.impulse[0].text;
+  const abmelden = ".seitenkopf form[action='/abmelden'] button";
+  const dialoge = () => ereignisse.filter((e) => e === "Page.javascriptDialogOpening").length;
+  const dialogeVorher = dialoge();
+  const SPEICHERN = "form.formular button[type=submit]";
+  const meldung = async () => (await js("document.querySelector('.meldung')?.innerText")) ?? "";
+  const knoepfeOk = (sel) =>
+    js(`[...document.querySelectorAll(${JSON.stringify(sel)})].every((e) => { const r = e.getBoundingClientRect(); return r.height >= 43.5 && r.left >= 0 && r.right <= ${sollBreite}; })`);
+  await handy();
+  await farbschema("light");
+
+  // Vorbereitung: erster Tag = heute (der Ablauf von #15 hat ihn in die Zukunft gesetzt), zwei Zugänge anlegen.
+  const d = new Date();
+  const heute = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
+  muss((await text()).includes("Abmelden"), "Lehrperson-Ablauf: Auftraggeberin angemeldet");
+  await oeffne("/verwaltung/inhalte/allgemein");
+  await tippe("#projektstart", heute);
+  await sende(SPEICHERN);
+  muss((await js("document.querySelector('#projektstart').value")) === heute, "Lehrperson-Ablauf: erster Tag auf heute gesetzt");
+  const pwEins = await legeZugangAn("Erika Eins", "lp.e2e.eins");
+  const pwZwei = await legeZugangAn("Zora Zwei", "lp.e2e.zwei");
+  await sende(abmelden);
+
+  // 1. Anmelden, Startseite
+  let stand = merke();
+  await meldeAn("lp.e2e.eins", pwEins);
+  muss((await ueberschrift()) === "Hallo, Erika Eins", "Lehrperson: Startseite mit Anzeigename");
+  let t = await text();
+  muss(/woche 1/i.test(t), "Start: «Woche 1»"); // die Überzeile ist per CSS in Grossbuchstaben
+  pruefe(t.includes("Willkommen!"), "Start: Begrüssung steht da");
+  pruefe(await js("(document.querySelector('.hinweis')?.innerText.length ?? 0) > 20"), "Start: Hinweis «wer sieht was» steht da");
+  pruefe(/impuls dieser woche/i.test(t) && t.includes(impuls1), "Start: Impuls dieser Woche");
+  muss(t.includes(titelRunde1), "Start: Titel von Runde 1");
+  pruefe(t.includes("Nächste Runde ab"), "Start: «Nächste Runde ab …»");
+  pruefe(!t.includes(titelRunde2), "Start: Titel von Runde 2 steht nicht im Text");
+  pruefe(await knoepfeOk("main .knopf, main a.runde, main a.karte--link, .tabs a"), "Start: Knöpfe, Runden und Leiste ganz im Bild und mindestens 44 px hoch");
+  await keinUeberlauf("Lehrperson-Start 390 px");
+  await screenshot("20-lp-start");
+  keineFehlerSeit(stand, "Lehrperson-Start");
+
+  // 2. Infoblock
+  stand = merke();
+  await sende("a.karte--link[href$='/info']");
+  muss((await ueberschrift()) === "Worum es geht", "Infoblock: Titel");
+  const anzahl = await js("document.querySelectorAll('details.aufklapp').length");
+  pruefe(anzahl >= 2, "Infoblock: mehrere Abschnitte");
+  pruefe((await js("document.querySelector('details.aufklapp:last-of-type summary').innerText")) === "Datenschutz", "Infoblock: Datenschutz ist der letzte Abschnitt");
+  const zweiter = "details.aufklapp:nth-of-type(2)";
+  const vorher = await js(`document.querySelector(${JSON.stringify(zweiter)}).open`);
+  await klick(`${zweiter} summary`);
+  pruefe((await js(`document.querySelector(${JSON.stringify(zweiter)}).open`)) === !vorher, "Infoblock: Abschnitt lässt sich aufklappen");
+  await keinUeberlauf("Infoblock 390 px");
+  await screenshot("23-lp-infoblock");
+  await klick(`${zweiter} summary`);
+  pruefe((await js(`document.querySelector(${JSON.stringify(zweiter)}).open`)) === vorher, "Infoblock: Abschnitt lässt sich wieder zuklappen");
+  keineFehlerSeit(stand, "Infoblock");
+
+  // 3. Runde 1: Fallbeispiel, kleines Speichern, unterbrochene Eingabe
+  stand = merke();
+  await oeffne("/lehrperson");
+  await sende(`a.runde[href$='/runden/1']`);
+  muss((await ueberschrift()) === titelRunde1, "Runde 1: Titel");
+  const rundenPfad = await pfad();
+  pruefe(!!(await js("document.querySelector('.fall')")), "Runde 1: Fallbeispiel steht da");
+  pruefe(await knoepfeOk("main .knopf:not([data-entwurf-hinweis] .knopf)"), "Runde 1: Knöpfe ganz im Bild und mindestens 44 px hoch");
+  await keinUeberlauf("Runde 1 390 px");
+  await screenshot("24-lp-runde");
+  const erstesFeld = await js("document.querySelector('textarea').id");
+  const antwort1 = "Mein erster Gedanke: erst einmal nachfragen.";
+  await tippe(`#${erstesFeld}`, antwort1);
+  await sende(`button[name=anker][value=${erstesFeld}]`);
+  pruefe((await js("location.hash")) === `#${erstesFeld}`, "Runde 1: nach dem kleinen Speichern steht die Seite bei der Frage");
+  pruefe((await meldung()).includes("Gespeichert."), "Runde 1: «Gespeichert.»");
+  await keinUeberlauf("Runde 1 gespeichert 390 px");
+  await screenshot("25-lp-runde-gespeichert");
+  await oeffne(rundenPfad);
+  pruefe((await js(`document.getElementById(${JSON.stringify(erstesFeld)}).value`)) === antwort1, "Runde 1: nach neuem Laden steht der Text im Feld (unterbrochene Eingabe)");
+  await cdp("Network.clearBrowserCookies");
+  await oeffne("/");
+  await tippe("#benutzername", "lp.e2e.eins");
+  await tippe("#passwort", pwEins);
+  await sende("form[action='/anmelden'] button[type=submit]");
+  await oeffne(rundenPfad);
+  pruefe((await js(`document.getElementById(${JSON.stringify(erstesFeld)}).value`)) === antwort1, "Runde 1: nach neuer Anmeldung steht der Text im Feld");
+  // Skala wählen, unten speichern: Startseite zeigt «Angefangen»
+  await klick("fieldset input[type=radio][value='4']");
+  await sende("form.formular > button[type=submit]");
+  await oeffne("/lehrperson");
+  pruefe((await text()).includes("Angefangen"), "Start: Runde 1 «Angefangen»");
+  await oeffne(rundenPfad);
+  pruefe(await js("document.querySelector('fieldset input[value=\"4\"]').checked"), "Runde 1: gewählter Skalawert gespeichert");
+  for (const id of await js("[...document.querySelectorAll('textarea')].map((e) => e.id)")) await tippe(`#${id}`, `Antwort zu ${id}`);
+  await sende("form.formular > button[type=submit]");
+  await oeffne("/lehrperson");
+  pruefe((await text()).includes("Beantwortet"), "Start: Runde 1 «Beantwortet»");
+  keineFehlerSeit(stand, "Runde 1");
+
+  // 4. Runde 2 ist nicht erreichbar
+  stand = merke();
+  await oeffne("/lehrperson/runden/2");
+  pruefe((await ueberschrift()) === "Nicht gefunden", "Runde 2 (nicht freigeschaltet): «Nicht gefunden»");
+  pruefe(!(await text()).includes(titelRunde2), "Runde 2: Titel steht nicht in der Antwort");
+  await keinUeberlauf("Nicht gefunden 390 px");
+  await screenshot("30-lp-nicht-gefunden");
+  keineFehlerSeit(stand, "Runde 2 direkt", ["status of 404"]);
+
+  // 5. Tagebuch: frei (mit Skript und langem Wort), zum Impuls, zu einer Leitfrage
+  stand = merke();
+  await oeffne("/lehrperson/tagebuch/neu");
+  muss((await ueberschrift()) === "Tagebuch", "Tagebuch: Wahlseite");
+  pruefe(await knoepfeOk("main a.karte--link"), "Tagebuch: Auswahlkarten ganz im Bild und tippbar hoch");
+  await keinUeberlauf("Tagebuch-Wahl 390 px");
+  await screenshot("26-lp-tagebuch-wahl");
+  await sende("a[href$='/tagebuch/neu/frei']");
+  const bosTexte = `Vor ${"a".repeat(300)} nach <script>alert(1)</script> fett **bleibt**`;
+  await tippe("#text", bosTexte);
+  await sende(SPEICHERN);
+  muss(/^\/lehrperson\/tagebuch\/\d+$/.test(await pfad()), "Tagebuch frei: nach dem Speichern auf der Seite des Eintrags");
+  const freiPfad = await pfad();
+  pruefe((await meldung()).includes("Gespeichert."), "Tagebuch frei: «Gespeichert.»");
+  pruefe((await js("document.querySelector('#text').value")) === bosTexte, "Tagebuch frei: Skript und langes Wort stehen als Text im Feld");
+  pruefe(dialoge() === dialogeVorher, "Tagebuch frei: kein Dialog durch den Skript-Text");
+  await keinUeberlauf("Eintrag mit langem Wort 390 px");
+  await oeffne("/lehrperson/tagebuch/neu");
+  await oeffne("/lehrperson");
+  await sende("section.karte--impuls a.knopf");
+  muss(/\/tagebuch\/neu\/impuls\/\d+$/.test(await pfad()), "Tagebuch Impuls: Formular zum Impuls");
+  pruefe((await text()).includes(impuls1), "Tagebuch Impuls: Impulstext steht über dem Feld");
+  await keinUeberlauf("Eintrag zum Impuls 390 px");
+  await screenshot("27-lp-eintrag-impuls");
+  await tippe("#text", "Ein Moment mit der Hofaufsicht, über den ich nachdenke.");
+  await sende(SPEICHERN);
+  muss(/^\/lehrperson\/tagebuch\/\d+$/.test(await pfad()), "Tagebuch Impuls: gespeichert");
+  await oeffne("/lehrperson/tagebuch/neu");
+  await sende("a[href*='/tagebuch/neu/leitfrage/']");
+  await tippe("#text", "Es ging um eine Absprache im Team.");
+  await sende(SPEICHERN);
+  muss(/^\/lehrperson\/tagebuch\/\d+$/.test(await pfad()), "Tagebuch Leitfrage: gespeichert");
+  const leitPfad = await pfad();
+
+  // Meine Einträge: vier Karten
+  await oeffne("/lehrperson/eintraege");
+  muss((await ueberschrift()) === "Meine Einträge", "Meine Einträge: Titel");
+  pruefe((await js("document.querySelectorAll('a.karte--eintrag').length")) === 4, "Meine Einträge: vier Karten (Runde, Tagebuch, Impuls, Tagebuch)");
+  pruefe(await js("[...document.querySelectorAll('a.karte--eintrag .marke')].some((e) => e.innerText === 'Runde')"), "Meine Einträge: Karte mit Marke «Runde»");
+  pruefe(await knoepfeOk("a.karte--eintrag"), "Meine Einträge: Karten ganz im Bild");
+  await keinUeberlauf("Meine Einträge 390 px");
+  await screenshot("28-lp-meine-eintraege");
+  // Eintrag ändern: «geändert» erscheint
+  await warte(1100);
+  await oeffne(leitPfad);
+  await tippe("#text", "Es ging um eine Absprache im Team, die ich anders sehe.");
+  await sende(SPEICHERN);
+  pruefe((await text()).includes("geändert"), "Eintrag geändert: «geändert» steht auf der Seite");
+  await oeffne("/lehrperson/eintraege");
+  pruefe((await text()).includes("geändert"), "Meine Einträge: «geändert» an der Karte");
+  await keinUeberlauf("Meine Einträge nach Änderung 390 px");
+  // Löschen über die Bestätigung
+  await oeffne(leitPfad);
+  await sende("a[href$='/loeschen']");
+  pruefe(await js("!!document.querySelector('form button.knopf')") && (await text()).includes("Endgültig löschen"), "Löschen: Bestätigung mit Knopf");
+  await keinUeberlauf("Löschen-Seite 390 px");
+  await screenshot("29-lp-loeschen");
+  await sende("form.formular button[type=submit]");
+  await oeffne("/lehrperson/eintraege");
+  pruefe((await js("document.querySelectorAll('a.karte--eintrag').length")) === 3, "Meine Einträge: nach dem Löschen drei Karten");
+  keineFehlerSeit(stand, "Tagebuch und Meine Einträge");
+
+  // 6. Entwurfsschutz: tippen, ohne Speichern neu laden
+  stand = merke();
+  const entwurfSchluessel = () => js('Object.keys(sessionStorage).filter((k) => k.startsWith("entwurf:")).length');
+  const hinweisSichtbar = () => js('(() => { const h = document.querySelector("[data-entwurf-hinweis]"); return !!h && !h.hidden && h.getBoundingClientRect().height > 0; })()');
+  await oeffne(rundenPfad);
+  const gespeichert = await js(`document.getElementById(${JSON.stringify(erstesFeld)}).value`);
+  pruefe(!(await hinweisSichtbar()), "Entwurf: ohne Änderung kein Hinweis");
+  const entwurfText = "Noch nicht gespeichert: ein Gedanke zum Fall.";
+  await tippe(`#${erstesFeld}`, entwurfText);
+  pruefe((await entwurfSchluessel()) === 1, "Entwurf: beim Tippen liegt ein Entwurf im Tab");
+  await oeffne(rundenPfad);
+  muss((await js(`document.getElementById(${JSON.stringify(erstesFeld)}).value`)) === entwurfText, "Entwurf: nach neuem Laden steht der getippte Text im Feld");
+  pruefe(await hinweisSichtbar(), "Entwurf: Hinweis ist sichtbar");
+  pruefe((await text()).includes("Nicht gespeicherter Text wurde wiederhergestellt."), "Entwurf: Text des Hinweises");
+  pruefe(await knoepfeOk("[data-entwurf-hinweis] button"), "Entwurf: «Verwerfen» ganz im Bild und tippbar hoch");
+  await keinUeberlauf("Entwurf 390 px");
+  await screenshot("32-lp-entwurf");
+  await klick("[data-entwurf-hinweis] button");
+  pruefe((await js(`document.getElementById(${JSON.stringify(erstesFeld)}).value`)) === gespeichert, "Entwurf: «Verwerfen» setzt das Feld auf den gespeicherten Stand");
+  pruefe(!(await hinweisSichtbar()), "Entwurf: nach «Verwerfen» kein Hinweis");
+  pruefe((await entwurfSchluessel()) === 0, "Entwurf: nach «Verwerfen» kein Entwurf im Tab");
+  await oeffne(rundenPfad);
+  pruefe(!(await hinweisSichtbar()) && (await js(`document.getElementById(${JSON.stringify(erstesFeld)}).value`)) === gespeichert, "Entwurf: nach neuem Laden bleibt der gespeicherte Stand");
+  // Speichern räumt den Entwurf weg
+  await tippe(`#${erstesFeld}`, `${gespeichert} Ergänzung.`);
+  await sende("form.formular > button[type=submit]");
+  pruefe((await entwurfSchluessel()) === 0, "Entwurf: nach dem Speichern kein Entwurf im Tab");
+  // Neuer Tagebucheintrag: nach dem Anlegen ist der Entwurf des Formulars «neu» weg
+  await oeffne("/lehrperson/tagebuch/neu/frei");
+  await tippe("#text", "Ein Eintrag, der gleich gespeichert wird.");
+  pruefe((await entwurfSchluessel()) === 1, "Entwurf: neuer Eintrag legt einen Entwurf an");
+  await sende(SPEICHERN);
+  pruefe((await entwurfSchluessel()) === 0, "Entwurf: nach dem Anlegen kein Entwurf im Tab");
+  // Ein anderer, noch nicht gespeicherter Neu-Entwurf bleibt, wenn die Seite des Eintrags neu lädt («Zurück»)
+  const konto = await js('document.querySelector("form[data-entwurf]").dataset.entwurf.split(":")[0]');
+  await js(`sessionStorage.setItem("entwurf:${konto}:neu-frei:text", "Ein anderer, noch offener Gedanke.")`);
+  await oeffne(`${await pfad()}?erledigt=gespeichert`);
+  pruefe((await entwurfSchluessel()) === 1, "Entwurf: fremder Neu-Entwurf bleibt nach erneutem Laden der Eintragsseite");
+  await js('sessionStorage.clear()');
+  // Abmelden räumt alles weg
+  await oeffne(rundenPfad);
+  await tippe(`#${erstesFeld}`, entwurfText);
+  pruefe((await entwurfSchluessel()) === 1, "Entwurf: vor dem Abmelden liegt ein Entwurf im Tab");
+  await sende(abmelden);
+  pruefe((await entwurfSchluessel()) === 0, "Entwurf: nach «Abmelden» kein Entwurf im Tab");
+  await meldeAn("lp.e2e.eins", pwEins);
+  keineFehlerSeit(stand, "Entwurfsschutz");
+
+  // Dunkel und Computer
+  stand = merke();
+  await farbschema("dark");
+  await oeffne("/lehrperson");
+  await keinUeberlauf("Lehrperson-Start 390 px dunkel");
+  await screenshot("21-lp-start-dunkel");
+  await oeffne(rundenPfad);
+  await keinUeberlauf("Runde 1 390 px dunkel");
+  await farbschema("light");
+  await desktop();
+  await oeffne("/lehrperson");
+  await keinUeberlauf("Lehrperson-Start 1280 px");
+  await screenshot("22-lp-start-desktop");
+  await oeffne(rundenPfad);
+  await keinUeberlauf("Runde 1 1280 px");
+  await screenshot("31-lp-runde-desktop");
+  await oeffne("/lehrperson/eintraege");
+  await keinUeberlauf("Meine Einträge 1280 px");
+  await handy();
+  keineFehlerSeit(stand, "Dunkel und Computer");
+
+  // 7. Zweite Lehrperson öffnet den Eintrag der ersten
+  stand = merke();
+  await sende(abmelden);
+  await meldeAn("lp.e2e.zwei", pwZwei);
+  muss((await ueberschrift()) === "Hallo, Zora Zwei", "Zweite Lehrperson angemeldet");
+  await oeffne(freiPfad);
+  pruefe((await ueberschrift()) === "Nicht gefunden", "Fremder Eintrag über die Adresse: «Nicht gefunden»");
+  pruefe(!(await text()).includes("fett"), "Fremder Eintrag: kein Text der ersten Lehrperson");
+  keineFehlerSeit(stand, "Fremder Eintrag", ["status of 404"]);
+  stand = merke();
+  await oeffne("/lehrperson/eintraege");
+  pruefe((await js("document.querySelectorAll('a.karte--eintrag').length")) === 0, "Zweite Lehrperson: keine Einträge der ersten");
+  await keinUeberlauf("Meine Einträge leer 390 px");
+  keineFehlerSeit(stand, "Meine Einträge der zweiten");
+
+  // 8. Auftraggeberin kann eine beantwortete Frage nicht löschen
+  stand = merke();
+  await sende(abmelden);
+  await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
+  await oeffne("/verwaltung/inhalte/runden/1");
+  await sende("article[id^=frage-] a[href$='/loeschen']");
+  t = await text();
+  pruefe(/schon \d+-mal beantwortet/.test(t), "Verwaltung: beantwortete Frage zeigt die Erklärung «schon … beantwortet»");
+  pruefe(!t.includes("Endgültig löschen") && !(await js("!!document.querySelector('form[action$=\"/loeschen\"] button')")), "Verwaltung: kein Knopf «Endgültig löschen»");
+  await keinUeberlauf("Frage löschen gesperrt 390 px");
+  await screenshot("29a-lp-loeschen-gesperrt");
+  keineFehlerSeit(stand, "Beantwortete Frage löschen");
+  pruefe(dialoge() === dialogeVorher, "Lehrperson-Ablauf: kein JavaScript-Dialog");
+  await sende(abmelden);
+}
+
+async function ablaufAufnahmen() {
+  // #17 füllt diese Funktion
+}
+
+async function ablaufEintraege() {
+  // #18 füllt diese Funktion
+}
+
+async function ablaufGast() {
+  // #19 füllt diese Funktion
+}
 
 async function ablaeufe() {
   const PW_FALSCH = "falsches-passwort";
@@ -572,6 +878,10 @@ try {
   await starteApp();
   await starteChrome();
   await ablaeufe();
+  await ablaufLehrperson();
+  await ablaufAufnahmen();
+  await ablaufEintraege();
+  await ablaufGast();
 } catch (e) {
   abbruch = true;
   console.log(`FEHLER ${e.stack || e}`);

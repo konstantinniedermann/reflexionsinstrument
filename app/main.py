@@ -15,7 +15,18 @@ from app.anmeldeschutz import Anmeldeschutz
 from app.config import Einstellungen, lade_einstellungen
 from app.cookies import CookieMiddleware
 from app.db import migriere, verbinde
-from app.routen import allgemein, anmeldung, lehrperson, verwaltung, verwaltung_inhalte
+from app.groesse import GroessenGrenze
+from app.routen import (
+    allgemein,
+    anmeldung,
+    aufnahmen,
+    gast,
+    lehrperson,
+    verwaltung,
+    verwaltung_eintraege,
+    verwaltung_inhalte,
+    verwaltung_vorschau,
+)
 from app.sicherheit import SicherheitsHeaderMiddleware
 from app.vorlagen import templates
 from app.zugriff import KeinZugriff, NichtAngemeldet
@@ -25,6 +36,13 @@ APP_VERZEICHNIS = Path(__file__).parent
 FEHLERTEXTE = {
     404: ("Nicht gefunden", "Diese Seite gibt es nicht."),
     405: ("Nicht möglich", "Diese Seite gibt es so nicht."),
+    413: (
+        "Zu gross",
+        (
+            "Es wurde nichts gespeichert, weil die Eingabe zu gross ist. "
+            "Eine Aufnahme darf höchstens 10 Minuten lang sein."
+        ),
+    ),
 }
 FEHLER_ALLGEMEIN = ("Das hat nicht geklappt", "Bitte versuche es später nochmals.")
 
@@ -74,6 +92,7 @@ def erstelle_app(einstellungen: Einstellungen | None = None) -> FastAPI:
         return fehlerseite(request, 404, *FEHLERTEXTE[404])
 
     # Zuletzt hinzugefuegt = aeusserste Schicht: Header gelten auch fuer Fehlerantworten.
+    app.add_middleware(GroessenGrenze)  # innerste Schicht: die 413-Seite bekommt die Header
     app.add_middleware(CookieMiddleware)
     app.add_middleware(SicherheitsHeaderMiddleware, produktion=einstellungen.produktion)
     app.mount("/static", StaticFiles(directory=APP_VERZEICHNIS / "static"), name="static")
@@ -82,4 +101,8 @@ def erstelle_app(einstellungen: Einstellungen | None = None) -> FastAPI:
     app.include_router(lehrperson.router)
     app.include_router(verwaltung.router)
     app.include_router(verwaltung_inhalte.router)
+    app.include_router(aufnahmen.router)
+    app.include_router(verwaltung_eintraege.router)
+    app.include_router(gast.router)
+    app.include_router(verwaltung_vorschau.router)
     return app

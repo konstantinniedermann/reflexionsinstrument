@@ -4,7 +4,7 @@ Eine einfache Anwendung, mit der Lehrpersonen zu mehreren Zeitpunkten ein Reflex
 
 ## Stand
 
-Die Anforderungen an die Pilot-Version stehen in [docs/anforderungen.md](docs/anforderungen.md), die Technik in [docs/adr/ADR-001-technik-pilot.md](docs/adr/ADR-001-technik-pilot.md). Die Pilot-Version ist im Aufbau: Das Grundgerüst läuft unter https://reflexionsinstrument.fly.dev. Es gibt die Anmeldung (Login und Abmelden), die Verwaltung der Zugänge für Lehrpersonen und die Eingabemaske für alle Inhalte (Titel und Begrüssung, Infoblock, Runden mit Fragen, Leitfragen, Impulse, Hinweise) durch die Auftraggeberin; die Seiten für die Lehrpersonen folgen.
+Die Anforderungen an die Pilot-Version stehen in [docs/anforderungen.md](docs/anforderungen.md), die Technik in [docs/adr/ADR-001-technik-pilot.md](docs/adr/ADR-001-technik-pilot.md). Die Pilot-Version ist im Aufbau: Das Grundgerüst läuft unter https://reflexionsinstrument.fly.dev. Es gibt die Anmeldung (Login und Abmelden), die Verwaltung der Zugänge für Lehrpersonen und die Eingabemaske für alle Inhalte (Titel und Begrüssung, Infoblock, Runden mit Fragen, Leitfragen, Impulse, Hinweise) durch die Auftraggeberin sowie die Lehrpersonen-Ansicht (Runden, Tagebuch, Meine Einträge).
 
 Der **klickbare Wegwerf-Prototyp** hat dazu gedient, Feedback zu holen. Er ist nicht die Pilot-Version. Aufbau und Entscheidungen: [docs/prototyp.md](docs/prototyp.md).
 
@@ -23,7 +23,7 @@ Voraussetzung: [uv](https://docs.astral.sh/uv/). Alle Befehle stehen in `make he
 | `make dev` | App lokal starten auf http://localhost:8000 (Daten in `.daten/`) |
 | `make lint test` | Code, Formatierung und Tests prüfen (läuft auch in der CI) |
 | `make platzhalter` | Erfundene Platzhalter-Inhalte in `.daten/` laden (nie in Produktion) |
-| `make e2e` | App im Headless-Chrome prüfen (Login, Zugänge anlegen, Zugriffsschutz, Eingabemaske für Inhalte; Handy- und Desktop-Breite, hell und dunkel), Screenshots in `tests/.e2e/bilder-pilot/`. Braucht Node ab 22 und Google Chrome, läuft nur lokal |
+| `make e2e` | App im Headless-Chrome prüfen (Login, Zugänge anlegen, Zugriffsschutz, Eingabemaske für Inhalte, Lehrpersonen-Ansicht mit Runden, Tagebuch und Meine Einträge; Handy- und Desktop-Breite, hell und dunkel), Screenshots in `tests/.e2e/bilder-pilot/`. Braucht Node ab 22 und Google Chrome, läuft nur lokal |
 | `make deploy` | Auf fly.io veröffentlichen (Frankfurt), braucht die fly-CLI und eine Anmeldung |
 | `make logs`, `make ssh` | Logs ansehen bzw. Shell auf der Maschine öffnen |
 

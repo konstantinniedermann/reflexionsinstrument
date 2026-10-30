@@ -49,7 +49,7 @@ Entwurf der Frage an die Auftraggeberin: `intern/frage-loeschdatum.md` (nicht im
 | Betreiber lokal: `.daten/`, `tests/.e2e/` | nur erfundene Testdaten | nein | Betreiber | B | Ordner löschen |
 | Betreiber lokal: Kopie aus Produktion | darf es nicht geben (Regel unten) | ja | Betreiber | sofort nach Gebrauch | löschen, im Löschprotokoll vermerken |
 | Auftraggeberin: Gesamtexport (ZIP, Tabelle, Aufnahmen) | alle Forschungsdaten | ja | Auftraggeberin | nach den Vorgaben ihrer Hochschule | ihre Verantwortung, siehe unten |
-| Browser der Lehrpersonen | Sitzungs-Cookie, keine Einträge | nein | niemand | wird mit der App wertlos | Abmelden genügt |
+| Browser der Lehrpersonen | Sitzungs-Cookie; im Browser-Tab höchstens der Entwurf eines noch nicht gespeicherten Texts (`sessionStorage`, [datenschutz.md](datenschutz.md#welche-daten-entstehen)) | Entwurf: ja, bis gespeichert, verworfen, abgemeldet oder Tab geschlossen | Lehrperson | Speichern, Verwerfen, Abmelden oder Schliessen des Tabs | Tab schliessen oder Abmelden. Abmelden auf einer Seite ohne Entwurfsschutz (z. B. Fehlerseite) löscht den Entwurf nicht, Schliessen des Tabs schon |
 | GitHub-Repo, Prototyp auf GitHub Pages | nur Platzhalter | nein | – | – | nichts zu löschen |
 
 **Regel für den Betreiber:** Keine Kopie der Produktionsdaten auf den eigenen Rechner. Ist sie für eine Fehlersuche unvermeidbar, wird sie danach gelöscht und das im Löschprotokoll (#10) vermerkt.

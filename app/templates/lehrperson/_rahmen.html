@@ -1,0 +1,23 @@
+{% extends "basis.html" %}
+{% block kopf_zusatz %}
+{% if ansicht.speichert %}<script src="/static/js/entwurf.js" defer></script>{% endif %}
+{% endblock %}
+{% block kopf_rechts %}
+{{ super() }}
+{% if ansicht.ausgang %}
+<a class="knopf knopf--klein knopf--zweit knopf--kopf" href="{{ ansicht.ausgang[1] }}">{{ ansicht.ausgang[0] }}</a>
+{% endif %}
+{% endblock %}
+{% block navigation %}
+{% include "lehrperson/_navigation.html" %}
+{% endblock %}
+{% block main_klasse %} bereich--{{ bereich }}{% endblock %}
+{% block inhalt %}
+{% if ansicht.band %}
+<div class="hinweis" role="note">{{ ansicht.band | formatiert }}</div>
+{% endif %}
+{% if meldung %}
+<p class="meldung" role="status">{{ meldung }}</p>
+{% endif %}
+{% block seite %}{% endblock %}
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "lehrperson/_rahmen.html" %}
+{% block titel %}{{ art_text }} – {{ instrument_titel }}{% endblock %}
+{% block seite %}
+<p><a href="{{ ansicht.url('/eintraege') }}">‹ Meine Einträge</a></p>
+<header>
+  <p class="ueberzeile">{{ art_text }}</p>
+  <p class="gedaempft">Erstellt {{ eintrag.erstellt | zeitpunkt }}{% if geaendert %} · geändert {{ eintrag.geaendert | zeitpunkt }}{% endif %}</p>
+</header>
+{% if bezug_text %}
+<section class="karte karte--impuls">
+  <p class="impuls__text">{{ bezug_text }}</p>
+</section>
+{% endif %}
+{% if aufnahme %}
+{% set url = ansicht.url('/aufnahmen/' ~ aufnahme.id) %}
+{% include "_aufnahme.html" %}
+{# #17: Aufnahme ersetzen oder löschen #}
+{% endif %}
+<form class="formular" method="post" action="{{ ansicht.url('/tagebuch/' ~ eintrag.id) }}"{% if entwurf %} data-entwurf="{{ entwurf }}"{% endif %}{% if entwurf_verwerfen %} data-entwurf-verwerfen="{{ entwurf_verwerfen }}"{% endif %}>
+  {{ csrf_feld(request) }}
+  {% include "lehrperson/_entwurf_hinweis.html" %}
+  <div class="feld">
+    <label for="text">{% if eintrag.art == "aufnahme" %}Notiz zur Aufnahme (freiwillig){% else %}Dein Eintrag{% endif %}</label>
+    {% if fehler %}<p class="fehler" id="fehler-text">{{ fehler }}</p>{% endif %}
+    <textarea name="text" id="text" rows="10" maxlength="20000"{% if fehler %} aria-invalid="true" aria-describedby="fehler-text"{% endif %}>
+{{ text }}</textarea>
+  </div>
+  <button type="submit" class="knopf">Speichern</button>
+</form>
+{% if eintrag.art == "leitfragen" %}
+<p><a href="{{ ansicht.url('/tagebuch/neu') }}">Zu einer weiteren Leitfrage schreiben</a></p>
+{% endif %}
+<p><a href="{{ ansicht.url() }}">Zur Startseite</a></p>
+<p><a href="{{ ansicht.url('/tagebuch/' ~ eintrag.id ~ '/loeschen') }}">Eintrag löschen</a></p>
+{% endblock %}

@@ -103,3 +103,15 @@ def test_filter_registriert():
 @pytest.mark.parametrize("wert", [None, ""])
 def test_datumsfilter_ohne_datum(wert):
     assert templates.env.filters["datum"](wert) == ""
+
+
+def test_filter_dauer_zeitpunkt():
+    dauer = templates.env.filters["dauer"]
+    zeitpunkt = templates.env.filters["zeitpunkt"]
+    erwartet = {None: "", 0: "0 Sek.", 45: "45 Sek.", 59: "59 Sek.", 60: "1 Min.", 61: "2 Min."}
+    erwartet[600] = "10 Min."
+    for sekunden, text in erwartet.items():
+        assert dauer(sekunden) == text
+    assert zeitpunkt(None) == ""
+    assert zeitpunkt("") == ""
+    assert zeitpunkt("2026-11-23T17:40:00Z") == "Mo 23.11.2026, 18:40"

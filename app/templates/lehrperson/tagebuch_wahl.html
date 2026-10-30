@@ -1,0 +1,31 @@
+{% extends "lehrperson/_rahmen.html" %}
+{% block titel %}Tagebuch – {{ instrument_titel }}{% endblock %}
+{% block seite %}
+<header>
+  <h1>Tagebuch</h1>
+  <p class="gedaempft">Was möchtest du festhalten?</p>
+</header>
+<a class="karte karte--link" href="{{ ansicht.url('/tagebuch/neu/frei') }}">
+  <span>Frei schreiben</span>
+  <span class="pfeil" aria-hidden="true">›</span>
+</a>
+{# #17: Frei sprechen #}
+{% if impuls %}
+<a class="karte karte--link" href="{{ ansicht.url('/tagebuch/neu/impuls/' ~ impuls.id) }}">
+  <span>
+    <span class="wahl__titel">Zum Impuls dieser Woche</span>
+    <span class="wahl__text gedaempft">{{ impuls.text }}</span>
+  </span>
+  <span class="pfeil" aria-hidden="true">›</span>
+</a>
+{% endif %}
+{% if leitfragen %}
+<h2>Zu einer Leitfrage schreiben</h2>
+{% for leitfrage in leitfragen %}
+<a class="karte karte--link" href="{{ ansicht.url('/tagebuch/neu/leitfrage/' ~ leitfrage.id) }}">
+  <span>{{ leitfrage.text }}</span>
+  <span class="pfeil" aria-hidden="true">›</span>
+</a>
+{% endfor %}
+{% endif %}
+{% endblock %}
