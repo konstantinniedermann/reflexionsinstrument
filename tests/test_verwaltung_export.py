@@ -92,35 +92,53 @@ def test_gesamtexport_inhalt(client, auftraggeberin, lehrperson, db, einstellung
     assert len(dateien) == 2
     for n in dateien:
         assert zf.read(n).startswith(testdaten.WEBM_ANFANG)
-    originale = sorted(
-        (einstellungen.aufnahmen_verzeichnis / _dateiname(db, i)).read_bytes() for i in ids
-    )
-    assert sorted(zf.read(n) for n in dateien) == originale
+    a1, a2 = ids
+    for kennung, aufnahme_id in (("runde", a1), ("tagebuch", a2)):
+        (name,) = [n for n in dateien if n.endswith(f"_{kennung}_{aufnahme_id}.webm")]
+        original = einstellungen.aufnahmen_verzeichnis / _dateiname(db, aufnahme_id)
+        assert zf.read(name) == original.read_bytes()
     zeilen = _zeilen(zf.read("eintraege.csv").decode("utf-8"))
     assert len(zeilen) == 4
     assert sorted(z["Aufnahme"] for z in zeilen if z["Aufnahme"]) == sorted(dateien)
+    (runde,) = [z for z in zeilen if z["Art"] == "Runde" and z["Aufnahme"]]
+    assert runde["Aufnahme"].endswith(f"_runde_{a1}.webm")
+    (tagebuch,) = [z for z in zeilen if z["Art"] == "Tagebuch" and z["Aufnahme"]]
+    assert tagebuch["Aufnahme"].endswith(f"_tagebuch_{a2}.webm")
 
 
 def test_gesamtexport_datei_geloescht(
     client, auftraggeberin, lehrperson, db, einstellungen, heute_ist
 ):
-    a1, _ = _bereit(client, auftraggeberin, lehrperson, db, einstellungen, heute_ist)
+    a1, a2 = _bereit(client, auftraggeberin, lehrperson, db, einstellungen, heute_ist)
     (einstellungen.aufnahmen_verzeichnis / _dateiname(db, a1)).unlink()
     antwort = client.get(EXPORT)
     assert antwort.status_code == 200
     zf = _zip(antwort)
     assert zf.testzip() is None
-    assert len([n for n in zf.namelist() if n.startswith("aufnahmen/")]) == 1
+    dateien = [n for n in zf.namelist() if n.startswith("aufnahmen/")]
+    assert len(dateien) == 1 and dateien[0].endswith(f"_tagebuch_{a2}.webm")
+    original = einstellungen.aufnahmen_verzeichnis / _dateiname(db, a2)
+    assert zf.read(dateien[0]) == original.read_bytes()
     zeilen = _zeilen(zf.read("eintraege.csv").decode("utf-8"))
     assert [z["Aufnahme"] for z in zeilen].count("Datei fehlt") == 1
+    (runde,) = [z for z in zeilen if z["Art"] == "Runde" and z["Aufnahme"]]
+    assert runde["Aufnahme"] == "Datei fehlt"
+    (tagebuch,) = [z for z in zeilen if z["Art"] == "Tagebuch" and z["Aufnahme"]]
+    assert tagebuch["Aufnahme"] == dateien[0]
 
 
 def test_downloads_ohne_eintraege(client, auftraggeberin):
     als_leitung(client, auftraggeberin)
-    tabelle = client.get(TABELLE).content.decode("utf-8")
+    antwort = client.get(TABELLE)
+    assert antwort.status_code == 200
+    tabelle = antwort.content.decode("utf-8")
     assert tabelle.startswith("﻿")
     assert tabelle.count("\r\n") == 1 and tabelle.endswith("\r\n")
-    assert _zip(client.get(EXPORT)).namelist() == ["eintraege.csv"]
+    export = client.get(EXPORT)
+    assert export.status_code == 200
+    zf = _zip(export)
+    assert zf.testzip() is None
+    assert zf.namelist() == ["eintraege.csv"]
 
 
 def test_downloads_zugriff(client, lehrperson):
