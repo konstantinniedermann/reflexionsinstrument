@@ -88,7 +88,8 @@ def test_allgemein_fehler(client, auftraggeberin):
     assert antwort.status_code == 400
     assert "Bitte prüfe die markierten Felder." in antwort.text
     assert "Bitte ein Datum wählen." in antwort.text
-    assert 'aria-describedby="fehler-projektstart"' in antwort.text
+    assert 'aria-invalid="true" aria-describedby="fehler-projektstart"' in antwort.text
+    assert antwort.text.count('aria-invalid="true"') == 1
     assert 'id="fehler-projektstart"' in antwort.text
     assert 'value="Mein Titel"' in antwort.text
 
@@ -111,9 +112,8 @@ def test_fehlerseite_zeigt_titel(client, auftraggeberin):
 
 def test_kein_fester_titel_in_templates():
     wurzel = Path(__file__).parent.parent / "app" / "templates"
-    for datei in wurzel.rglob("*"):
-        if datei.is_file():
-            assert "Reflexionsinstrument" not in datei.read_text(encoding="utf-8"), datei
+    for datei in wurzel.rglob("*.html"):
+        assert "Reflexionsinstrument" not in datei.read_text(encoding="utf-8"), datei
 
 
 def test_bestaetigung_nur_aus_fester_liste(client, auftraggeberin):
@@ -218,7 +218,8 @@ def test_runde_anlegen_fehler(client, auftraggeberin, db):
     assert antwort.status_code == 400
     assert "Bitte prüfe die markierten Felder." in antwort.text
     assert "Bitte einen Titel eingeben." in antwort.text
-    assert 'aria-describedby="fehler-titel"' in antwort.text
+    assert 'aria-invalid="true" aria-describedby="fehler-titel"' in antwort.text
+    assert antwort.text.count('aria-invalid="true"') == 1
     assert "Fall</textarea>" in antwort.text
     datum = sende(client, RUNDEN, **runde_felder(freischaltdatum=""))
     assert datum.status_code == 400

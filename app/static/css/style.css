@@ -937,6 +937,12 @@ input[type="date"]:focus {
   border-color: var(--akzent);
 }
 
+input[aria-invalid="true"],
+textarea[aria-invalid="true"] {
+  border-color: var(--fehler);
+  box-shadow: 0 0 0 1px var(--fehler);
+}
+
 .formatiert {
   overflow-wrap: anywhere;
 }

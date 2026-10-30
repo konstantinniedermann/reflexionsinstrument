@@ -19,7 +19,7 @@
     <div class="feld">
       <label for="titel">Titel</label>
       <input type="text" id="titel" name="titel" value="{{ werte.titel }}" maxlength="60"
-             autocomplete="off"{% if fehler.titel %} aria-describedby="fehler-titel"{% endif %} />
+             autocomplete="off"{% if fehler.titel %} aria-invalid="true" aria-describedby="fehler-titel"{% endif %} />
       <p class="hilfe">Erscheint oben auf jeder Seite. Höchstens 60 Zeichen.</p>
       {{ feldfehler(fehler, "titel") }}
     </div>
@@ -28,13 +28,13 @@
         <label for="begruessung">Begrüssung</label>
         {% if not stand.bestaetigt %}<span class="marke">Vorschlag, noch nicht von dir bestätigt</span>{% endif %}
       </div>
-      <textarea id="begruessung" name="begruessung" rows="12"{% if fehler.begruessung %} aria-describedby="fehler-begruessung"{% endif %}>{{ werte.begruessung }}</textarea>
+      <textarea id="begruessung" name="begruessung" rows="12"{% if fehler.begruessung %} aria-invalid="true" aria-describedby="fehler-begruessung"{% endif %}>{{ werte.begruessung }}</textarea>
       {{ formatier_hilfe() }}
       {{ feldfehler(fehler, "begruessung") }}
     </div>
     <div class="feld">
       <label for="projektstart">Erster Tag für die Lehrpersonen</label>
-      <input type="date" id="projektstart" name="projektstart" value="{{ werte.projektstart }}"{% if fehler.projektstart %} aria-describedby="fehler-projektstart"{% endif %} />
+      <input type="date" id="projektstart" name="projektstart" value="{{ werte.projektstart }}"{% if fehler.projektstart %} aria-invalid="true" aria-describedby="fehler-projektstart"{% endif %} />
       <p class="hilfe">Daraus ergibt sich, in welcher Woche ein Eintrag entstanden ist. Die Daten der Runden und Impulse ändern sich dabei nicht.</p>
       {{ feldfehler(fehler, "projektstart") }}
     </div>

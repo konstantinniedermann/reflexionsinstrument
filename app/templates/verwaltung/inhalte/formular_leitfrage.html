@@ -13,7 +13,7 @@
     {{ fehlerkopf(fehler) }}
     <div class="feld">
       <label for="text">Leitfrage</label>
-      <textarea id="text" name="text" rows="3"{% if fehler.text %} aria-describedby="fehler-text"{% endif %}>{{ werte.text }}</textarea>
+      <textarea id="text" name="text" rows="3"{% if fehler.text %} aria-invalid="true" aria-describedby="fehler-text"{% endif %}>{{ werte.text }}</textarea>
       <p class="hilfe">Höchstens 500 Zeichen.</p>
       {{ feldfehler(fehler, "text") }}
     </div>

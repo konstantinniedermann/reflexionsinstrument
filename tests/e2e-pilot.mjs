@@ -766,6 +766,12 @@ async function ablaeufe() {
   await sende(SPEICHERN);
   pruefe(await sichtbar(".fehler[id^=fehler-skala]"), "Frage Skala ohne Beschriftung: Fehlertext am Feld sichtbar");
   pruefe(await sichtbar("p.hinweis.fehler"), "Frage Skala ohne Beschriftung: Hinweis über dem Formular");
+  const markiert = await js(`(() => {
+    const rot = getComputedStyle(document.querySelector(".fehler[id^=fehler-skala]")).color;
+    const felder = [...document.querySelectorAll("[aria-invalid=true]")];
+    return felder.length > 0 && felder.every((f) => getComputedStyle(f).borderColor === rot);
+  })()`);
+  pruefe(markiert === true, "Frage Skala ohne Beschriftung: Feld rot markiert (aria-invalid)");
   await keinUeberlauf("Frage mit Fehler 390 px");
   await screenshot("14-frage-fehler");
   keineFehlerSeit(stand, "Frage mit Fehler", ["status of 400"]);
