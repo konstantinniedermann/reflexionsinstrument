@@ -17,11 +17,6 @@ MODULE = {
 APP = Path(__file__).parent.parent / "app"
 
 
-@pytest.mark.parametrize("modul", MODULE.values(), ids=MODULE.keys())
-def test_leere_router(modul):
-    assert modul.router.routes == []
-
-
 def test_router_eingebunden_ohne_praefix(einstellungen, monkeypatch):
     for name, modul in MODULE.items():
         r = APIRouter()
@@ -44,7 +39,6 @@ def test_verwaltung_unveraendert(client, auftraggeberin):
     als_leitung(client, auftraggeberin)
     seite = client.get("/verwaltung").text
     assert "Einträge" in seite and "Vorschau" in seite
-    assert seite.count("folgt") == 2
 
 
 def test_css_abschnitte():

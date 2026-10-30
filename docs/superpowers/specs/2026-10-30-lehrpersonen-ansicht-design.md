@@ -859,3 +859,7 @@ Eingearbeitet aus dem «Bedarf an #16» der Designs #17–#19, der Entscheidung 
 - **`transaktion` härten:** Schlägt `COMMIT` fehl (z. B. `SQLITE_BUSY`), folgt ein `ROLLBACK`; ein fehlgeschlagenes `ROLLBACK` überdeckt die ursprüngliche Ausnahme nicht. Kleiner Test. Gehört in die erste Task von #16, weil ab hier Lehrpersonen schreiben.
 - **Titel über die Anfrage-Verbindung:** Der Context-Processor aus #15 öffnet pro Seite eine zweite Verbindung für den Titel. Auf den Lehrpersonen-Seiten den Titel möglichst über die Anfrage-Verbindung lesen (bzw. einmal pro Anfrage zwischenspeichern). Kein Muss.
 - **Datumswerte:** #15 lässt nur Jahre 2020–2099 zu (`datum_feld`); #16 verlässt sich darauf und braucht keine eigene Prüfung für Freischaltdaten.
+- `antworten_der_runde`-Zeilen tragen zusätzlich `aufnahme_dauer_sekunden` (LEFT JOIN `aufnahmen`, gefiltert nach `konto_id`); `kontext_runde` übergibt `antworten` an `runde.html`.
+- «Meine Einträge» zeigt «Aufnahme» ohne Dauer, wenn sie NULL ist.
+- Der Platzhalter für #17 in `runde.html` steht innerhalb von `{% if ansicht.speichert %}`.
+- `tests/test_geruest.py` verlangt weder leere Router noch «folgt» auf der Startseite der Verwaltung, damit #17 bis #19 den Test nicht gemeinsam ändern müssen.
