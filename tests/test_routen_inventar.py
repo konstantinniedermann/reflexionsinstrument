@@ -44,6 +44,30 @@ def test_inventar_nicht_leer(einstellungen):
     assert "/abmelden" in posts
 
 
+def test_nur_bekannte_methoden(einstellungen):
+    app = erstelle_app(einstellungen)
+    for r in iter_route_contexts(app.routes):
+        if isinstance(r.original_route, APIRoute):
+            fremd = set(r.methods or ()) - {"GET", "HEAD", "POST"}
+            assert not fremd, (
+                f"{r.path} nutzt {sorted(fremd)}: Das Inventar prueft nur GET und POST. "
+                "Erst die Tests unten erweitern, dann die Methode zulassen."
+            )
+
+
+def test_einziger_mount_ist_static(einstellungen):
+    app = erstelle_app(einstellungen)
+    andere = [
+        r.path
+        for r in iter_route_contexts(app.routes)
+        if not isinstance(r.original_route, APIRoute) and r.path != "/static"
+    ]
+    assert andere == [], (
+        f"Weitere Mounts oder Routen ohne Inventar: {andere}. "
+        "Sie waeren ohne Anmeldung erreichbar, bis das Inventar sie pruefen kann."
+    )
+
+
 def test_get_routen_brauchen_anmeldung(client, einstellungen):
     for pfad in inventar(einstellungen, "GET"):
         if pfad in OEFFENTLICH:
