@@ -10,6 +10,7 @@ from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app import zeit
 from app.anmeldeschutz import Anmeldeschutz
 from app.config import Einstellungen, lade_einstellungen
 from app.cookies import CookieMiddleware
@@ -46,6 +47,7 @@ def erstelle_app(einstellungen: Einstellungen | None = None) -> FastAPI:
     app = FastAPI(lifespan=lebenszyklus, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.einstellungen = einstellungen
     app.state.anmeldeschutz = Anmeldeschutz()
+    app.state.heute = zeit.heute
 
     def fehlerseite(request: Request, status: int, titel: str, meldung: str):
         return templates.TemplateResponse(

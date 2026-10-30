@@ -1,4 +1,5 @@
 import re
+from datetime import date
 
 import pytest
 from fastapi.testclient import TestClient
@@ -68,3 +69,11 @@ def anmelden(client, benutzername, passwort, dauerhaft=True, headers=None):
     if dauerhaft:
         daten["dauerhaft"] = "1"
     return client.post("/anmelden", data=daten, headers=headers, follow_redirects=False)
+
+
+@pytest.fixture
+def festes_heute(client) -> date:
+    """Setzt den Stichtag der App auf einen Montag und gibt ihn zurueck."""
+    fest = date(2026, 11, 30)
+    client.app.state.heute = lambda: fest
+    return fest
