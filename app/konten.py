@@ -185,7 +185,10 @@ def loesche_konto(db: sqlite3.Connection, konto_id: int, aufnahmen_verzeichnis: 
         for zeile in namen.fetchall():
             # Nur der Dateiname zaehlt: ein manipulierter Eintrag darf nichts ausserhalb
             # des Ordners treffen.
-            (aufnahmen_verzeichnis / Path(zeile["dateiname"]).name).unlink(missing_ok=True)
+            name = Path(zeile["dateiname"]).name
+            if name in ("", ".", ".."):
+                continue
+            (aufnahmen_verzeichnis / name).unlink(missing_ok=True)
         db.execute("DELETE FROM konten WHERE id = ?", (konto_id,))
         db.execute("COMMIT")
     except Exception:

@@ -143,6 +143,19 @@ def test_loesche_konto_entfernt_dateien_und_zeilen(db, tmp_path):
     assert db.execute("SELECT COUNT(*) FROM tagebucheintraege").fetchone()[0] == 1
 
 
+def test_loesche_konto_ueberspringt_ungueltige_dateinamen(db, tmp_path):
+    ordner = tmp_path / "aufnahmen"
+    ordner.mkdir()
+    a = lege_konto_an(db, "Anna", "lp.anna", "geheim123")
+    for name in ("", ".", "..", "../.."):
+        _daten_anlegen(db, a.id, name)
+
+    loesche_konto(db, a.id, ordner)
+
+    assert finde_konto(db, a.id) is None
+    assert ordner.exists()
+
+
 def test_zaehle_daten(db):
     a = lege_konto_an(db, "Anna", "lp.anna", "geheim123")
     assert zaehle_daten(db, a.id) == {"antworten": 0, "tagebucheintraege": 0, "aufnahmen": 0}
