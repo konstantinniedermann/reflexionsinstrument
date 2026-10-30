@@ -11,7 +11,10 @@ MIGRATIONEN = Path(__file__).parent / "migrationen"
 
 def verbinde(db_pfad: Path) -> sqlite3.Connection:
     # isolation_level=None: Transaktionen steuert der Code selbst.
-    conn = sqlite3.connect(db_pfad, isolation_level=None)
+    # check_same_thread=False: FastAPI fuehrt Dependency-Aufbau, Route und Abbau in
+    # verschiedenen Threads aus. Sicher, weil jede Anfrage ihre eigene Verbindung hat
+    # und diese nie gleichzeitig von mehreren Threads genutzt wird.
+    conn = sqlite3.connect(db_pfad, isolation_level=None, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")

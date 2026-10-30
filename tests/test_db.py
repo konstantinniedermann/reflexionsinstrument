@@ -1,4 +1,5 @@
 import sqlite3
+import threading
 
 import pytest
 
@@ -77,6 +78,24 @@ def test_migration_ist_idempotent(conn):
 def test_pragmas_aktiv(conn):
     assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1
     assert conn.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
+
+
+def test_verbindung_in_anderem_thread_nutzbar(tmp_path):
+    # FastAPI fuehrt Dependency-Aufbau, Route und Abbau in verschiedenen Threads aus.
+    conn = verbinde(tmp_path / "t.db")
+    fehler = []
+
+    def nutze_und_schliesse():
+        try:
+            conn.execute("SELECT 1").fetchone()
+            conn.close()
+        except sqlite3.Error as e:
+            fehler.append(e)
+
+    t = threading.Thread(target=nutze_und_schliesse)
+    t.start()
+    t.join()
+    assert fehler == []
 
 
 def test_konto_loeschen_entfernt_eintraege(db):

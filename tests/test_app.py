@@ -1,4 +1,5 @@
 import sqlite3
+from concurrent.futures import ThreadPoolExecutor
 
 from fastapi.testclient import TestClient
 
@@ -21,6 +22,12 @@ def test_healthz(client):
     antwort = client.get("/healthz")
     assert antwort.status_code == 200
     assert antwort.json() == {"status": "ok"}
+
+
+def test_healthz_unter_paralleler_last(client):
+    with ThreadPoolExecutor(max_workers=10) as pool:
+        codes = list(pool.map(lambda _: client.get("/healthz").status_code, range(40)))
+    assert codes == [200] * 40
 
 
 def test_healthz_fehler_gibt_503(einstellungen):
