@@ -3,6 +3,7 @@
 import re
 from collections import deque
 from datetime import date
+from pathlib import Path
 
 import pytest
 import testdaten
@@ -233,3 +234,18 @@ def test_gast_sitzung_unberuehrt(client, inhalte, lehrperson):
     assert not [c for c in antwort.headers.get_list("set-cookie") if c.startswith("sitzung=")]
     assert "Anna Beispiel" not in antwort.text
     assert client.get("/lehrperson").status_code == 200
+
+
+def test_login_zeigt_gast_knopf(client):
+    html = client.get("/").text
+    assert 'href="/gast"' in html
+    assert "Ansehen ohne Konto" in html
+    assert "Ohne Anmeldung. Es wird nichts gespeichert." in html
+
+
+def test_datenschutz_nennt_gast_ansicht():
+    text = (Path(__file__).parent.parent / "docs" / "datenschutz.md").read_text(encoding="utf-8")
+    assert "Gast-Ansicht speichert nichts" in text
+    assert "test_gast_datenbank_unveraendert" in text
+    zeile = next(z for z in text.splitlines() if "`hinweis_gast`" in z)
+    assert "als Meldung statt einer Bestätigung" not in zeile

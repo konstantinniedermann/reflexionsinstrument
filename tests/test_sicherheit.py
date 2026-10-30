@@ -68,3 +68,8 @@ def test_405_zeigt_fehlerseite_mit_headern(client, methode, pfad):
     assert "Diese Seite gibt es so nicht." in antwort.text
     assert "allow" in antwort.headers
     assert antwort.headers["x-content-type-options"] == "nosniff"
+
+
+def test_robots_header(client):
+    for pfad in ("/", "/gast", "/gibt-es-nicht"):
+        assert client.get(pfad).headers["x-robots-tag"] == "noindex, nofollow"

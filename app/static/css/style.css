@@ -1189,4 +1189,13 @@ input[type="checkbox"] {
   margin-top: 1.5rem;
 }
 
+.karte--gast {
+  margin-top: 1rem;
+  text-align: center;
+}
+
+.karte--gast .knopf {
+  margin: 0.5rem 0;
+}
+
 /* Ende #19 */
