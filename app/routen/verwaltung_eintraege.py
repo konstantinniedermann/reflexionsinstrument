@@ -4,12 +4,15 @@ import sqlite3
 from datetime import date
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from fastapi.responses import StreamingResponse
 
 from app import zeit
 from app.auswertung import exportstand, groesse_text, karten, personenkarten
 from app.db import hole_db
-from app.eintraege import alle_zeilen, gruppiere
+from app.eintraege import Zeile, alle_zeilen, gruppiere
+from app.export import als_csv, exportzeilen
+from app.export_zip import DATEI_FEHLT, zip_dateien, zip_strom
 from app.inhalte import lies_projektstart
 from app.sitzung import braucht_auftraggeberin
 from app.vorlagen import templates
@@ -47,4 +50,46 @@ def uebersicht(request: Request, db: DB, heute: HEUTE, lehrperson: LehrpersonFil
             "stand": stand,
             "groesse": groesse_text(stand.bytes),
         },
+    )
+
+
+def _anhang(name: str, heute: date, endung: str) -> dict[str, str]:
+    return {
+        "Content-Disposition": f'attachment; filename="reflexion-{name}-{heute.isoformat()}.{endung}"'
+    }
+
+
+@router.get("/tabelle.csv")
+def tabelle(request: Request, db: DB, heute: HEUTE):
+    ez = exportzeilen(alle_zeilen(db), lies_projektstart(db))
+    basis = str(request.base_url).rstrip("/")
+
+    def link(z: Zeile) -> str:
+        return f"{basis}/verwaltung/aufnahmen/{z.aufnahme_id}" if z.aufnahme_id else ""
+
+    return Response(
+        als_csv(ez, link),
+        media_type="text/csv; charset=utf-8",
+        headers=_anhang("tabelle", heute, "csv"),
+    )
+
+
+@router.get("/gesamtexport.zip")
+def gesamtexport(request: Request, db: DB, heute: HEUTE):
+    # Alles lesen, bevor die Antwort beginnt: der Generator hält keine Datenbankverbindung.
+    ez = exportzeilen(alle_zeilen(db), lies_projektstart(db))
+    dateien = zip_dateien(ez, request.app.state.einstellungen.aufnahmen_verzeichnis)
+
+    def tabelle_im_zip(enthalten: dict[int, str]) -> bytes:
+        def name(z: Zeile) -> str:
+            if z.aufnahme_id is None:
+                return ""
+            return enthalten.get(z.aufnahme_id, DATEI_FEHLT)
+
+        return als_csv(ez, name)
+
+    return StreamingResponse(
+        zip_strom(dateien, tabelle_im_zip),
+        media_type="application/zip",
+        headers=_anhang("gesamtexport", heute, "zip"),
     )
