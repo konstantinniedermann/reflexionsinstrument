@@ -1,14 +1,17 @@
 .DEFAULT_GOAL := help
-.PHONY: help install dev test e2e lint format deploy logs ssh
+.PHONY: help install dev platzhalter test e2e lint format deploy logs ssh
 
 help: ## Zeigt diese Hilfe
-	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-8s %s\n", $$1, $$2}'
+	@grep -E '^[a-zA-Z0-9_-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-12s %s\n", $$1, $$2}'
 
 install: ## Installiert die Abhängigkeiten (uv sync)
 	uv sync
 
 dev: ## Startet die App lokal auf http://localhost:8000 (Daten in .daten/)
 	DATEN_VERZEICHNIS=.daten uv run uvicorn --factory app.main:erstelle_app --reload --port 8000
+
+platzhalter: ## Lädt erfundene Platzhalter-Inhalte in .daten/ (nie in Produktion)
+	DATEN_VERZEICHNIS=.daten uv run python -m app.kommandos platzhalter-laden
 
 test: ## Führt die Python-Tests aus
 	uv run pytest

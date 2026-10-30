@@ -97,6 +97,22 @@ def zaehle_inhalte(db: sqlite3.Connection) -> dict[str, int]:
     }
 
 
+def inhalte_vorhanden(db: sqlite3.Connection) -> bool:
+    zahlen = zaehle_inhalte(db)
+    return any(zahlen[k] for k in ("info_abschnitte", "runden", "leitfragen", "impulse"))
+
+
+def loesche_alle_inhalte(db: sqlite3.Connection) -> None:
+    """Leert Infoblock, Runden (samt Fragen), Leitfragen und Impulse. Mit Antworten: Gesperrt."""
+    with transaktion(db):
+        try:
+            for tabelle in ("info_abschnitte", "runden", "leitfragen", "impulse"):
+                db.execute(f"DELETE FROM {tabelle}")
+        except sqlite3.IntegrityError as fehler:
+            antworten = db.execute("SELECT COUNT(*) FROM antworten").fetchone()[0]
+            raise Gesperrt(max(antworten, 1)) from fehler
+
+
 # ---------- Runden ----------
 
 _RUNDEN_SQL = (
