@@ -22,6 +22,7 @@ Voraussetzung: [uv](https://docs.astral.sh/uv/). Alle Befehle stehen in `make he
 | `make install` | Abhängigkeiten installieren |
 | `make dev` | App lokal starten auf http://localhost:8000 (Daten in `.daten/`) |
 | `make lint test` | Code, Formatierung und Tests prüfen (läuft auch in der CI) |
+| `make e2e` | App im Headless-Chrome prüfen (Handy- und Desktop-Breite, hell und dunkel), Screenshots in `tests/.e2e/bilder-pilot/`. Braucht Node ab 22 und Google Chrome, läuft nur lokal |
 | `make deploy` | Auf fly.io veröffentlichen (Frankfurt), braucht die fly-CLI und eine Anmeldung |
 | `make logs`, `make ssh` | Logs ansehen bzw. Shell auf der Maschine öffnen |
 
