@@ -14,7 +14,7 @@
         {% if not stand.bestaetigt %}<span class="marke marke--offen">Vorschlag, noch nicht von dir bestätigt</span>{% endif %}
       </div>
       <p class="hilfe">Erscheint: {{ stand.vorlage.ort }}</p>
-      <textarea id="inhalt" name="inhalt" rows="12"{% if fehler.inhalt %} aria-describedby="fehler-inhalt"{% endif %}>{{ werte.inhalt }}</textarea>
+      <textarea id="inhalt" name="inhalt" rows="12"{% if fehler.inhalt %} aria-invalid="true" aria-describedby="fehler-inhalt"{% endif %}>{{ werte.inhalt }}</textarea>
       {{ formatier_hilfe() }}
       {% if not stand.bestaetigt %}<p class="hilfe">Bestätigen heisst speichern, auch unverändert.</p>{% endif %}
       {{ feldfehler(fehler, "inhalt") }}

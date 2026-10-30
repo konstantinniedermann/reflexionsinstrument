@@ -11,12 +11,12 @@
     <div class="feld">
       <label for="titel">Titel</label>
       <input type="text" id="titel" name="titel" value="{{ werte.titel }}" maxlength="100"
-             autocomplete="off"{% if fehler.titel %} aria-describedby="fehler-titel"{% endif %} />
+             autocomplete="off"{% if fehler.titel %} aria-invalid="true" aria-describedby="fehler-titel"{% endif %} />
       {{ feldfehler(fehler, "titel") }}
     </div>
     <div class="feld">
       <label for="inhalt">Text</label>
-      <textarea id="inhalt" name="inhalt" rows="12"{% if fehler.inhalt %} aria-describedby="fehler-inhalt"{% endif %}>{{ werte.inhalt }}</textarea>
+      <textarea id="inhalt" name="inhalt" rows="12"{% if fehler.inhalt %} aria-invalid="true" aria-describedby="fehler-inhalt"{% endif %}>{{ werte.inhalt }}</textarea>
       {{ formatier_hilfe() }}
       {{ feldfehler(fehler, "inhalt") }}
     </div>

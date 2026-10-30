@@ -11,12 +11,12 @@
     <div class="feld">
       <label for="titel">Titel</label>
       <input type="text" id="titel" name="titel" value="{{ werte.titel }}" maxlength="100"
-             autocomplete="off"{% if fehler.titel %} aria-describedby="fehler-titel"{% endif %} />
+             autocomplete="off"{% if fehler.titel %} aria-invalid="true" aria-describedby="fehler-titel"{% endif %} />
       {{ feldfehler(fehler, "titel") }}
     </div>
     <div class="feld">
       <label for="freischaltdatum">Sichtbar ab</label>
-      <input type="date" id="freischaltdatum" name="freischaltdatum" value="{{ werte.freischaltdatum }}"{% if fehler.freischaltdatum %} aria-describedby="fehler-freischaltdatum"{% endif %} />
+      <input type="date" id="freischaltdatum" name="freischaltdatum" value="{{ werte.freischaltdatum }}"{% if fehler.freischaltdatum %} aria-invalid="true" aria-describedby="fehler-freischaltdatum"{% endif %} />
       <p class="hilfe">Ab diesem Tag sehen die Lehrpersonen die Runde. Die Runden erscheinen in der Reihenfolge ihres Datums.</p>
       {% if schon_sichtbar %}
       <p class="hinweis">Diese Runde ist schon sichtbar. Mit einem späteren Datum verschwindet sie für die Lehrpersonen bis dahin; bisherige Antworten bleiben gespeichert.</p>
@@ -25,7 +25,7 @@
     </div>
     <div class="feld">
       <label for="fallbeispiel">Fallbeispiel (freiwillig)</label>
-      <textarea id="fallbeispiel" name="fallbeispiel" rows="12"{% if fehler.fallbeispiel %} aria-describedby="fehler-fallbeispiel"{% endif %}>{{ werte.fallbeispiel }}</textarea>
+      <textarea id="fallbeispiel" name="fallbeispiel" rows="12"{% if fehler.fallbeispiel %} aria-invalid="true" aria-describedby="fehler-fallbeispiel"{% endif %}>{{ werte.fallbeispiel }}</textarea>
       {{ formatier_hilfe() }}
       {{ feldfehler(fehler, "fallbeispiel") }}
     </div>
