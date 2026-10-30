@@ -203,3 +203,12 @@ def test_ungueltige_id_ist_404_als_seite(client, auftraggeberin, pfad):
     assert antwort.status_code == 404
     assert antwort.headers["content-type"].startswith("text/html")
     assert "Diese Seite gibt es nicht." in antwort.text
+
+
+def test_passwort_hilfetext_nennt_mindestlaenge(client, auftraggeberin, lehrperson):
+    seite = als_leitung(client, auftraggeberin)
+    assert "mindestens 8 Zeichen" in seite.get("/verwaltung/zugaenge").text
+    assert (
+        "mindestens 8 Zeichen"
+        in seite.get(f"/verwaltung/zugaenge/{lehrperson['id']}/passwort").text
+    )

@@ -903,3 +903,7 @@ textarea:focus {
   font-size: 1.15rem;
   overflow-wrap: anywhere;
 }
+
+.karte > .hilfe {
+  margin-top: 1rem;
+}

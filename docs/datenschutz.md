@@ -13,9 +13,10 @@ Die Entscheidungen hier hat Claude getroffen (Projektregel «Fragen selbst beant
 | Sprachaufnahmen | `/data/aufnahmen/`, Verweis in `aufnahmen` | Tagebuch zum Einsprechen | ja, Stimme |
 | Texte der Auftraggeberin (Infoblock, Runden, Fragen, Impulse, Hinweise) | übrige Tabellen | Inhalt | nein |
 | Sitzungs-Cookie im Browser | Browser | angemeldet bleiben. Enthält Konto-ID und Sitzungsversion, signiert. Technisch nötig, kein Tracking | ja (Konto-ID) |
+| Cookie `csrf` im Browser | Browser | Schutz der Formulare vor fremden Seiten. Zufallswert ohne Personenbezug, 30 Tage gültig | nein |
 | Zähler für Fehlversuche beim Anmelden | nur Arbeitsspeicher der App | Schutz gegen das Durchprobieren von Passwörtern | Client-IP und eingegebener Benutzername |
 
-**Umsetzung in #14:** Für die Begrenzung der Fehlversuche hält die App die Client-IP aus dem Header `Fly-Client-IP` und den eingegebenen Benutzernamen nur im Arbeitsspeicher (höchstens 15 Minuten pro Eintrag), ohne sie in die Datenbank oder in Logs zu schreiben. Sie verschwindet beim Neustart der Maschine (spätestens beim automatischen Anhalten bei Inaktivität).
+**Umsetzung in #14:** Für die Begrenzung der Fehlversuche hält die App die Client-IP aus dem Header `Fly-Client-IP` und den eingegebenen Benutzernamen nur im Arbeitsspeicher (höchstens 15 Minuten pro Eintrag; veraltete Einträge räumt jeder Anmeldeversuch weg), ohne sie in die Datenbank oder in Logs zu schreiben. Sie verschwindet beim Neustart der Maschine (spätestens beim automatischen Anhalten bei Inaktivität).
 
 **Nicht gespeichert:** E-Mail-Adressen, Telefonnummern, IP-Adressen (dauerhaft), Browser- oder Gerätekennungen, Standort, Nutzungsstatistik. Es gibt keine Benachrichtigungen, deshalb braucht es keine Kontaktdaten.
 
@@ -26,7 +27,7 @@ Stand 30.10.2026 (Grundgerüst aus #13 plus dieses Issue).
 | Prüfpunkt | Ergebnis | Absicherung |
 |---|---|---|
 | Keine E-Mail-Adressen | Das Schema hat kein Feld dafür. «Passwort vergessen» läuft über die Auftraggeberin. | `app/migrationen/001_grundschema.sql`, [Anforderungen](anforderungen.md#anmeldung-und-konten) |
-| Kein Tracking | Kein Analyse-Skript, keine Cookies ausser der Sitzung, kein JavaScript von Dritten | CSP `script-src 'self'` (`app/sicherheit.py`) |
+| Kein Tracking | Kein Analyse-Skript, nur zwei technisch nötige Cookies (Sitzung und `csrf`), kein JavaScript von Dritten | CSP `script-src 'self'` (`app/sicherheit.py`) |
 | Keine externen Ressourcen | Templates und CSS laden nichts von aussen. Schriften sind Systemschriften (`system-ui`, `Georgia` usw.), kein `@import`, kein `url(…)` | Test `test_vorlagen_und_css_laden_nichts_von_aussen` (alle Templates und CSS-Dateien, auch künftige), Test `test_startseite_ohne_externe_quellen`, CSP `default-src 'self'` |
 | Keine Weitergabe beim Verlassen der Seite | Kein Referrer an fremde Seiten | `Referrer-Policy: no-referrer` |
 | Keine IP-Adressen in Logs | Bis jetzt protokollierte uvicorn jede Anfrage mit echter Client-IP und Pfad, auch die Health-Checks alle 30 Sekunden. Abgeschaltet, siehe [Logs](#logs) | Test `test_produktion_schreibt_keine_zugriffsprotokolle` |

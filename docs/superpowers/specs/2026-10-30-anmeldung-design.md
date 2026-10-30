@@ -83,7 +83,7 @@ Die Verwaltung bearbeitet nur Konten der Rolle Lehrperson. Eine `id` eines Konto
 - `Konto` ist eine kleine, unveränderliche Dataclass (`id`, `anzeigename`, `benutzername`, `rolle`, `sitzungsversion`).
 - Regel für #16–#18: Objekte einer anderen Lehrperson (Einträge, Aufnahmen) ergeben **404**, nicht 403, damit nicht erkennbar ist, ob sie existieren. Jede Abfrage auf Einträge filtert in SQL nach `konto_id`.
 
-Die Abbrüche laufen über eigene Exceptions (`NichtAngemeldet`, `KeinZugriff`) mit Exception-Handlern in `erstelle_app`. Für 403 und 404 gibt es eine gemeinsame Fehlerseite `fehler.html` im Seitenrahmen (Titel, ein Satz, Link «Zur Startseite»). Der bestehende Handler für `HTTPException` 404 wird so ersetzt, dass auch unbekannte Adressen diese Seite zeigen (Sicherheits-Header bleiben, das prüft schon ein Test aus #13).
+Die Abbrüche laufen über eigene Exceptions (`NichtAngemeldet`, `KeinZugriff`) mit Exception-Handlern in `erstelle_app`. Für alle Fehlerstatus (403, 404, 405 …) gibt es eine gemeinsame Fehlerseite `fehler.html` im Seitenrahmen (Titel, ein Satz, Link «Zur Startseite»). Der Handler für `HTTPException` zeigt sie für jeden Status (Header wie `Allow` bleiben), ebenso ungültige Pfadparameter (`RequestValidationError`, z. B. `/verwaltung/zugaenge/abc/passwort`) als 404. IDs in Pfaden nutzen den gemeinsamen Typ `Id` (`app/typen.py`, 1 bis 2⁶³−1). `GET /anmelden` und `GET /abmelden` (Tab-Wiederherstellung) leiten per 303 auf `/`.
 
 ## CSRF-Schutz
 
@@ -113,10 +113,10 @@ Im Arbeitsspeicher (eine Maschine, ein Prozess; ein Neustart setzt die Zähler z
 
 - Klasse `Anmeldeschutz` in `app/anmeldeschutz.py` mit einstellbarer Uhr (für Tests), gehalten in `app.state.anmeldeschutz`.
 - Zählt **Fehlversuche** in einem gleitenden Fenster von 15 Minuten, getrennt pro Benutzername (kleingeschrieben) und pro Client-Adresse.
-- Sperre: ab **5** Fehlversuchen pro Benutzername oder **20** pro Adresse im Fenster. Während der Sperre wird auch ein richtiges Passwort abgelehnt (sonst ginge das Durchprobieren weiter), ohne bcrypt-Prüfung. Meldung (429): «Zu viele Fehlversuche. Bitte in 15 Minuten nochmals versuchen.»
-- Erfolgreiche Anmeldung löscht die Fehlversuche dieses Benutzernamens (nicht die der Adresse).
+- Sperre: ab **5** Fehlversuchen pro Benutzername oder **20** pro Adresse im Fenster. Während der Sperre wird auch ein richtiges Passwort abgelehnt (sonst ginge das Durchprobieren weiter), ohne bcrypt-Prüfung. Ablauf: `versuch_beginnen(name, adresse)` prüft die Sperre und merkt den Versuch unter dem Lock **vor** der bcrypt-Prüfung vor (sonst unterliefen parallele Anfragen die Grenze). Fehlschlag: Vormerkung bleibt. Meldung (429): «Zu viele Fehlversuche. Bitte in 15 Minuten nochmals versuchen.»
+- Erfolgreiche Anmeldung löscht die Einträge dieses Benutzernamens und nimmt die Vormerkung dieses Versuchs bei der Adresse zurück (frühere Fehlversuche der Adresse bleiben).
 - **Client-Adresse:** In Produktion der Header `Fly-Client-IP` (setzt der fly-Proxy), sonst `request.client.host`. Nicht `X-Forwarded-For` (das linke Feld kann der Client selbst setzen). Die Adresse wird nur im Arbeitsspeicher gehalten und nirgends gespeichert.
-- Speicher begrenzen: Einträge, deren Fenster abgelaufen ist, werden beim Zugriff entfernt; höchstens 10 000 Schlüssel (danach werden die ältesten verworfen).
+- Speicher begrenzen: Einträge, deren Fenster abgelaufen ist, werden bei jedem Versuch für alle Schlüssel entfernt; höchstens 10 000 Schlüssel (danach werden die ältesten verworfen).
 - Bewusst in Kauf genommen: Wer einen Benutzernamen kennt, kann diesen Zugang 15 Minuten sperren. Bei 5 bekannten Personen ist das harmlos, und nach 15 Minuten ist es vorbei.
 
 ## Zugänge verwalten

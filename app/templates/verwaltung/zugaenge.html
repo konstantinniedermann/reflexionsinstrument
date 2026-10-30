@@ -40,7 +40,7 @@
       <label for="passwort">Passwort</label>
       <input type="text" id="passwort" name="passwort" value="{{ werte.get('passwort', vorschlag) }}"
              autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" required />
-      <p class="hilfe">Das ist ein Vorschlag. Du kannst ihn ändern.</p>
+      <p class="hilfe">Das ist ein Vorschlag. Du kannst ihn ändern (mindestens 8 Zeichen).</p>
       {% if fehler.passwort %}<p class="fehler" role="alert">{{ fehler.passwort }}</p>{% endif %}
     </div>
     <button type="submit" class="knopf">Zugang anlegen</button>
