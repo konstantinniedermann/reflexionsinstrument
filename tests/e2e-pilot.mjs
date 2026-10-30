@@ -6,7 +6,7 @@
 // Aufbau: Abschnitt «Gerüst» (Hilfsfunktionen für alle Abläufe) und Abschnitt «Abläufe».
 // Spätere Issues ergänzen ihre Abläufe im Abschnitt «Abläufe» mit oeffne(), js(), klick(),
 // screenshot() und pruefe().
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:net";
 import { mkdirSync, rmSync, writeFileSync } from "node:fs";
 import { setTimeout as warte } from "node:timers/promises";
@@ -16,6 +16,7 @@ const BILDER = `${HIER}bilder-pilot/`;
 const DATEN = `${HIER}daten-pilot/`;
 const PROFIL = `${HIER}profil-pilot/`;
 const PROJEKT = new URL("../", import.meta.url).pathname;
+const PW_AUFTRAGGEBERIN = "e2e-passwort-projektleitung";
 const CHROME = process.env.CHROME_PFAD || "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome";
 
 // ---------------------------------------------------------------- Gerüst
@@ -183,6 +184,27 @@ function pruefe(bedingung, beschreibung) {
   console.log(`${bedingung ? "ok    " : "FEHLER"} ${beschreibung}`);
 }
 
+/** Wie pruefe, bricht den Ablauf aber ab: für Schritte, auf denen spätere Schritte aufbauen. */
+function muss(bedingung, beschreibung) {
+  pruefe(bedingung, beschreibung);
+  if (!bedingung) throw new Error(`Abbruch, Voraussetzung nicht erfüllt: ${beschreibung}`);
+}
+
+/** Setzt den Wert eines Feldes und löst «input» aus. */
+const tippe = (sel, wert) =>
+  js(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); e.value = ${JSON.stringify(wert)}; e.dispatchEvent(new Event("input", { bubbles: true })); })()`);
+
+/** Klickt den Absende-Knopf und wartet, bis die nächste Seite geladen ist. */
+async function sende(sel) {
+  const vorher = ereignisse.filter((e) => e === "Page.loadEventFired").length;
+  await klick(sel);
+  await warteBis(() => ereignisse.filter((e) => e === "Page.loadEventFired").length > vorher, `Seite nach Absenden von ${sel} lädt nicht`);
+  await warte(150);
+}
+
+const pfad = () => js("location.pathname");
+const ueberschrift = () => js("document.querySelector('h1')?.innerText");
+
 async function keinUeberlauf(name) {
   const [scroll, breite] = await js("[document.documentElement.scrollWidth, window.innerWidth]");
   pruefe(scroll <= breite, `kein horizontales Scrollen: ${name} (${scroll} <= ${breite})`);
@@ -190,8 +212,9 @@ async function keinUeberlauf(name) {
 
 /** Prüft, dass seit dem Aufruf von merke() keine Konsolenfehler oder CSP-Verstösse dazukamen. */
 const merke = () => konsolenfehler.length;
-function keineFehlerSeit(stand, name) {
-  const neu = konsolenfehler.slice(stand);
+function keineFehlerSeit(stand, name, erwartet = []) {
+  // erwartet: Teile von Meldungen, die der Ablauf absichtlich auslöst (z. B. «status of 403» bei verweigertem Zugriff).
+  const neu = konsolenfehler.slice(stand).filter((f) => !erwartet.some((e) => f.includes(e)));
   pruefe(neu.length === 0, `keine Konsolenfehler und CSP-Verstösse: ${name}${neu.length ? ` (${neu.join("; ")})` : ""}`);
 }
 
@@ -218,29 +241,98 @@ for (const signal of ["SIGINT", "SIGTERM"]) {
 // ---------------------------------------------------------------- Abläufe
 
 async function ablaeufe() {
-  // Startseite in Handy-Breite, hell und dunkel
+  const PW_FALSCH = "falsches-passwort";
+
+  // 1. Login-Seite in Handy-Breite, hell und dunkel
   await handy();
   await farbschema("light");
   let stand = merke();
   await oeffne("/");
-  pruefe((await js("document.querySelector('h1')?.innerText")) === "Reflexionsinstrument", "Startseite: Titel «Reflexionsinstrument» sichtbar");
-  pruefe(await js("document.querySelector('h1').offsetHeight > 0"), "Startseite: Titel hat eine sichtbare Fläche");
-  await keinUeberlauf("Startseite 390 px");
-  await screenshot("01-start-hell");
+  muss((await ueberschrift()) === "Anmelden", "Login-Seite: Titel «Anmelden» sichtbar");
+  pruefe(await js("document.querySelector('h1').offsetHeight > 0"), "Login-Seite: Titel hat eine sichtbare Fläche");
+  pruefe(await js("!!document.querySelector('#benutzername') && !!document.querySelector('#passwort')"), "Login-Seite: Felder für Benutzername und Passwort vorhanden");
+  await keinUeberlauf("Login-Seite 390 px");
+  await screenshot("01-login-hell");
 
   await farbschema("dark");
-  await screenshot("02-start-dunkel");
-  await keinUeberlauf("Startseite 390 px dunkel");
-  keineFehlerSeit(stand, "Startseite Handy");
+  await screenshot("02-login-dunkel");
+  await keinUeberlauf("Login-Seite 390 px dunkel");
+  keineFehlerSeit(stand, "Login-Seite Handy");
   await farbschema("light");
 
-  // Startseite in Desktop-Breite
+  // Login-Seite in Desktop-Breite
   await desktop();
   stand = merke();
   await oeffne("/");
-  pruefe((await text()).includes("Reflexionsinstrument"), "Startseite Desktop: Titel sichtbar");
-  await screenshot("03-start-desktop");
-  keineFehlerSeit(stand, "Startseite Desktop");
+  pruefe((await ueberschrift()) === "Anmelden", "Login-Seite Desktop: Titel sichtbar");
+  await keinUeberlauf("Login-Seite 1280 px");
+  await screenshot("03-login-desktop");
+  keineFehlerSeit(stand, "Login-Seite Desktop");
+
+  // 2. Falsches Passwort
+  await handy();
+  stand = merke();
+  await oeffne("/");
+  await tippe("#benutzername", "projektleitung");
+  await tippe("#passwort", PW_FALSCH);
+  await sende("form[action='/anmelden'] button[type=submit]");
+  pruefe((await text()).includes("Benutzername oder Passwort stimmt nicht."), "Falsches Passwort: Meldung sichtbar");
+  pruefe((await pfad()) !== "/verwaltung", "Falsches Passwort: nicht angemeldet");
+  await keinUeberlauf("Login-Fehler 390 px");
+  await screenshot("04-login-fehler");
+  keineFehlerSeit(stand, "Login-Fehler", ["status of 400"]); // 400 ist die Antwort auf falsche Zugangsdaten
+
+  // 3. Auftraggeberin meldet sich an, legt einen Zugang an, sieht das Passwort, meldet sich ab
+  stand = merke();
+  await oeffne("/");
+  await tippe("#benutzername", "projektleitung");
+  await tippe("#passwort", PW_AUFTRAGGEBERIN);
+  await sende("form[action='/anmelden'] button[type=submit]");
+  muss((await text()).includes("Projektleitung") && (await text()).includes("Abmelden"), "Auftraggeberin ist angemeldet (Name und Abmelden im Kopf)");
+  keineFehlerSeit(stand, "Anmeldung Auftraggeberin");
+
+  stand = merke();
+  await oeffne("/verwaltung");
+  muss((await ueberschrift()) === "Verwaltung", "Auftraggeberin sieht die Verwaltung");
+  await keinUeberlauf("Verwaltung 390 px");
+  await oeffne("/verwaltung/zugaenge");
+  muss((await ueberschrift()) === "Zugänge", "Auftraggeberin sieht die Zugänge");
+  pruefe((await js("document.querySelector('#passwort').value.length")) >= 8, "Zugang anlegen: Passwort ist vorbelegt");
+  await keinUeberlauf("Zugänge 390 px");
+  await screenshot("05-zugaenge");
+  await tippe("#anzeigename", "Anna Muster");
+  await tippe("#benutzername", "lp.anna");
+  await sende("form[action='/verwaltung/zugaenge'] button[type=submit]");
+  const bestaetigung = await text();
+  muss(bestaetigung.includes("lp.anna") && (await js("document.querySelector('dl.zugangsdaten dd:last-of-type')?.innerText.length > 0")), "Zugang angelegt: Benutzername und Passwort werden angezeigt");
+  const pwLehrperson = await js("document.querySelector('dl.zugangsdaten dd:last-of-type').innerText.trim()");
+  await keinUeberlauf("Zugang angelegt 390 px");
+  await screenshot("06-zugang-angelegt");
+  await oeffne("/verwaltung/zugaenge");
+  pruefe((await text()).includes("Anna Muster"), "Zugänge: neuer Zugang steht in der Liste");
+  keineFehlerSeit(stand, "Verwaltung");
+
+  await sende(".seitenkopf form[action='/abmelden'] button");
+  pruefe((await ueberschrift()) === "Anmelden", "Abmelden führt zur Login-Seite");
+  await oeffne("/verwaltung");
+  pruefe((await ueberschrift()) === "Anmelden", "Nach dem Abmelden: Verwaltung nicht mehr zugänglich");
+
+  // 4. Lehrperson meldet sich mit dem gelesenen Passwort an, sieht ihre Startseite, hat keinen Zugriff auf die Verwaltung
+  stand = merke();
+  await oeffne("/");
+  await tippe("#benutzername", "lp.anna");
+  await tippe("#passwort", pwLehrperson);
+  await sende("form[action='/anmelden'] button[type=submit]");
+  muss((await ueberschrift()) === "Hallo, Anna Muster", "Lehrperson ist angemeldet: Startseite mit Anzeigename");
+  await keinUeberlauf("Lehrperson-Start 390 px");
+  await screenshot("07-lehrperson-start");
+  await oeffne("/verwaltung");
+  pruefe((await ueberschrift()) === "Kein Zugriff", "Lehrperson: /verwaltung zeigt «Kein Zugriff»");
+  await keinUeberlauf("Kein Zugriff 390 px");
+  await screenshot("08-kein-zugriff");
+  keineFehlerSeit(stand, "Lehrperson", ["status of 403"]); // 403 ist die Antwort auf /verwaltung
+  await sende(".seitenkopf form[action='/abmelden'] button");
+  pruefe((await ueberschrift()) === "Anmelden", "Lehrperson: Abmelden führt zur Login-Seite");
 }
 
 // ---------------------------------------------------------------- Ablauf des Skripts
@@ -252,6 +344,13 @@ try {
   rmSync(BILDER, { recursive: true, force: true });
   mkdirSync(BILDER, { recursive: true });
   mkdirSync(DATEN, { recursive: true });
+  // Konto der Auftraggeberin wie im Betrieb per Kommando anlegen (Passwort über stdin).
+  const anlegen = spawnSync(
+    "uv",
+    ["run", "python", "-m", "app.kommandos", "auftraggeberin-anlegen", "--benutzername", "projektleitung", "--anzeigename", "Projektleitung"],
+    { cwd: PROJEKT, env: { ...process.env, DATEN_VERZEICHNIS: DATEN }, input: `${PW_AUFTRAGGEBERIN}\n`, encoding: "utf8" },
+  );
+  if (anlegen.status !== 0) throw new Error(`Konto der Auftraggeberin nicht angelegt (Exit ${anlegen.status}): ${anlegen.stdout}${anlegen.stderr}`);
   await starteApp();
   await starteChrome();
   await ablaeufe();

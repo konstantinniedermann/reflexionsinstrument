@@ -1,0 +1,49 @@
+{% extends "verwaltung/rahmen.html" %}
+{% block titel %}Zugänge – Reflexionsinstrument{% endblock %}
+{% block inhalt %}
+<h1>Zugänge</h1>
+{% if meldung %}
+<p class="hinweis" role="status">{{ meldung }}</p>
+{% endif %}
+<ul class="liste-ohne">
+  {% for lp in lehrpersonen %}
+  <li class="karte">
+    <strong>{{ lp.anzeigename }}</strong>
+    <span class="gedaempft">{{ lp.benutzername }} · angelegt am {{ lp.erstellt[8:10] }}.{{ lp.erstellt[5:7] }}.{{ lp.erstellt[0:4] }}</span>
+    <span class="aktionen">
+      <a href="/verwaltung/zugaenge/{{ lp.id }}/passwort">Neues Passwort</a>
+      <a href="/verwaltung/zugaenge/{{ lp.id }}/loeschen">Löschen</a>
+    </span>
+  </li>
+  {% else %}
+  <li class="karte"><p class="gedaempft">Noch keine Zugänge.</p></li>
+  {% endfor %}
+</ul>
+
+<h2>Neuer Zugang</h2>
+<section class="karte">
+  <form method="post" action="/verwaltung/zugaenge" class="formular">
+    {{ csrf_feld(request) }}
+    <div class="feld">
+      <label for="anzeigename">Name</label>
+      <input type="text" id="anzeigename" name="anzeigename" value="{{ werte.get('anzeigename', '') }}" autocomplete="off" required />
+      {% if fehler.anzeigename %}<p class="fehler" role="alert">{{ fehler.anzeigename }}</p>{% endif %}
+    </div>
+    <div class="feld">
+      <label for="benutzername">Benutzername</label>
+      <input type="text" id="benutzername" name="benutzername" value="{{ werte.get('benutzername', '') }}"
+             autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" required />
+      <p class="hilfe">Kleinbuchstaben, Ziffern, Punkt und Bindestrich.</p>
+      {% if fehler.benutzername %}<p class="fehler" role="alert">{{ fehler.benutzername }}</p>{% endif %}
+    </div>
+    <div class="feld">
+      <label for="passwort">Passwort</label>
+      <input type="text" id="passwort" name="passwort" value="{{ werte.get('passwort', vorschlag) }}"
+             autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" required />
+      <p class="hilfe">Das ist ein Vorschlag. Du kannst ihn ändern (mindestens 8 Zeichen).</p>
+      {% if fehler.passwort %}<p class="fehler" role="alert">{{ fehler.passwort }}</p>{% endif %}
+    </div>
+    <button type="submit" class="knopf">Zugang anlegen</button>
+  </form>
+</section>
+{% endblock %}

@@ -1,20 +1,14 @@
-"""Allgemeine Routen: Startseite und Health-Check."""
+"""Allgemeine Routen: Health-Check."""
 
 import sqlite3
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
 from app.db import hole_db
-from app.vorlagen import templates
 
 router = APIRouter()
-
-
-@router.get("/")
-def start(request: Request):
-    return templates.TemplateResponse(request, "start.html", {})
 
 
 @router.get("/healthz")

@@ -8,6 +8,22 @@
     <link rel="stylesheet" href="/static/css/style.css" />
   </head>
   <body>
+    {% set konto = konto_von(request) %}
+    <header class="seitenkopf">
+      <span class="seitenkopf__titel">Reflexionsinstrument</span>
+      <div class="seitenkopf__rechts">
+        {% block kopf_rechts %}
+        {% if konto %}
+        <span class="gedaempft">{{ konto.anzeigename }}</span>
+        <form method="post" action="/abmelden">
+          {{ csrf_feld(request) }}
+          <button type="submit" class="knopf knopf--klein">Abmelden</button>
+        </form>
+        {% endif %}
+        {% endblock %}
+      </div>
+    </header>
+    {% block navigation %}{% endblock %}
     <main class="inhalt">
       {% block inhalt %}{% endblock %}
     </main>

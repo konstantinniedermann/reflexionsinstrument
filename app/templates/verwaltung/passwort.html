@@ -1,0 +1,20 @@
+{% extends "verwaltung/rahmen.html" %}
+{% block titel %}Neues Passwort – Reflexionsinstrument{% endblock %}
+{% block inhalt %}
+<h1>Neues Passwort</h1>
+<section class="karte">
+  <p>Für <strong>{{ zugang.anzeigename }}</strong> ({{ zugang.benutzername }}). Wer gerade angemeldet ist, wird abgemeldet.</p>
+  <form method="post" action="/verwaltung/zugaenge/{{ zugang.id }}/passwort" class="formular">
+    {{ csrf_feld(request) }}
+    <div class="feld">
+      <label for="passwort">Passwort</label>
+      <input type="text" id="passwort" name="passwort" value="{{ passwort }}"
+             autocomplete="off" autocapitalize="none" autocorrect="off" spellcheck="false" required />
+      <p class="hilfe">Das ist ein Vorschlag. Du kannst ihn ändern (mindestens 8 Zeichen).</p>
+      {% if fehler %}<p class="fehler" role="alert">{{ fehler }}</p>{% endif %}
+    </div>
+    <button type="submit" class="knopf">Passwort setzen</button>
+    <a class="knopf knopf--leise" href="/verwaltung/zugaenge">Abbrechen</a>
+  </form>
+</section>
+{% endblock %}
