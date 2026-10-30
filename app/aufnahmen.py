@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import BinaryIO, NamedTuple
 
 from app import groesse
+from app.db import transaktion
 
 MAX_DAUER_SEKUNDEN = 600
 TOLERANZ_SEKUNDEN = 10
@@ -153,3 +154,32 @@ def eigene_aufnahme(db: sqlite3.Connection, konto_id: int, aufnahme_id: int) -> 
 def aufnahme(db: sqlite3.Connection, aufnahme_id: int) -> sqlite3.Row | None:
     """Aufnahme eines beliebigen Kontos (nur fuer die Auftraggeberin)."""
     return db.execute("SELECT * FROM aufnahmen WHERE id = ?", (aufnahme_id,)).fetchone()
+
+
+def lege_aufnahme_an(
+    db: sqlite3.Connection, konto_id: int, datei: Datei, dauer_sekunden: int | None
+) -> int:
+    """Nur der `INSERT`; die Transaktion gehoert dem Aufrufer."""
+    return db.execute(
+        "INSERT INTO aufnahmen (konto_id, dateiname, mime_typ, groesse_bytes, dauer_sekunden) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (konto_id, datei.name, datei.mime_typ, datei.groesse, dauer_sekunden),
+    ).lastrowid
+
+
+def aufnahme_als_tagebucheintrag(
+    db: sqlite3.Connection,
+    konto_id: int,
+    datei: Datei,
+    dauer_sekunden: int | None,
+    text: str | None,
+    jetzt: str | None = None,
+) -> int:
+    """Aufnahme und Tagebucheintrag in einer Transaktion; Rueckgabe: `eintrag_id`."""
+    from app import eintraege  # spaet: eintraege importiert dieses Modul
+
+    with transaktion(db):
+        aufnahme_id = lege_aufnahme_an(db, konto_id, datei, dauer_sekunden)
+        return eintraege.lege_tagebucheintrag_an(
+            db, konto_id, "aufnahme", text, aufnahme_id=aufnahme_id, jetzt=jetzt
+        )

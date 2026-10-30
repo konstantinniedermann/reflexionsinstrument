@@ -1,0 +1,21 @@
+{% extends "lehrperson/_rahmen.html" %}
+{% block titel %}Frei sprechen – {{ instrument_titel }}{% endblock %}
+{% block seite %}
+<p><a href="{{ zurueck }}">‹ Tagebuch</a></p>
+<header>
+  <h1>Frei sprechen</h1>
+</header>
+<div class="hinweis formatiert">{{ hinweis_tagebuch | formatiert }}</div>
+<div class="hinweis formatiert">{{ hinweis_aufnahme | formatiert }}</div>
+<form class="formular" method="post" action="{{ aktion }}" enctype="multipart/form-data">
+  {{ csrf_feld(request) }}
+  <input type="hidden" name="dauer_sekunden">
+  <section class="karte">
+    {% include "lehrperson/_aufnehmen.html" %}
+  </section>
+  <details class="feld">
+    <summary>Etwas dazuschreiben (freiwillig)</summary>
+    <textarea name="text" id="text" aria-label="Dein Text" rows="3" maxlength="20000"></textarea>
+  </details>
+</form>
+{% endblock %}
