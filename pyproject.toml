@@ -21,6 +21,10 @@ extend-select = ["I"]
 testpaths = ["tests"]
 pythonpath = ["."]
 python_files = ["test_*.py"]
+filterwarnings = [
+    # Starlette empfiehlt httpx2, siehe docs/beobachtungen.md
+    "ignore:Using `httpx` with `starlette.testclient` is deprecated",
+]
 
 [dependency-groups]
 dev = [

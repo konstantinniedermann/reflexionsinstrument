@@ -13,7 +13,21 @@ Der **klickbare Wegwerf-Prototyp** hat dazu gedient, Feedback zu holen. Er ist n
 
 Alle Texte im Prototyp sind Platzhalter. Eingaben bleiben im jeweiligen Browser.
 
-## Prüfen
+## Pilot-Version
+
+Voraussetzung: [uv](https://docs.astral.sh/uv/). Alle Befehle stehen in `make help`.
+
+| Befehl | Zweck |
+|---|---|
+| `make install` | Abhängigkeiten installieren |
+| `make dev` | App lokal starten auf http://localhost:8000 (Daten in `.daten/`) |
+| `make lint test` | Code, Formatierung und Tests prüfen (läuft auch in der CI) |
+| `make deploy` | Auf fly.io veröffentlichen (Frankfurt), braucht die fly-CLI und eine Anmeldung |
+| `make logs`, `make ssh` | Logs ansehen bzw. Shell auf der Maschine öffnen |
+
+Einstellungen über Umgebungsvariablen: `DATEN_VERZEICHNIS` (Ablage der Datenbank), `GEHEIMER_SCHLUESSEL` (Sitzungen) und `PRODUKTION`. `PRODUKTION` gilt nur beim genauen Wert `1` als eingeschaltet. Im Produktionsbetrieb startet die App ohne `GEHEIMER_SCHLUESSEL` nicht. Den Schlüssel auf fly.io einmalig mit `fly secrets set GEHEIMER_SCHLUESSEL=...` setzen.
+
+## Prüfen (Prototyp)
 
 | Befehl | Prüft |
 |---|---|

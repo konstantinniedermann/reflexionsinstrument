@@ -1,0 +1,31 @@
+# Deploy lokal mit `make deploy`.
+# Geheimer Schlüssel einmalig setzen: fly secrets set GEHEIMER_SCHLUESSEL=...
+
+app = "reflexion-pilot"
+primary_region = "fra"
+
+[env]
+  DATEN_VERZEICHNIS = "/data"
+  PRODUKTION = "1"
+
+[mounts]
+  source = "daten"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/healthz"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "256mb"
