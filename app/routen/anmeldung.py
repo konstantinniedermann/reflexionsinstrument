@@ -58,14 +58,13 @@ def anmelden_senden(
     schutz = request.app.state.anmeldeschutz
     name = normalisiere_benutzername(benutzername)
     adresse = client_adresse(request)
-    if schutz.gesperrt(name, adresse):
+    if not schutz.versuch_beginnen(name, adresse):
         return _login_seite(request, 429, benutzername, MELDUNG_GESPERRT)
     gefunden = finde_hash(db, name)
     konto, passwort_hash = gefunden if gefunden else (None, None)
     if konto is None or not passwort_stimmt(passwort, passwort_hash):
-        schutz.fehlversuch(name, adresse)
         return _login_seite(request, 400, benutzername, MELDUNG_FALSCH)
-    schutz.erfolg(name)
+    schutz.erfolg(name, adresse)
     anmelden(request, konto, dauerhaft == "1")
     return _weiter(konto)
 

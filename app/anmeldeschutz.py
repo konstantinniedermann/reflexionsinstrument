@@ -46,25 +46,37 @@ class Anmeldeschutz:
             return 0
         return len(zeiten)
 
-    def gesperrt(self, benutzername: str, adresse: str) -> bool:
+    def versuch_beginnen(self, benutzername: str, adresse: str) -> bool:
+        """Prueft die Sperre und merkt den Versuch sofort vor (atomar).
+
+        Die Vormerkung geschieht vor der langsamen Passwortpruefung, sonst koennten
+        parallele Anfragen die Grenze unterlaufen. Bei Erfolg nimmt `erfolg` sie zurueck.
+        Gibt False zurueck, wenn gesperrt ist; dann wird nichts aufgezeichnet.
+        """
         name, adr = self._schluessel(benutzername, adresse)
         with self._sperre:
             jetzt = self._uhr()
-            return (
+            for schluessel in list(self._eintraege):
+                self._anzahl(schluessel, jetzt)
+            if (
                 self._anzahl(name, jetzt) >= self._max_pro_name
                 or self._anzahl(adr, jetzt) >= self._max_pro_adresse
-            )
-
-    def fehlversuch(self, benutzername: str, adresse: str) -> None:
-        with self._sperre:
-            jetzt = self._uhr()
-            for schluessel in self._schluessel(benutzername, adresse):
-                self._anzahl(schluessel, jetzt)
+            ):
+                return False
+            for schluessel in (name, adr):
                 self._eintraege.setdefault(schluessel, deque()).append(jetzt)
             while len(self._eintraege) > self._max_schluessel:
                 aeltester = min(self._eintraege, key=lambda s: self._eintraege[s][-1])
                 del self._eintraege[aeltester]
+            return True
 
-    def erfolg(self, benutzername: str) -> None:
+    def erfolg(self, benutzername: str, adresse: str) -> None:
+        """Loescht die Eintraege des Namens und nimmt die Vormerkung dieses Versuchs zurueck."""
+        name, adr = self._schluessel(benutzername, adresse)
         with self._sperre:
-            self._eintraege.pop("n:" + normalisiere_benutzername(benutzername), None)
+            self._eintraege.pop(name, None)
+            zeiten = self._eintraege.get(adr)
+            if zeiten:
+                zeiten.pop()
+                if not zeiten:
+                    del self._eintraege[adr]

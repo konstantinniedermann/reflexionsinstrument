@@ -1,4 +1,6 @@
 import re
+import time
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import replace
 
 import pytest
@@ -116,3 +118,25 @@ def test_abgelaufenes_formular_beim_anmelden(client, lehrperson):
     antwort = client.post("/anmelden", data={"benutzername": "lp.anna", "passwort": "anna-pass-1"})
     assert antwort.status_code == 403
     assert "Formular abgelaufen" in antwort.text
+
+
+def test_parallele_fehlversuche_werden_gebremst(client, lehrperson, monkeypatch):
+    """Die Sperre gilt auch, wenn viele Anfragen gleichzeitig in der Passwortpruefung stecken."""
+
+    def langsam_falsch(passwort, passwort_hash):
+        time.sleep(0.1)
+        return False
+
+    monkeypatch.setattr("app.routen.anmeldung.passwort_stimmt", langsam_falsch)
+    token = csrf_von(client)
+
+    def versuch(_):
+        return client.post(
+            "/anmelden",
+            data={"csrf": token, "benutzername": "lp.anna", "passwort": "falsch-falsch"},
+        ).status_code
+
+    with ThreadPoolExecutor(max_workers=30) as pool:
+        status = list(pool.map(versuch, range(30)))
+    assert status.count(400) == 5
+    assert status.count(429) == 25
