@@ -130,3 +130,39 @@ Letzte Auswertung: noch keine
 **Ursprung:** Löschkonzept #8
 
 **Einschätzung:** Eine Probe vor dem Testlauf (#9) mit Testdaten dauert etwa eine halbe Stunde und kostet für ein paar Minuten ein zweites Volume. Ohne Probe bleibt im Ernstfall nur Ausprobieren unter Zeitdruck.
+
+### 2026-10-30 — Eingabemaske: Doppelklick legt doppelt an
+
+**Thema:** Bedienung
+
+**Fundort:** Formulare «Neue Runde», «Neue Frage» usw. unter `/verwaltung/inhalte`
+
+**Beobachtung:** Ein Doppelklick auf «Speichern» schickt das Formular zweimal ab; ohne JavaScript legt das den Eintrag doppelt an.
+
+**Ursprung:** Gesamt-Review #15
+
+**Einschätzung:** Doppelte Einträge lassen sich löschen. Eine Abhilfe wäre ein einmaliger Formular-Schlüssel oder ein kleines Skript, das den Knopf sperrt; die Maske ist bewusst ohne JavaScript.
+
+### 2026-10-30 — Eingabemaske: Doppeltes «Endgültig löschen» endet auf «Nicht gefunden»
+
+**Thema:** Bedienung
+
+**Fundort:** Löschbestätigung unter `/verwaltung/inhalte`
+
+**Beobachtung:** Bei langsamem Netz und zweimaligem Klick auf «Endgültig löschen» löscht die erste Anfrage, die zweite endet auf der Seite «Nicht gefunden» statt auf der Liste mit «Gelöscht.».
+
+**Ursprung:** Gesamt-Review #15
+
+**Einschätzung:** Folgenlos, die Daten sind richtig gelöscht; nur die Rückmeldung irritiert.
+
+### 2026-10-30 — Eingabemaske: Nur ein Fehler pro Absenden, Felder ohne Markierung
+
+**Thema:** Bedienung, Barrierefreiheit
+
+**Fundort:** Formulare der Eingabemaske
+
+**Beobachtung:** Pro Absenden wird nur der erste Fehler gemeldet. Betroffene Felder tragen weder `aria-invalid` noch einen Rahmen; der Fehler ist nur über den Text darunter erkennbar.
+
+**Ursprung:** Gesamt-Review #15
+
+**Einschätzung:** Bei den kurzen Formularen tragbar. Rahmen und `aria-invalid` sind eine kleine Ergänzung, falls die Auftraggeberin Mühe damit hat.
