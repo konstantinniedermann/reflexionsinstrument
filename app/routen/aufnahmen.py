@@ -2,14 +2,15 @@
 
 import re
 import sqlite3
+from collections.abc import Callable
 from pathlib import Path
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.responses import FileResponse, RedirectResponse, Response
 from starlette.datastructures import UploadFile
 
-from app import aufnahmen, eintraege, groesse
+from app import aufnahmen, eintraege, groesse, inhalte
 from app.ansicht import Ansicht, hole_ansicht_lehrperson
 from app.aufnahmen import AufnahmeFehler, aufnahme, aufnahme_pfad, eigene_aufnahme
 from app.csrf import pruefe_csrf
@@ -17,6 +18,7 @@ from app.db import hole_db
 from app.eingaben import InhaltFehler
 from app.groesse import ZuGross
 from app.konten import Konto
+from app.sichtbar import sichtbare_runde
 from app.sitzung import braucht_auftraggeberin, braucht_lehrperson
 from app.texte import lies_text
 from app.typen import Id
@@ -107,31 +109,166 @@ def tagebuch_aufnahme_seite(request: Request, db: DB, ansicht: ANSICHT):
     return _seite_tagebuch(request, db, ansicht)
 
 
+async def _speichere_upload(
+    request: Request,
+    mit_text: bool,
+    uebernehmen: Callable[[Path, int | None, str | None], RedirectResponse],
+    fehlerseite: Callable[[str, int], Response],
+) -> Response:
+    """Liest und speichert die Datei; `uebernehmen` legt die Zeilen an und gibt die Weiterleitung."""
+    verzeichnis = _verzeichnis(request)
+    try:
+        datei, dauer, text = await _lies_aufnahme(request)
+        text = eintraege.lies_tagebuchtext(text, pflicht=False) if mit_text else None
+        gespeichert = aufnahmen.schreibe_datei(datei.file, verzeichnis)
+    except InhaltFehler as fehler:
+        return fehlerseite(fehler.meldung, 400)
+    except AufnahmeFehler as fehler:
+        if fehler.status != 400:
+            raise HTTPException(fehler.status) from None
+        return fehlerseite(fehler.meldung, 400)
+    try:
+        antwort = uebernehmen(gespeichert, dauer, text)
+    except BaseException:
+        aufnahmen.loesche_dateien(verzeichnis, [gespeichert.name])
+        raise
+    return antwort
+
+
 @lehrperson.post(
     "/tagebuch/neu/aufnahme",
     dependencies=[Depends(begrenze_upload), Depends(pruefe_csrf)],
 )
 async def tagebuch_aufnahme_speichern(request: Request, db: DB, ansicht: ANSICHT):
-    verzeichnis = _verzeichnis(request)
-    try:
-        datei, dauer, text = await _lies_aufnahme(request)
-        text = eintraege.lies_tagebuchtext(text, pflicht=False)
-        gespeichert = aufnahmen.schreibe_datei(datei.file, verzeichnis)
-    except InhaltFehler as fehler:
-        return _seite_tagebuch(request, db, ansicht, fehler.meldung, 400)
-    except AufnahmeFehler as fehler:
-        if fehler.status != 400:
-            raise HTTPException(fehler.status) from None
-        return _seite_tagebuch(request, db, ansicht, fehler.meldung, 400)
-    try:
+    def uebernehmen(gespeichert: Path, dauer: int | None, text: str | None):
         eintrag_id = aufnahmen.aufnahme_als_tagebucheintrag(
             db, ansicht.konto_id, gespeichert, dauer, text
         )
-    except BaseException:
-        aufnahmen.loesche_dateien(verzeichnis, [gespeichert.name])
-        raise
+        return RedirectResponse(f"/lehrperson/tagebuch/{eintrag_id}?erledigt=gespeichert", 303)
+
+    antwort = await _speichere_upload(
+        request,
+        True,
+        uebernehmen,
+        lambda meldung, status: _seite_tagebuch(request, db, ansicht, meldung, status),
+    )
+    aufnahmen.raeume_waisen(db, _verzeichnis(request))
+    return antwort
+
+
+def _freitext_frage(
+    db: sqlite3.Connection, ansicht: Ansicht, runde_id: int, frage_id: int
+) -> tuple[sqlite3.Row, sqlite3.Row]:
+    """Runde (sichtbar) und Freitext-Frage dieser Runde; sonst 404."""
+    runde = sichtbare_runde(db, runde_id, ansicht.stichtag)
+    if runde is None:
+        raise HTTPException(404)
+    for frage in inhalte.fragen(db, runde_id):
+        if frage["id"] == frage_id and frage["typ"] == "freitext":
+            return runde, frage
+    raise HTTPException(404)
+
+
+def _antwort_pfad(runde_id: int, frage_id: int) -> str:
+    return f"/lehrperson/runden/{runde_id}/fragen/{frage_id}/aufnahme"
+
+
+def _seite_antwort(
+    request: Request,
+    db: DB,
+    ansicht: Ansicht,
+    runde: sqlite3.Row,
+    frage: sqlite3.Row,
+    meldung: str | None = None,
+    status: int = 200,
+):
+    ziel = f"/lehrperson/runden/{runde['id']}#frage-{frage['id']}"
+    kontext = {
+        "ansicht": ansicht,
+        "bereich": "runden",
+        "meldung": meldung,
+        "frage": frage,
+        "bisherige": aufnahmen.aufnahme_der_antwort(db, ansicht.konto_id, frage["id"]),
+        "hinweis_tagebuch": lies_text(db, "hinweis_tagebuch"),
+        "hinweis_aufnahme": lies_text(db, "hinweis_aufnahme"),
+        "max_dauer": aufnahmen.MAX_DAUER_SEKUNDEN,
+        "max_bytes": aufnahmen.MAX_BYTES,
+        "aktion": _antwort_pfad(runde["id"], frage["id"]),
+        "zurueck": ziel,
+        "schreiben": ziel,
+    }
+    return templates.TemplateResponse(
+        request, "lehrperson/aufnahme_antwort.html", kontext, status_code=status
+    )
+
+
+@lehrperson.get("/runden/{runde_id}/fragen/{frage_id}/aufnahme")
+def antwort_aufnahme_seite(request: Request, runde_id: Id, frage_id: Id, db: DB, ansicht: ANSICHT):
+    runde, frage = _freitext_frage(db, ansicht, runde_id, frage_id)
+    return _seite_antwort(request, db, ansicht, runde, frage)
+
+
+@lehrperson.post(
+    "/runden/{runde_id}/fragen/{frage_id}/aufnahme",
+    dependencies=[Depends(begrenze_upload), Depends(pruefe_csrf)],
+)
+async def antwort_aufnahme_speichern(
+    request: Request, runde_id: Id, frage_id: Id, db: DB, ansicht: ANSICHT
+):
+    runde, frage = _freitext_frage(db, ansicht, runde_id, frage_id)
+    verzeichnis = _verzeichnis(request)
+
+    def uebernehmen(gespeichert: Path, dauer: int | None, _text: str | None):
+        aufnahmen.haenge_an_antwort(db, ansicht.konto_id, frage_id, gespeichert, dauer, verzeichnis)
+        return RedirectResponse(
+            f"/lehrperson/runden/{runde_id}?erledigt=gespeichert#frage-{frage_id}", 303
+        )
+
+    antwort = await _speichere_upload(
+        request,
+        False,
+        uebernehmen,
+        lambda meldung, status: _seite_antwort(request, db, ansicht, runde, frage, meldung, status),
+    )
     aufnahmen.raeume_waisen(db, verzeichnis)
-    return RedirectResponse(f"/lehrperson/tagebuch/{eintrag_id}?erledigt=gespeichert", 303)
+    return antwort
+
+
+def _seite_loeschen(request: Request, ansicht: Ansicht, runde_id: int, frage_id: int):
+    kontext = {
+        "ansicht": ansicht,
+        "bereich": "runden",
+        "frage_text": "Die Aufnahme zu dieser Frage löschen? Deine geschriebene Antwort bleibt.",
+        "aktion": f"{_antwort_pfad(runde_id, frage_id)}/loeschen",
+        "zurueck": f"/lehrperson/runden/{runde_id}#frage-{frage_id}",
+    }
+    return templates.TemplateResponse(request, "lehrperson/loeschen.html", kontext)
+
+
+@lehrperson.get("/runden/{runde_id}/fragen/{frage_id}/aufnahme/loeschen")
+def antwort_aufnahme_loeschen_seite(
+    request: Request, runde_id: Id, frage_id: Id, db: DB, ansicht: ANSICHT
+):
+    _freitext_frage(db, ansicht, runde_id, frage_id)
+    if aufnahmen.aufnahme_der_antwort(db, ansicht.konto_id, frage_id) is None:
+        raise HTTPException(404)
+    return _seite_loeschen(request, ansicht, runde_id, frage_id)
+
+
+@lehrperson.post(
+    "/runden/{runde_id}/fragen/{frage_id}/aufnahme/loeschen", dependencies=[Depends(pruefe_csrf)]
+)
+def antwort_aufnahme_loeschen(
+    request: Request, runde_id: Id, frage_id: Id, db: DB, ansicht: ANSICHT
+):
+    _freitext_frage(db, ansicht, runde_id, frage_id)
+    if not aufnahmen.loesche_aufnahme_der_antwort(
+        db, ansicht.konto_id, frage_id, _verzeichnis(request)
+    ):
+        raise HTTPException(404)
+    return RedirectResponse(
+        f"/lehrperson/runden/{runde_id}?erledigt=aufnahme_geloescht#frage-{frage_id}", 303
+    )
 
 
 @lehrperson.get("/aufnahmen/{aufnahme_id}")

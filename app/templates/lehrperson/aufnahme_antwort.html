@@ -1,0 +1,20 @@
+{% extends "lehrperson/_rahmen.html" %}
+{% block titel %}Antwort einsprechen – {{ instrument_titel }}{% endblock %}
+{% block seite %}
+<p><a href="{{ zurueck }}">‹ Zurück zur Runde</a></p>
+<header>
+  <h1>Antwort einsprechen</h1>
+  <p>{{ frage.text }}</p>
+</header>
+<div class="hinweis formatiert">{{ hinweis_tagebuch | formatiert }}</div>
+<div class="hinweis formatiert">{{ hinweis_aufnahme | formatiert }}</div>
+<p class="gedaempft">Deine geschriebene Antwort bleibt erhalten.{% if bisherige %} Die neue Aufnahme ersetzt die bisherige.{% endif %}</p>
+<form class="formular" method="post" action="{{ aktion }}" enctype="multipart/form-data" data-anker="frage-{{ frage.id }}">
+  {{ csrf_feld(request) }}
+  <input type="hidden" name="dauer_sekunden">
+  <section class="karte">
+    {% include "lehrperson/_aufnehmen.html" %}
+  </section>
+</form>
+<script src="/static/js/aufnahme.js" defer></script>
+{% endblock %}

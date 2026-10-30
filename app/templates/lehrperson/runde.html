@@ -36,8 +36,22 @@
 {{ zeile.wert }}</textarea>
     <div class="feld__knoepfe">
       <button type="submit" class="knopf knopf--klein knopf--zweit" name="anker" value="frage-{{ frage.id }}">Speichern</button>
-      {% if ansicht.speichert %}{# #17: Antwort einsprechen #}{% endif %}
+      {% set aufnahme = antworten.get(frage.id) %}
+      {% set hat_aufnahme = aufnahme and aufnahme.aufnahme_id %}
+      {% if ansicht.speichert and not hat_aufnahme %}
+      <button type="submit" class="knopf knopf--klein knopf--zweit" name="anker" value="aufnahme-{{ frage.id }}">Antwort einsprechen</button>
+      {% endif %}
     </div>
+    {% if ansicht.speichert and hat_aufnahme %}
+    {% set url = "/lehrperson/aufnahmen/" ~ aufnahme.aufnahme_id %}
+    <div class="feld__aufnahme">
+      {% include "_aufnahme.html" %}
+      <p class="feld__knoepfe">
+        <a href="{{ ansicht.url('/runden/' ~ runde.id ~ '/fragen/' ~ frage.id ~ '/aufnahme') }}">Aufnahme ersetzen</a>
+        <a href="{{ ansicht.url('/runden/' ~ runde.id ~ '/fragen/' ~ frage.id ~ '/aufnahme/loeschen') }}">Aufnahme löschen</a>
+      </p>
+    </div>
+    {% endif %}
   </div>
   {% endif %}
   {% endfor %}

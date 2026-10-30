@@ -1259,6 +1259,23 @@ input[type="checkbox"] {
   min-height: 2.75rem;
 }
 
+.feld__aufnahme {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.feld__aufnahme .feld__knoepfe {
+  margin: 0;
+  gap: 1.25rem;
+}
+
+.feld__aufnahme .feld__knoepfe a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+
 /* Ende #17 */
 
 /* Pilot: Einträge und Export (#18) */
