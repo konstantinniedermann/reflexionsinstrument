@@ -565,7 +565,7 @@ async function ablaufAufnahmen() {
   // Vorbereitung: zwei Zugänge (der zweite für spätere Schritte)
   await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
   const pwAda = await legeZugangAn("Ada Aufnahme", "lp.e2e.aufnahme1");
-  await legeZugangAn("Ben Beispiel", "lp.e2e.aufnahme2");
+  const pwBen = await legeZugangAn("Ben Beispiel", "lp.e2e.aufnahme2");
   await sende(abmelden);
   await meldeAn("lp.e2e.aufnahme1", pwAda);
   muss((await ueberschrift()) === "Hallo, Ada Aufnahme", "Aufnahmen: erste Lehrperson angemeldet");
@@ -694,6 +694,7 @@ async function ablaufAufnahmen() {
   await nimmAuf(2);
   await sende('[data-aktion="speichern"]');
   muss(/^\/lehrperson\/tagebuch\/\d+$/.test(await pfad()), "Aufnahme gespeichert: Seite des Eintrags");
+  const eintragPfad = await pfad();
   pruefe((await meldung()).includes("Gespeichert."), "Aufnahme gespeichert: «Gespeichert.»");
   const src = await js("document.querySelector('audio')?.getAttribute('src') ?? ''");
   muss(/^\/lehrperson\/aufnahmen\/\d+$/.test(src), `Aufnahme gespeichert: Player mit Adresse der Aufnahme (${src})`);
@@ -717,6 +718,126 @@ async function ablaufAufnahmen() {
   pruefe(t.includes("Gesprochener Eintrag") && /\d+ Sek\./.test(t), "Meine Einträge: «Gesprochener Eintrag» mit Dauer");
   await keinUeberlauf("Meine Einträge mit Aufnahme 390 px");
   keineFehlerSeit(stand, "Meine Einträge mit Aufnahme");
+
+  // 6. Runde 1: Antwort einsprechen, ersetzen, löschen; der getippte Text bleibt immer
+  stand = merke();
+  const RUNDE = "/lehrperson/runden/1";
+  await oeffne(RUNDE);
+  const feld = await js("document.querySelector('textarea')?.id ?? ''");
+  muss(/^frage-\d+$/.test(feld), `Runde 1: Freitext-Frage da (${feld})`);
+  const frageId = feld.slice("frage-".length);
+  const EINSPRECHEN = `button[value="aufnahme-${frageId}"]`;
+  const ANTWORT_SEITE = `${RUNDE}/fragen/${frageId}/aufnahme`;
+  const ander = `document.getElementById(${JSON.stringify(feld)}).closest('.feld')`;
+  const playerAnDerFrage = () => js(`[...${ander}.querySelectorAll('audio')].map((a) => a.getAttribute('src'))`);
+  const feldWert = () => js(`document.getElementById(${JSON.stringify(feld)}).value`);
+  const dateienVorRunde = dateien().length;
+  pruefe((await js(`document.querySelector(${JSON.stringify(EINSPRECHEN)})?.innerText.trim()`)) === "Antwort einsprechen", "Runde 1: Knopf «Antwort einsprechen» an der Frage");
+  pruefe(await knoepfeOk(EINSPRECHEN), "Runde 1: «Antwort einsprechen» ganz im Bild und tippbar hoch");
+  const getippt = "Erst nachfragen, dann entscheiden.";
+  await tippe(`#${feld}`, getippt);
+  await sende(EINSPRECHEN);
+  muss((await pfad()) === ANTWORT_SEITE, "Antwort einsprechen: Aufnahme-Seite der Frage");
+  pruefe((await ueberschrift()) === "Antwort einsprechen", "Antwort einsprechen: Überschrift");
+  await keinUeberlauf("Antwort einsprechen 390 px");
+  await nimmAuf(2);
+  await sende('[data-aktion="speichern"]');
+  muss((await pfad()) === RUNDE && (await js("location.hash")) === `#${feld}`, "Antwort eingesprochen: zurück an der Frage");
+  pruefe((await meldung()).includes("Gespeichert."), "Antwort eingesprochen: «Gespeichert.»");
+  const ersterPlayer = await playerAnDerFrage();
+  muss(ersterPlayer.length === 1 && /^\/lehrperson\/aufnahmen\/\d+$/.test(ersterPlayer[0]), `Antwort eingesprochen: ein Player an der Frage (${ersterPlayer.join(", ")})`);
+  pruefe((await feldWert()) === getippt, "Antwort eingesprochen: getippter Text steht im Feld");
+  pruefe((await js(`document.querySelector(${JSON.stringify(EINSPRECHEN)}).innerText.trim()`)) === "Aufnahme ersetzen", "Antwort eingesprochen: Knopf «Aufnahme ersetzen» statt «Antwort einsprechen»");
+  pruefe(await knoepfeOk(EINSPRECHEN), "Antwort eingesprochen: «Aufnahme ersetzen» ganz im Bild und tippbar hoch");
+  pruefe(dateien().length === dateienVorRunde + 1, "Antwort eingesprochen: eine Datei mehr im Ordner");
+  await keinUeberlauf("Frage mit Aufnahme 390 px");
+  await screenshot("44-aufnahme-frage");
+
+  // Ersetzen: zuerst geänderten Text tippen, er wird mit dem Knopf gespeichert
+  const geaendert = "Erst nachfragen, dann gemeinsam entscheiden.";
+  await tippe(`#${feld}`, geaendert);
+  await sende(EINSPRECHEN);
+  muss((await pfad()) === ANTWORT_SEITE, "Aufnahme ersetzen: Aufnahme-Seite der Frage");
+  pruefe((await text()).includes("Die neue Aufnahme ersetzt die bisherige."), "Aufnahme ersetzen: Hinweis «Die neue Aufnahme ersetzt die bisherige.»");
+  await nimmAuf(2);
+  await sende('[data-aktion="speichern"]');
+  muss((await pfad()) === RUNDE && (await js("location.hash")) === `#${feld}`, "Aufnahme ersetzt: zurück an der Frage");
+  const zweiterPlayer = await playerAnDerFrage();
+  pruefe(zweiterPlayer.length === 1 && zweiterPlayer[0] !== ersterPlayer[0], `Aufnahme ersetzt: genau ein Player mit neuer Adresse (${zweiterPlayer.join(", ")})`);
+  pruefe((await feldWert()) === geaendert, "Aufnahme ersetzt: geänderter Text steht im Feld");
+  pruefe(dateien().length === dateienVorRunde + 1, "Aufnahme ersetzt: alte Datei weg, weiterhin eine Datei mehr im Ordner");
+  const alteAntwort = await js(`fetch(${JSON.stringify(ersterPlayer[0])}).then((r) => r.status)`);
+  pruefe(alteAntwort === 404, `Aufnahme ersetzt: alte Adresse 404 (${alteAntwort})`);
+
+  // Löschen über die Bestätigung
+  await sende(`a[href='${ANTWORT_SEITE}/loeschen']`);
+  muss((await ueberschrift()) === "Löschen", "Aufnahme löschen: Bestätigung");
+  await keinUeberlauf("Aufnahme löschen bestätigen 390 px");
+  await sende("form.formular button[type=submit]");
+  muss((await pfad()) === RUNDE && (await js("location.hash")) === `#${feld}`, "Aufnahme gelöscht: zurück an der Frage");
+  pruefe((await meldung()).includes("Die Aufnahme wurde gelöscht."), "Aufnahme gelöscht: «Die Aufnahme wurde gelöscht.»");
+  pruefe((await playerAnDerFrage()).length === 0, "Aufnahme gelöscht: kein Player an der Frage");
+  pruefe((await feldWert()) === geaendert, "Aufnahme gelöscht: Text bleibt im Feld");
+  pruefe((await js(`document.querySelector(${JSON.stringify(EINSPRECHEN)})?.innerText.trim()`)) === "Antwort einsprechen", "Aufnahme gelöscht: «Antwort einsprechen» wieder da");
+  pruefe(dateien().length === dateienVorRunde, "Aufnahme gelöscht: Datei weg");
+  await keinUeberlauf("Aufnahme gelöscht 390 px");
+  keineFehlerSeit(stand, "Antwort einsprechen, ersetzen, löschen", ["status of 404"]);
+
+  // Dunkel: «Frei sprechen» im Zustand «Fertig» (ohne Speichern)
+  stand = merke();
+  await farbschema("dark");
+  await oeffne(SEITE);
+  await nimmAuf(1);
+  pruefe(await sichtbar('[data-aktion="speichern"]'), "Dunkel: «Frei sprechen» im Zustand «Fertig»");
+  await keinUeberlauf("Frei sprechen fertig 390 px dunkel");
+  await screenshot("45-aufnahme-dunkel");
+  await farbschema("light");
+  keineFehlerSeit(stand, "Frei sprechen dunkel");
+
+  // 1280 px: Eintrag mit Player; Wahl-Seite (390 px)
+  stand = merke();
+  await desktop();
+  await oeffne(eintragPfad);
+  pruefe((await js("document.querySelectorAll('audio').length")) === 1, "1280 px: Eintrag mit Player");
+  await keinUeberlauf("Eintrag mit Aufnahme 1280 px");
+  await screenshot("46-aufnahme-desktop");
+  await handy();
+  await oeffne("/lehrperson/tagebuch/neu");
+  await keinUeberlauf("Tagebuch-Wahl 390 px");
+  await screenshot("47-aufnahme-wahl");
+  keineFehlerSeit(stand, "Eintrag 1280 px und Wahl");
+  await sende(abmelden);
+
+  // 7. Zweite Lehrperson: fremde Aufnahme über die direkte Adresse 404 (Akzeptanzkriterium)
+  stand = merke();
+  await meldeAn("lp.e2e.aufnahme2", pwBen);
+  muss((await ueberschrift()) === "Hallo, Ben Beispiel", "Aufnahmen: zweite Lehrperson angemeldet");
+  const fremd = await js(`Promise.all([{}, { Range: "bytes=0-1" }].map((headers) => fetch(${JSON.stringify(src)}, { headers }).then((r) => ({ status: r.status, typ: r.headers.get("content-type") ?? "" }))))`);
+  pruefe(fremd.every((r) => r.status === 404 && !r.typ.startsWith("audio/")), `Fremde Aufnahme: 404 ohne Audio, auch mit Range (${fremd.map((r) => r.status).join(", ")})`);
+  keineFehlerSeit(stand, "Fremde Aufnahme", ["status of 404"]);
+  await sende(abmelden);
+
+  // 8. Auftraggeberin hört die Aufnahme
+  stand = merke();
+  await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
+  const aufnahmeId = src.split("/").pop();
+  const leitung = await js(`fetch("/verwaltung/aufnahmen/${aufnahmeId}").then((r) => ({ status: r.status, typ: r.headers.get("content-type") ?? "" }))`);
+  pruefe(leitung.status === 200 && leitung.typ.startsWith("audio/"), `Auftraggeberin: Aufnahme 200 mit Audio-Typ (${leitung.status}, ${leitung.typ})`);
+  keineFehlerSeit(stand, "Auftraggeberin hört die Aufnahme");
+  await sende(abmelden);
+
+  // 9. Erste Lehrperson löscht den gesprochenen Eintrag: Adresse 404, Datei weg
+  stand = merke();
+  await meldeAn("lp.e2e.aufnahme1", pwAda);
+  await oeffne(eintragPfad);
+  await sende(`a[href='${eintragPfad}/loeschen']`);
+  muss((await ueberschrift()) === "Löschen", "Eintrag löschen: Bestätigung");
+  await sende("form.formular button[type=submit]");
+  pruefe((await pfad()) === "/lehrperson/eintraege" && (await meldung()).includes("Gelöscht."), "Eintrag gelöscht: «Meine Einträge» mit «Gelöscht.»");
+  const geloescht = await js(`fetch(${JSON.stringify(src)}).then((r) => r.status)`);
+  pruefe(geloescht === 404, `Eintrag gelöscht: Adresse der Aufnahme 404 (${geloescht})`);
+  pruefe(!dateien().includes(neu[0]), "Eintrag gelöscht: Datei nicht mehr im Ordner");
+  keineFehlerSeit(stand, "Gesprochenen Eintrag löschen", ["status of 404"]);
   await sende(abmelden);
 }
 

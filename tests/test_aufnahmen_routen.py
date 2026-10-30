@@ -1,5 +1,8 @@
 """Aufnahmen abspielen: Lehrperson (nur eigene) und Auftraggeberin (alle)."""
 
+import csv
+import io
+
 import pytest
 import testdaten
 from conftest import als_lehrperson, als_leitung
@@ -106,3 +109,21 @@ def test_rollen_getrennt(client, lehrperson, auftraggeberin, aufnahme_der_ersten
         r = client.get(pfad)
         assert r.status_code == 303
         assert r.headers["location"] == "/"
+
+
+def test_link_aus_tabelle_spielt_ab(client, db, lehrperson, auftraggeberin, aufnahme_der_ersten):
+    aid, pfad = aufnahme_der_ersten
+    testdaten.lege_eintrag_an(db, lehrperson["id"], "aufnahme", None, aufnahme_id=aid)
+    als_leitung(client, auftraggeberin)
+    tabelle = client.get("/verwaltung/eintraege/tabelle.csv").content.decode("utf-8-sig")
+    zeilen = list(csv.DictReader(io.StringIO(tabelle, newline=""), delimiter=";"))
+    links = [z["Aufnahme"] for z in zeilen if z["Aufnahme"]]
+    assert len(links) == 1
+    link = links[0].removeprefix("http://testserver")
+    assert link == f"/verwaltung/aufnahmen/{aid}"
+    r = client.get(link)
+    assert r.status_code == 200
+    assert r.content == pfad.read_bytes()
+    client.cookies.clear()
+    r = client.get(link)
+    assert r.status_code == 303
