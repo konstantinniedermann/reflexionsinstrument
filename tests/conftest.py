@@ -18,3 +18,8 @@ def einstellungen(tmp_path):
 def client(einstellungen):
     with TestClient(erstelle_app(einstellungen)) as c:
         yield c
+
+
+@pytest.fixture(autouse=True)
+def schnelles_bcrypt(monkeypatch):
+    monkeypatch.setattr("app.konten.BCRYPT_RUNDEN", 4)
