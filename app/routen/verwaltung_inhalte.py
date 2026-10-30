@@ -14,15 +14,25 @@ from app.eingaben import Gesperrt, InhaltFehler
 from app.inhalte import (
     NichtGefunden,
     aendere_frage,
+    aendere_info,
+    aendere_leitfrage,
     aendere_runde,
     datum_vorschlag_runde,
     frage,
     fragen,
+    info_abschnitt,
+    info_abschnitte,
     lege_frage_an,
+    lege_info_an,
+    lege_leitfrage_an,
     lege_runde_an,
+    leitfrage,
+    leitfragen,
     lies_projektstart,
     lies_titel,
     loesche_frage,
+    loesche_info,
+    loesche_leitfrage,
     loesche_runde,
     runde,
     runden,
@@ -33,7 +43,7 @@ from app.inhalte import (
     zaehle_inhalte,
 )
 from app.sitzung import braucht_auftraggeberin
-from app.texte import lies_texte, lies_textstand
+from app.texte import lies_text, lies_texte, lies_textstand
 from app.typen import Id
 from app.vorlagen import templates, zahl
 from app.zeit import hole_heute, zeitplan
@@ -488,3 +498,255 @@ def frage_loeschen(request: Request, frage_id: Id, db: DB):
     except Gesperrt as gesperrt:
         return _frage_loeschen_seite(request, zeile, gesperrt.anzahl, 409)
     return _weiter(f"{RUNDEN}/{zeile['runde_id']}", "geloescht")
+
+
+# ---------- Infoblock ----------
+
+INFO = f"{INHALTE}/info"
+
+
+@router.get("/info")
+def info_liste(request: Request, db: DB):
+    return templates.TemplateResponse(
+        request,
+        "verwaltung/inhalte/info.html",
+        {
+            "abschnitte": info_abschnitte(db),
+            "datenschutz": lies_text(db, "hinweis_datenspeicherung"),
+            "meldung": _meldung(request),
+        },
+    )
+
+
+def _info_formular(request: Request, ueberschrift, aktion, abbrechen, werte, fehler, status=200):
+    return templates.TemplateResponse(
+        request,
+        "verwaltung/inhalte/formular_info.html",
+        {
+            "ueberschrift": ueberschrift,
+            "aktion": aktion,
+            "abbrechen": abbrechen,
+            "werte": werte,
+            "fehler": fehler or {},
+        },
+        status_code=status,
+    )
+
+
+def _neuer_abschnitt_seite(request: Request, werte=None, fehler=None, status=200):
+    werte = werte or {"titel": "", "inhalt": ""}
+    return _info_formular(request, "Neuer Abschnitt", INFO, INFO, werte, fehler, status)
+
+
+@router.get("/info/neu")
+def info_neu(request: Request):
+    return _neuer_abschnitt_seite(request)
+
+
+@router.post("/info", dependencies=[Depends(pruefe_csrf)])
+def info_anlegen(
+    request: Request,
+    db: DB,
+    titel: Annotated[str, Form()] = "",
+    inhalt: Annotated[str, Form()] = "",
+):
+    try:
+        abschnitt_id = lege_info_an(db, titel, inhalt)
+    except InhaltFehler as fehler:
+        werte = {"titel": titel, "inhalt": inhalt}
+        return _neuer_abschnitt_seite(request, werte, {fehler.feld: fehler.meldung}, 400)
+    return _weiter(INFO, "angelegt", f"abschnitt-{abschnitt_id}")
+
+
+def _info_bearbeiten_seite(request: Request, zeile, werte=None, fehler=None, status=200):
+    werte = werte or {"titel": zeile["titel"], "inhalt": zeile["inhalt"]}
+    return _info_formular(
+        request,
+        "Abschnitt bearbeiten",
+        f"{INFO}/{zeile['id']}",
+        f"{INFO}#abschnitt-{zeile['id']}",
+        werte,
+        fehler,
+        status,
+    )
+
+
+@router.get("/info/{abschnitt_id}")
+def info_bearbeiten(request: Request, abschnitt_id: Id, db: DB):
+    return _info_bearbeiten_seite(request, _oder_404(info_abschnitt(db, abschnitt_id)))
+
+
+@router.post("/info/{abschnitt_id}", dependencies=[Depends(pruefe_csrf)])
+def info_speichern(
+    request: Request,
+    abschnitt_id: Id,
+    db: DB,
+    titel: Annotated[str, Form()] = "",
+    inhalt: Annotated[str, Form()] = "",
+):
+    zeile = _oder_404(info_abschnitt(db, abschnitt_id))
+    try:
+        with _vorhanden():
+            aendere_info(db, abschnitt_id, titel, inhalt)
+    except InhaltFehler as fehler:
+        werte = {"titel": titel, "inhalt": inhalt}
+        return _info_bearbeiten_seite(request, zeile, werte, {fehler.feld: fehler.meldung}, 400)
+    return _weiter(INFO, "gespeichert", f"abschnitt-{abschnitt_id}")
+
+
+@router.post("/info/{abschnitt_id}/verschieben", dependencies=[Depends(pruefe_csrf)])
+def info_verschieben(db: DB, abschnitt_id: Id, richtung: Annotated[str, Form()] = ""):
+    _oder_404(info_abschnitt(db, abschnitt_id))
+    try:
+        verschiebe(db, "info", abschnitt_id, richtung)
+    except ValueError:
+        raise HTTPException(400) from None
+    return _weiter(INFO, anker=f"abschnitt-{abschnitt_id}")
+
+
+def _info_loeschen_seite(request: Request, zeile):
+    return _loeschen_seite(
+        request,
+        ueberschrift="Abschnitt löschen",
+        frage_text=f"Abschnitt ‹{zeile['titel']}› löschen?",
+        aktion=f"{INFO}/{zeile['id']}/loeschen",
+        zurueck=f"{INFO}#abschnitt-{zeile['id']}",
+    )
+
+
+@router.get("/info/{abschnitt_id}/loeschen")
+def info_loeschen_seite(request: Request, abschnitt_id: Id, db: DB):
+    return _info_loeschen_seite(request, _oder_404(info_abschnitt(db, abschnitt_id)))
+
+
+@router.post("/info/{abschnitt_id}/loeschen", dependencies=[Depends(pruefe_csrf)])
+def info_loeschen(abschnitt_id: Id, db: DB):
+    _oder_404(info_abschnitt(db, abschnitt_id))
+    with _vorhanden():
+        loesche_info(db, abschnitt_id)
+    return _weiter(INFO, "geloescht")
+
+
+# ---------- Leitfragen ----------
+
+LEITFRAGEN = f"{INHALTE}/leitfragen"
+
+
+@router.get("/leitfragen")
+def leitfragen_liste(request: Request, db: DB):
+    return templates.TemplateResponse(
+        request,
+        "verwaltung/inhalte/leitfragen.html",
+        {"leitfragen": leitfragen(db), "meldung": _meldung(request)},
+    )
+
+
+def _leitfrage_formular(
+    request: Request, ueberschrift, aktion, abbrechen, werte, fehler, status=200, eintraege=0
+):
+    return templates.TemplateResponse(
+        request,
+        "verwaltung/inhalte/formular_leitfrage.html",
+        {
+            "ueberschrift": ueberschrift,
+            "aktion": aktion,
+            "abbrechen": abbrechen,
+            "werte": werte,
+            "fehler": fehler or {},
+            "anzahl_eintraege": eintraege,
+        },
+        status_code=status,
+    )
+
+
+def _neue_leitfrage_seite(request: Request, werte=None, fehler=None, status=200):
+    werte = werte or {"text": ""}
+    return _leitfrage_formular(
+        request, "Neue Leitfrage", LEITFRAGEN, LEITFRAGEN, werte, fehler, status
+    )
+
+
+@router.get("/leitfragen/neu")
+def leitfrage_neu(request: Request):
+    return _neue_leitfrage_seite(request)
+
+
+@router.post("/leitfragen", dependencies=[Depends(pruefe_csrf)])
+def leitfrage_anlegen(request: Request, db: DB, text: Annotated[str, Form()] = ""):
+    try:
+        leitfrage_id = lege_leitfrage_an(db, text)
+    except InhaltFehler as fehler:
+        return _neue_leitfrage_seite(request, {"text": text}, {fehler.feld: fehler.meldung}, 400)
+    return _weiter(LEITFRAGEN, "angelegt", f"leitfrage-{leitfrage_id}")
+
+
+def _leitfrage_bearbeiten_seite(request: Request, zeile, werte=None, fehler=None, status=200):
+    werte = werte or {"text": zeile["text"]}
+    return _leitfrage_formular(
+        request,
+        "Leitfrage bearbeiten",
+        f"{LEITFRAGEN}/{zeile['id']}",
+        f"{LEITFRAGEN}#leitfrage-{zeile['id']}",
+        werte,
+        fehler,
+        status,
+        zeile["anzahl_eintraege"],
+    )
+
+
+@router.get("/leitfragen/{leitfrage_id}")
+def leitfrage_bearbeiten(request: Request, leitfrage_id: Id, db: DB):
+    return _leitfrage_bearbeiten_seite(request, _oder_404(leitfrage(db, leitfrage_id)))
+
+
+@router.post("/leitfragen/{leitfrage_id}", dependencies=[Depends(pruefe_csrf)])
+def leitfrage_speichern(
+    request: Request, leitfrage_id: Id, db: DB, text: Annotated[str, Form()] = ""
+):
+    zeile = _oder_404(leitfrage(db, leitfrage_id))
+    try:
+        with _vorhanden():
+            aendere_leitfrage(db, leitfrage_id, text)
+    except InhaltFehler as fehler:
+        return _leitfrage_bearbeiten_seite(
+            request, zeile, {"text": text}, {fehler.feld: fehler.meldung}, 400
+        )
+    return _weiter(LEITFRAGEN, "gespeichert", f"leitfrage-{leitfrage_id}")
+
+
+@router.post("/leitfragen/{leitfrage_id}/verschieben", dependencies=[Depends(pruefe_csrf)])
+def leitfrage_verschieben(db: DB, leitfrage_id: Id, richtung: Annotated[str, Form()] = ""):
+    _oder_404(leitfrage(db, leitfrage_id))
+    try:
+        verschiebe(db, "leitfrage", leitfrage_id, richtung)
+    except ValueError:
+        raise HTTPException(400) from None
+    return _weiter(LEITFRAGEN, anker=f"leitfrage-{leitfrage_id}")
+
+
+def _leitfrage_loeschen_seite(request: Request, zeile):
+    kontext = {
+        "ueberschrift": "Leitfrage löschen",
+        "frage_text": f"Leitfrage ‹{zeile['text']}› löschen?",
+        "aktion": f"{LEITFRAGEN}/{zeile['id']}/loeschen",
+        "zurueck": f"{LEITFRAGEN}#leitfrage-{zeile['id']}",
+    }
+    if zeile["anzahl_eintraege"]:
+        kontext["folgen"] = (
+            "Einträge, die sich darauf beziehen, bleiben erhalten. "
+            "Sie behalten den Text, den die Lehrperson damals gesehen hat."
+        )
+    return _loeschen_seite(request, **kontext)
+
+
+@router.get("/leitfragen/{leitfrage_id}/loeschen")
+def leitfrage_loeschen_seite(request: Request, leitfrage_id: Id, db: DB):
+    return _leitfrage_loeschen_seite(request, _oder_404(leitfrage(db, leitfrage_id)))
+
+
+@router.post("/leitfragen/{leitfrage_id}/loeschen", dependencies=[Depends(pruefe_csrf)])
+def leitfrage_loeschen(leitfrage_id: Id, db: DB):
+    _oder_404(leitfrage(db, leitfrage_id))
+    with _vorhanden():
+        loesche_leitfrage(db, leitfrage_id)
+    return _weiter(LEITFRAGEN, "geloescht")

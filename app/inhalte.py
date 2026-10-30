@@ -283,6 +283,98 @@ def loesche_frage(db: sqlite3.Connection, frage_id: int) -> None:
         _nummeriere(db, "frage", bisher["runde_id"])
 
 
+# ---------- Infoblock ----------
+
+
+def info_abschnitte(db: sqlite3.Connection) -> list[sqlite3.Row]:
+    return db.execute("SELECT * FROM info_abschnitte ORDER BY reihenfolge, id").fetchall()
+
+
+def info_abschnitt(db: sqlite3.Connection, abschnitt_id: int) -> sqlite3.Row | None:
+    return db.execute("SELECT * FROM info_abschnitte WHERE id = ?", (abschnitt_id,)).fetchone()
+
+
+def _pruefe_info(titel: str, inhalt: str):
+    sauberer_titel = kurzer_text(titel, "titel", LAENGE_TITEL, "Bitte einen Titel eingeben.")
+    text = langer_text(inhalt, "inhalt", "Bitte einen Text eingeben.")
+    return sauberer_titel, text
+
+
+def lege_info_an(db: sqlite3.Connection, titel: str, inhalt: str) -> int:
+    werte = _pruefe_info(titel, inhalt)
+    # Eine Anweisung: die naechste Nummer wird im selben Schritt gelesen und geschrieben.
+    return db.execute(
+        "INSERT INTO info_abschnitte (titel, inhalt, reihenfolge) "
+        "SELECT ?, ?, coalesce(max(reihenfolge), 0) + 1 FROM info_abschnitte",
+        werte,
+    ).lastrowid
+
+
+def aendere_info(db: sqlite3.Connection, abschnitt_id: int, titel: str, inhalt: str) -> None:
+    werte = _pruefe_info(titel, inhalt)
+    aenderungen = db.execute(
+        "UPDATE info_abschnitte SET titel = ?, inhalt = ? WHERE id = ?", (*werte, abschnitt_id)
+    ).rowcount
+    if aenderungen == 0:
+        raise NichtGefunden(abschnitt_id)
+
+
+def loesche_info(db: sqlite3.Connection, abschnitt_id: int) -> None:
+    with transaktion(db):
+        geloescht = db.execute("DELETE FROM info_abschnitte WHERE id = ?", (abschnitt_id,)).rowcount
+        if geloescht == 0:
+            raise NichtGefunden(abschnitt_id)
+        _nummeriere(db, "info", None)
+
+
+# ---------- Leitfragen ----------
+
+_LEITFRAGEN_SQL = (
+    "SELECT l.*, "
+    "(SELECT COUNT(*) FROM tagebucheintraege t WHERE t.leitfrage_id = l.id) AS anzahl_eintraege "
+    "FROM leitfragen l"
+)
+
+
+def leitfragen(db: sqlite3.Connection) -> list[sqlite3.Row]:
+    return db.execute(f"{_LEITFRAGEN_SQL} ORDER BY l.reihenfolge, l.id").fetchall()
+
+
+def leitfrage(db: sqlite3.Connection, leitfrage_id: int) -> sqlite3.Row | None:
+    return db.execute(f"{_LEITFRAGEN_SQL} WHERE l.id = ?", (leitfrage_id,)).fetchone()
+
+
+def _pruefe_leitfrage(text: str) -> str:
+    return kurzer_text(text, "text", LAENGE_KURZ, "Bitte eine Leitfrage eingeben.")
+
+
+def lege_leitfrage_an(db: sqlite3.Connection, text: str) -> int:
+    sauberer_text = _pruefe_leitfrage(text)
+    return db.execute(
+        "INSERT INTO leitfragen (text, reihenfolge) "
+        "SELECT ?, coalesce(max(reihenfolge), 0) + 1 FROM leitfragen",
+        (sauberer_text,),
+    ).lastrowid
+
+
+def aendere_leitfrage(db: sqlite3.Connection, leitfrage_id: int, text: str) -> None:
+    sauberer_text = _pruefe_leitfrage(text)
+    aenderungen = db.execute(
+        "UPDATE leitfragen SET text = ? WHERE id = ?", (sauberer_text, leitfrage_id)
+    ).rowcount
+    if aenderungen == 0:
+        raise NichtGefunden(leitfrage_id)
+
+
+def loesche_leitfrage(db: sqlite3.Connection, leitfrage_id: int) -> None:
+    """Eintraege behalten ihren Text; ihr Verweis wird von der Datenbank geleert."""
+    with transaktion(db):
+        geloescht = db.execute("DELETE FROM leitfragen WHERE id = ?", (leitfrage_id,)).rowcount
+        if geloescht == 0:
+            raise NichtGefunden(leitfrage_id)
+        _nummeriere(db, "leitfrage", None)
+
+
 # ---------- Reihenfolge ----------
 
 

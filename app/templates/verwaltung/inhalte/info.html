@@ -1,0 +1,40 @@
+{% extends "verwaltung/rahmen.html" %}
+{% from "verwaltung/inhalte/_teile.html" import verschieben with context %}
+{% block titel %}Infoblock – {{ instrument_titel }}{% endblock %}
+{% block inhalt %}
+<p><a class="zurueck" href="/verwaltung/inhalte">‹ Inhalte</a></p>
+<h1>Infoblock</h1>
+{% if meldung %}
+<p class="hinweis" role="status">{{ meldung }}</p>
+{% endif %}
+<p class="gedaempft">Die Abschnitte stehen über den Runden, in dieser Reihenfolge. Am Schluss steht immer der Datenschutz.</p>
+<p><a class="knopf" href="/verwaltung/inhalte/info/neu">Neuer Abschnitt</a></p>
+{# #19: Vorschau-Link #}
+<ul class="liste-ohne">
+  {% for a in abschnitte %}
+  <li>
+    <article class="karte" id="abschnitt-{{ a.id }}">
+      <h2>{{ a.titel }}</h2>
+      <div class="formatiert">{{ a.inhalt | formatiert }}</div>
+      <div class="aktionen">
+        <a href="/verwaltung/inhalte/info/{{ a.id }}">Bearbeiten</a>
+        <a href="/verwaltung/inhalte/info/{{ a.id }}/loeschen">Löschen</a>
+      </div>
+      {{ verschieben("/verwaltung/inhalte/info/" ~ a.id, a.titel, loop.first, loop.last) }}
+    </article>
+  </li>
+  {% endfor %}
+  <li>
+    <article class="karte" id="abschnitt-datenschutz">
+      <h2>Datenschutz (immer am Schluss)</h2>
+      <div class="formatiert">{{ datenschutz | formatiert }}</div>
+      <div class="aktionen">
+        <a href="/verwaltung/inhalte/hinweise/hinweis_datenspeicherung">Bearbeiten</a>
+      </div>
+    </article>
+  </li>
+</ul>
+{% if not abschnitte %}
+<p class="hinweis">Noch kein eigener Abschnitt. Lege mit «Neuer Abschnitt» den ersten an.</p>
+{% endif %}
+{% endblock %}

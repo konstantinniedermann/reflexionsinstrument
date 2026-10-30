@@ -1,0 +1,33 @@
+{% extends "verwaltung/rahmen.html" %}
+{% from "verwaltung/inhalte/_teile.html" import verschieben with context %}
+{% block titel %}Leitfragen – {{ instrument_titel }}{% endblock %}
+{% block inhalt %}
+<p><a class="zurueck" href="/verwaltung/inhalte">‹ Inhalte</a></p>
+<h1>Leitfragen</h1>
+{% if meldung %}
+<p class="hinweis" role="status">{{ meldung }}</p>
+{% endif %}
+<p class="gedaempft">Die Lehrpersonen können ihr Tagebuch mit diesen Fragen beginnen. Sie erscheinen in dieser Reihenfolge.</p>
+<p><a class="knopf" href="/verwaltung/inhalte/leitfragen/neu">Neue Leitfrage</a></p>
+{% if leitfragen %}
+<ul class="liste-ohne">
+  {% for l in leitfragen %}
+  <li>
+    <article class="karte" id="leitfrage-{{ l.id }}">
+      <p><strong>{{ l.text }}</strong></p>
+      {% if l.anzahl_eintraege %}
+      <p class="gedaempft">{{ zahl(l.anzahl_eintraege, "Tagebucheintrag", "Tagebucheinträge") }}</p>
+      {% endif %}
+      <div class="aktionen">
+        <a href="/verwaltung/inhalte/leitfragen/{{ l.id }}">Bearbeiten</a>
+        <a href="/verwaltung/inhalte/leitfragen/{{ l.id }}/loeschen">Löschen</a>
+      </div>
+      {{ verschieben("/verwaltung/inhalte/leitfragen/" ~ l.id, l.text, loop.first, loop.last) }}
+    </article>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="hinweis">Noch keine Leitfrage. Lege mit «Neue Leitfrage» die erste an.</p>
+{% endif %}
+{% endblock %}

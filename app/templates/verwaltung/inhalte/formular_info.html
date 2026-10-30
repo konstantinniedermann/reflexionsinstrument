@@ -1,0 +1,27 @@
+{% extends "verwaltung/rahmen.html" %}
+{% from "verwaltung/inhalte/_teile.html" import formatier_hilfe, fehlerkopf, feldfehler %}
+{% block titel %}{{ ueberschrift }} – {{ instrument_titel }}{% endblock %}
+{% block inhalt %}
+<p><a class="zurueck" href="{{ abbrechen }}">‹ Zurück</a></p>
+<h1>{{ ueberschrift }}</h1>
+<section class="karte">
+  <form method="post" action="{{ aktion }}" class="formular">
+    {{ csrf_feld(request) }}
+    {{ fehlerkopf(fehler) }}
+    <div class="feld">
+      <label for="titel">Titel</label>
+      <input type="text" id="titel" name="titel" value="{{ werte.titel }}" maxlength="100"
+             autocomplete="off"{% if fehler.titel %} aria-describedby="fehler-titel"{% endif %} />
+      {{ feldfehler(fehler, "titel") }}
+    </div>
+    <div class="feld">
+      <label for="inhalt">Text</label>
+      <textarea id="inhalt" name="inhalt" rows="12"{% if fehler.inhalt %} aria-describedby="fehler-inhalt"{% endif %}>{{ werte.inhalt }}</textarea>
+      {{ formatier_hilfe() }}
+      {{ feldfehler(fehler, "inhalt") }}
+    </div>
+    <button type="submit" class="knopf">Speichern</button>
+    <a class="knopf knopf--leise" href="{{ abbrechen }}">Abbrechen</a>
+  </form>
+</section>
+{% endblock %}

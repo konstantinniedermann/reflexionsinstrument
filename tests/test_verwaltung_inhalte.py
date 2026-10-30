@@ -2,7 +2,7 @@ import re
 from pathlib import Path
 
 import pytest
-from conftest import als_leitung, csrf_von, lege_antwort_an
+from conftest import als_leitung, csrf_von, lege_antwort_an, lege_eintrag_an
 from fastapi.testclient import TestClient
 
 from app import inhalte
@@ -589,3 +589,174 @@ def test_runde_ohne_fragen_loeschen_text(client, auftraggeberin, db):
     seite = client.get(f"{RUNDEN}/{rid}/loeschen")
     assert "Die Runde wird gelöscht." in seite.text
     assert "0 Fragen" not in seite.text
+
+
+# ---------- Infoblock und Leitfragen ----------
+
+INFO = "/verwaltung/inhalte/info"
+LEITFRAGEN = "/verwaltung/inhalte/leitfragen"
+
+
+def neuer_abschnitt(db, titel="Abschnitt", inhalt="Text", nummer=1):
+    return db.execute(
+        "INSERT INTO info_abschnitte (titel, inhalt, reihenfolge) VALUES (?, ?, ?)",
+        (titel, inhalt, nummer),
+    ).lastrowid
+
+
+def neue_leitfrage(db, text="Leitfrage", nummer=1):
+    return db.execute(
+        "INSERT INTO leitfragen (text, reihenfolge) VALUES (?, ?)", (text, nummer)
+    ).lastrowid
+
+
+def test_info_anlegen_mit_anker(client, auftraggeberin, db):
+    melde_an(client, auftraggeberin)
+    antwort = sende(client, INFO, INFO, titel="Worum es geht", inhalt="Text")
+    assert antwort.status_code == 303
+    aid = db.execute("SELECT id FROM info_abschnitte").fetchone()[0]
+    assert antwort.headers["location"] == f"{INFO}?erledigt=angelegt#abschnitt-{aid}"
+    seite = client.get(f"{INFO}?erledigt=angelegt")
+    assert "Angelegt." in seite.text and f'id="abschnitt-{aid}"' in seite.text
+
+
+def test_info_bearbeiten(client, auftraggeberin, db):
+    aid = neuer_abschnitt(db, "Alt", "Alter Text")
+    melde_an(client, auftraggeberin)
+    formular = client.get(f"{INFO}/{aid}")
+    assert "Alter Text" in formular.text
+    antwort = sende(client, f"{INFO}/{aid}", f"{INFO}/{aid}", titel="Neu", inhalt="Neuer Text")
+    assert antwort.headers["location"] == f"{INFO}?erledigt=gespeichert#abschnitt-{aid}"
+    assert db.execute("SELECT titel, inhalt FROM info_abschnitte").fetchone()[:] == (
+        "Neu",
+        "Neuer Text",
+    )
+
+
+def test_info_liste_formatiert_und_escapt(client, auftraggeberin, db):
+    neuer_abschnitt(db, "Liste", "- a\n- **b**", 1)
+    neuer_abschnitt(db, "Gefahr", "<script>alert(1)</script>", 2)
+    melde_an(client, auftraggeberin)
+    text = client.get(INFO).text
+    assert "<ul><li>a</li><li><strong>b</strong></li></ul>" in text
+    assert "&lt;script&gt;" in text
+    assert "<script>alert(1)" not in text
+
+
+def test_info_datenschutz_karte_am_schluss(client, auftraggeberin, db):
+    neuer_abschnitt(db, "Erster", "Text", 1)
+    letzter = neuer_abschnitt(db, "Letzter", "Text", 2)
+    melde_an(client, auftraggeberin)
+    text = client.get(INFO).text
+    karte = text[text.index("Datenschutz (immer am Schluss)") :]
+    assert text.index(f'id="abschnitt-{letzter}"') < text.index("Datenschutz (immer am Schluss)")
+    assert "/verwaltung/inhalte/hinweise/hinweis_datenspeicherung" in karte
+    assert "Frankfurt" in karte
+    assert "Nach oben" not in karte and "/loeschen" not in karte
+    assert "verschieben" not in karte
+
+
+def test_info_leer_zeigt_nur_datenschutz(client, auftraggeberin):
+    melde_an(client, auftraggeberin)
+    text = client.get(INFO).text
+    assert "Noch kein eigener Abschnitt" in text
+    assert "Datenschutz (immer am Schluss)" in text
+
+
+def test_info_verschieben(client, auftraggeberin, db):
+    a = neuer_abschnitt(db, "AAA", "a", 1)
+    neuer_abschnitt(db, "BBB", "b", 2)
+    melde_an(client, auftraggeberin)
+    antwort = sende(client, f"{INFO}/{a}/verschieben", INFO, richtung="runter")
+    assert antwort.status_code == 303
+    assert antwort.headers["location"] == f"{INFO}#abschnitt-{a}"
+    assert "erledigt" not in antwort.headers["location"]
+    text = client.get(INFO).text
+    assert text.index("BBB") < text.index("AAA")
+
+
+def test_info_loeschen(client, auftraggeberin, db):
+    aid = neuer_abschnitt(db)
+    melde_an(client, auftraggeberin)
+    pfad = f"{INFO}/{aid}/loeschen"
+    assert "Endgültig löschen" in client.get(pfad).text
+    antwort = sende(client, pfad, pfad)
+    assert antwort.status_code == 303
+    assert antwort.headers["location"] == f"{INFO}?erledigt=geloescht"
+    assert anzahl(db, "info_abschnitte") == 0
+
+
+def test_info_fehler_400(client, auftraggeberin, db):
+    melde_an(client, auftraggeberin)
+    antwort = sende(client, INFO, INFO, titel="", inhalt="Mein Text")
+    assert antwort.status_code == 400
+    assert "Bitte einen Titel eingeben." in antwort.text
+    assert "Mein Text" in antwort.text
+    assert anzahl(db, "info_abschnitte") == 0
+    aid = neuer_abschnitt(db)
+    antwort = sende(client, f"{INFO}/{aid}", f"{INFO}/{aid}", titel="T", inhalt="")
+    assert antwort.status_code == 400
+    assert "Bitte einen Text eingeben." in antwort.text
+
+
+def test_leitfragen_anlegen_bearbeiten(client, auftraggeberin, db):
+    melde_an(client, auftraggeberin)
+    antwort = sende(client, LEITFRAGEN, LEITFRAGEN, text="Was war heute?")
+    lid = db.execute("SELECT id FROM leitfragen").fetchone()[0]
+    assert antwort.headers["location"] == f"{LEITFRAGEN}?erledigt=angelegt#leitfrage-{lid}"
+    antwort = sende(client, f"{LEITFRAGEN}/{lid}", f"{LEITFRAGEN}/{lid}", text="Neu")
+    assert antwort.headers["location"] == f"{LEITFRAGEN}?erledigt=gespeichert#leitfrage-{lid}"
+    assert "Neu" in client.get(LEITFRAGEN).text
+    fehler = sende(client, LEITFRAGEN, LEITFRAGEN, text=" ")
+    assert fehler.status_code == 400
+    assert "Bitte eine Leitfrage eingeben." in fehler.text
+
+
+def test_leitfrage_mit_eintrag_hinweise(client, auftraggeberin, db):
+    lid = neue_leitfrage(db)
+    lege_eintrag_an(db, neues_konto(db, "a"), art="leitfragen", leitfrage_id=lid)
+    melde_an(client, auftraggeberin)
+    assert "1 Tagebucheintrag bezieht sich darauf" in client.get(f"{LEITFRAGEN}/{lid}").text
+    lege_eintrag_an(db, neues_konto(db, "b"), art="leitfragen", leitfrage_id=lid)
+    assert "2 Tagebucheinträge beziehen sich darauf" in client.get(f"{LEITFRAGEN}/{lid}").text
+    bestaetigung = client.get(f"{LEITFRAGEN}/{lid}/loeschen")
+    assert "Einträge, die sich darauf beziehen, bleiben erhalten." in bestaetigung.text
+    assert "Endgültig löschen" in bestaetigung.text
+
+
+def test_leitfragen_verschieben_und_loeschen(client, auftraggeberin, db):
+    a = neue_leitfrage(db, "AAA", 1)
+    b = neue_leitfrage(db, "BBB", 2)
+    lege_eintrag_an(db, neues_konto(db, "a"), art="leitfragen", leitfrage_id=a)
+    melde_an(client, auftraggeberin)
+    antwort = sende(client, f"{LEITFRAGEN}/{a}/verschieben", LEITFRAGEN, richtung="runter")
+    assert antwort.headers["location"] == f"{LEITFRAGEN}#leitfrage-{a}"
+    text = client.get(LEITFRAGEN).text
+    assert text.index("BBB") < text.index("AAA")
+    pfad = f"{LEITFRAGEN}/{a}/loeschen"
+    antwort = sende(client, pfad, pfad)
+    assert antwort.headers["location"] == f"{LEITFRAGEN}?erledigt=geloescht"
+    assert [z[0] for z in db.execute("SELECT id FROM leitfragen")] == [b]
+    assert db.execute("SELECT reihenfolge FROM leitfragen").fetchone()[0] == 1
+    eintrag = db.execute("SELECT leitfrage_id, leitfrage_text FROM tagebucheintraege").fetchone()
+    assert eintrag[:] == (None, "AAA")
+
+
+def test_unbekannte_ids_404_info_leitfragen(client, auftraggeberin, db):
+    melde_an(client, auftraggeberin)
+    token = csrf_von(client, INFO)
+    daten = {"csrf": token, "titel": "T", "inhalt": "I", "text": "X", "richtung": "hoch"}
+    for basis in (INFO, LEITFRAGEN):
+        for pfad in ("999", "999/loeschen"):
+            assert client.get(f"{basis}/{pfad}").status_code == 404, pfad
+        for pfad in ("999", "999/loeschen", "999/verschieben"):
+            assert client.post(f"{basis}/{pfad}", data=daten).status_code == 404, pfad
+        assert client.get(f"{basis}/99999999999999999999").status_code == 404
+
+
+def test_richtung_ungueltig_400_info_leitfragen(client, auftraggeberin, db):
+    a = neuer_abschnitt(db)
+    lid = neue_leitfrage(db)
+    melde_an(client, auftraggeberin)
+    assert sende(client, f"{INFO}/{a}/verschieben", INFO, richtung="x").status_code == 400
+    assert sende(client, f"{LEITFRAGEN}/{lid}/verschieben", INFO).status_code == 400

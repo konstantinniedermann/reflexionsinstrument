@@ -2,7 +2,7 @@ import sqlite3
 from datetime import date
 
 import pytest
-from conftest import lege_antwort_an
+from conftest import lege_antwort_an, lege_eintrag_an
 
 from app import inhalte
 from app.db import transaktion
@@ -10,15 +10,25 @@ from app.eingaben import Gesperrt, InhaltFehler, kurzer_text
 from app.inhalte import (
     NichtGefunden,
     aendere_frage,
+    aendere_info,
+    aendere_leitfrage,
     aendere_runde,
     datum_vorschlag_runde,
     frage,
     fragen,
+    info_abschnitt,
+    info_abschnitte,
     lege_frage_an,
+    lege_info_an,
+    lege_leitfrage_an,
     lege_runde_an,
+    leitfrage,
+    leitfragen,
     lies_projektstart,
     lies_titel,
     loesche_frage,
+    loesche_info,
+    loesche_leitfrage,
     loesche_runde,
     runde,
     runden,
@@ -384,3 +394,112 @@ def test_andere_integrity_error_bleibt_bestehen(db, monkeypatch):
     with pytest.raises(sqlite3.IntegrityError):
         lege_frage_an(db, 999, "freitext", "Frage", "", "")
     assert rid
+
+
+# ---------- Infoblock und Leitfragen ----------
+
+
+def _titel_info(db):
+    return [a["titel"] for a in info_abschnitte(db)]
+
+
+def test_info_anlegen_am_ende(db):
+    a = lege_info_an(db, "Eins", "Text eins")
+    b = lege_info_an(db, " Zwei ", "Text\r\nzwei ")
+    assert _titel_info(db) == ["Eins", "Zwei"]
+    assert info_abschnitt(db, b)["inhalt"] == "Text\nzwei"
+    assert [info_abschnitt(db, i)["reihenfolge"] for i in (a, b)] == [1, 2]
+    assert info_abschnitt(db, 999) is None
+
+
+def test_info_ungueltig(db):
+    with pytest.raises(InhaltFehler) as fehler:
+        lege_info_an(db, "  ", "Text")
+    assert (fehler.value.feld, fehler.value.meldung) == ("titel", "Bitte einen Titel eingeben.")
+    with pytest.raises(InhaltFehler) as fehler:
+        lege_info_an(db, "Titel", "")
+    assert (fehler.value.feld, fehler.value.meldung) == ("inhalt", "Bitte einen Text eingeben.")
+    with pytest.raises(InhaltFehler) as fehler:
+        lege_info_an(db, "Titel", "x" * 20_001)
+    assert fehler.value.feld == "inhalt"
+    with pytest.raises(InhaltFehler):
+        lege_info_an(db, "t" * 101, "Text")
+    assert info_abschnitte(db) == []
+    aid = lege_info_an(db, "Titel", "Text")
+    with pytest.raises(InhaltFehler):
+        aendere_info(db, aid, "", "Text")
+    assert info_abschnitt(db, aid)["titel"] == "Titel"
+
+
+def test_info_aendern_und_unbekannt(db):
+    aid = lege_info_an(db, "Alt", "Alt")
+    aendere_info(db, aid, "Neu", "Neuer Text")
+    assert (info_abschnitt(db, aid)["titel"], info_abschnitt(db, aid)["inhalt"]) == (
+        "Neu",
+        "Neuer Text",
+    )
+    with pytest.raises(NichtGefunden):
+        aendere_info(db, 999, "a", "b")
+    with pytest.raises(NichtGefunden):
+        loesche_info(db, 999)
+
+
+def test_info_loeschen_nummeriert_neu(db):
+    a = lege_info_an(db, "A", "a")
+    b = lege_info_an(db, "B", "b")
+    c = lege_info_an(db, "C", "c")
+    loesche_info(db, b)
+    assert _titel_info(db) == ["A", "C"]
+    assert [info_abschnitt(db, i)["reihenfolge"] for i in (a, c)] == [1, 2]
+
+
+def test_info_verschieben(db):
+    a = lege_info_an(db, "A", "a")
+    lege_info_an(db, "B", "b")
+    verschiebe(db, "info", a, "runter")
+    assert _titel_info(db) == ["B", "A"]
+
+
+def test_leitfrage_eine_zeile(db):
+    lid = lege_leitfrage_an(db, "a\nb")
+    assert leitfrage(db, lid)["text"] == "a b"
+    with pytest.raises(InhaltFehler) as fehler:
+        lege_leitfrage_an(db, " ")
+    assert fehler.value.meldung == "Bitte eine Leitfrage eingeben."
+    with pytest.raises(InhaltFehler):
+        lege_leitfrage_an(db, "x" * 501)
+    assert [x["text"] for x in leitfragen(db)] == ["a b"]
+
+
+def test_leitfragen_am_ende_und_neu_nummeriert(db):
+    a = lege_leitfrage_an(db, "A")
+    b = lege_leitfrage_an(db, "B")
+    c = lege_leitfrage_an(db, "C")
+    assert [x["text"] for x in leitfragen(db)] == ["A", "B", "C"]
+    loesche_leitfrage(db, a)
+    assert [leitfrage(db, i)["reihenfolge"] for i in (b, c)] == [1, 2]
+    with pytest.raises(NichtGefunden):
+        aendere_leitfrage(db, 999, "x")
+    with pytest.raises(NichtGefunden):
+        loesche_leitfrage(db, 999)
+
+
+def test_leitfrage_mit_eintrag_aendern(db):
+    lid = lege_leitfrage_an(db, "Alt")
+    eid = lege_eintrag_an(db, _konto(db), art="leitfragen", leitfrage_id=lid)
+    assert leitfrage(db, lid)["anzahl_eintraege"] == 1
+    aendere_leitfrage(db, lid, "Neu")
+    zeile = db.execute("SELECT * FROM tagebucheintraege WHERE id = ?", (eid,)).fetchone()
+    assert zeile["leitfrage_text"] == "Alt"
+    assert zeile["leitfrage_id"] == lid
+    assert leitfrage(db, lid)["text"] == "Neu"
+
+
+def test_leitfrage_mit_eintrag_loeschen(db):
+    lid = lege_leitfrage_an(db, "Alt")
+    eid = lege_eintrag_an(db, _konto(db), art="leitfragen", leitfrage_id=lid)
+    loesche_leitfrage(db, lid)
+    zeile = db.execute("SELECT * FROM tagebucheintraege WHERE id = ?", (eid,)).fetchone()
+    assert zeile["leitfrage_id"] is None
+    assert zeile["leitfrage_text"] == "Alt"
+    assert leitfragen(db) == []
