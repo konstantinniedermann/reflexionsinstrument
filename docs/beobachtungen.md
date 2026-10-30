@@ -7,187 +7,54 @@ Hier landen Befunde, die beim Arbeiten auffallen, aber nicht zum aktuellen Issue
 - **Ein Issue** entsteht daraus nur mit ausdrücklicher Zustimmung (Regeln in `../CLAUDE.md`).
 - Das Repo ist öffentlich: keine vertraulichen Inhalte in Einträgen.
 
-Letzte Auswertung: noch keine
+Letzte Auswertung: 30.10.2026 (15 Einträge, alle abgeschlossen)
 
 ## Offen
 
-### 2026-10-15 — GitHub Actions über Tags statt Commit-SHAs eingebunden
+Keine offenen Einträge.
 
-**Thema:** CI
+## Ausgewertet am 30.10.2026
 
-**Fundort:** `.github/workflows/prototyp.yml`
+Alle 15 Einträge gegen `main` (Stand nach #29) geprüft, Laufzeit-Aussagen gegen GitHub Actions, fly.io und eine lokal gestartete App gemessen. Bilanz: 1 mitgemacht, 2 an bestehende Issues gehängt, 2 erledigt, 9 abgehakt mit Trigger, 1 verworfen.
 
-**Beobachtung:** `actions/checkout@v4`, `configure-pages@v5` usw. sind über verschiebbare Tags eingebunden. Ein kompromittierter Tag würde beim nächsten Lauf fremden Code mit Pages-Schreibrechten ausführen.
+### Mitgemacht
 
-**Ursprung:** Review zu #1
+- 2026-10-30 — Eingabemaske: Nur ein Fehler pro Absenden, Felder ohne Markierung → Felder mit Fehler tragen jetzt `aria-invalid` und einen roten Rahmen; damit stimmt auch der Hinweis «Bitte prüfe die markierten Felder.», der vorher nichts markiert fand. Commit «fix: Eingabemaske markiert fehlerhafte Felder». Der Teil «nur ein Fehler pro Absenden» ist abgehakt, Trigger: die Auftraggeberin hat beim Erfassen (#6) Mühe damit.
 
-**Einschätzung:** Für den Wegwerf-Prototyp vertretbar. Für die Pilot-Version (#7) auf SHAs pinnen, falls sie weiter über Actions deployt wird.
+### An bestehende Issues gehängt (Kommentar mit DoD-Vorschlag)
 
-### 2026-10-15 — E2E-Prüfung läuft nur lokal auf macOS
+- 2026-10-30 — Eingabemaske: Doppelklick legt doppelt an → #16. Gemessen: zwei gleiche POSTs legen zwei Runden an. Für Lehrpersonen auf dem Handy hiesse das doppelte Tagebucheinträge; der Plan zu #16 deckt nur das Neuladen ab.
+- 2026-10-30 — Wiederherstellung aus einem Volume-Snapshot nie geprobt → #9. Snapshots sind eingeschaltet, am 30.10. gab es noch keinen; Probe mit Testdaten vor dem Testlauf.
 
-**Thema:** Tests
+### Erledigt
 
-**Fundort:** `tests/e2e-prototyp.mjs` (fester Chrome-Pfad unter `/Applications`)
+- 2026-10-15 — Runner-Image `ubuntu-latest` wechselt auf Ubuntu 26 → Wechsel erfolgt (`ubuntu-26.04`), alle Läufe von CI und Prototyp grün.
+- 2026-10-30 — Unklar, ob die GitHub-Verbindung von fly.io `main` deployt → GitHub-App «Fly.io» deinstalliert; Deploy nur mit `make deploy`.
 
-**Beobachtung:** Die CI führt nur die Unit-Tests aus. Die E2E-Prüfung braucht Chrome unter macOS und muss von Hand gestartet werden.
+### Abgehakt mit Trigger
 
-**Ursprung:** Review zu #1
+- 2026-10-15 — GitHub Actions über Tags statt Commit-SHAs eingebunden → betrifft nur noch `prototyp.yml` (`ci.yml` ist gepinnt; dort auch die Warnung «Node.js 20 is deprecated»). Der Prototyp wird laut ADR-001 abgelöst, sobald die Pilot-Version läuft. Trigger: beim Pilotstart Workflow und Prototyp entfernen oder, falls er öffentlich bleiben soll, auf aktuelle Versionen per SHA umstellen.
+- 2026-10-15 — Test-Server der E2E-Prüfung stürzt bei Verzeichnis-Anfragen ab → belegt, im heutigen Ablauf unerreichbar. Trigger: wie oben, entfällt mit dem Prototyp.
+- 2026-10-15 — E2E-Prüfung läuft nur lokal auf macOS → bewusst so (Nicht-Ziel im Grundgerüst-Design); `e2e-pilot.mjs` liest den Chrome-Pfad schon aus `CHROME_PFAD`. Trigger: eine zweite Person entwickelt mit, oder ein Merge geht ohne lokalen E2E-Lauf durch.
+- 2026-10-30 — TestClient warnt: httpx durch httpx2 ersetzen → Starlette 1.10 unterstützt httpx noch. Trigger: Starlette entfernt die Unterstützung; dann Freigabe für httpx2 als neue Dependency einholen.
+- 2026-10-30 — Basis-Images über Tags statt Digests eingebunden → bei einem vierwöchigen Pilot mit seltenen Deploys vertretbar. Trigger: Betrieb über das Projektende hinaus.
+- 2026-10-30 — Fehlerseiten 500 ohne Sicherheits-Header, `HEAD /` gibt 405 → beides gemessen (auch `HEAD /healthz` gibt 405), ohne Folgen. Trigger: ein Uptime-Monitor oder eine eigene Fehlerseite kommt dazu.
+- 2026-10-30 — Kleine Härtungen an Migrationen und E2E-Skript → belegt; ein zweiter Prozess entsteht nur, wenn ein Kommando per `fly ssh` genau während einer neuen Migration startet. Trigger: mehr als eine Maschine, oder ein Deploy scheitert an der Migration.
+- 2026-10-30 — Eingabemaske: Doppeltes «Endgültig löschen» endet auf «Nicht gefunden» → folgenlos, das 404 ist von Tests so festgelegt. Trigger: die Auftraggeberin meldet die Seite als irritierend.
+- 2026-10-30 — Zurückgestellte Kleinigkeiten aus den Reviews zu #14 und #15 → Politur ohne falsches Verhalten. Trigger: bei der nächsten Arbeit an der jeweiligen Testdatei dort nachziehen.
 
-**Einschätzung:** Für den Prototyp genügt das. Bei der Pilot-Version entscheiden, ob E2E in die CI gehört (Chrome-Pfad per Umgebungsvariable).
+### Verworfen
 
-### 2026-10-15 — Test-Server der E2E-Prüfung stürzt bei Verzeichnis-Anfragen ab
+- 2026-10-30 — Kommando rechnet mit ungeprüftem Datum → Die Kernaussage trifft nicht zu: `platzhalter-laden` ruft zuerst `speichere_allgemein` auf, das über `datum_feld` → `ist_plausibel` (`app/eingaben.py`) prüft. `--projektstart 9999-12-30` endet mit «Bitte ein Datum zwischen 2020 und 2099 wählen.» und Exit 1, ohne `OverflowError`. Richtig ist nur, dass `lies_projektstart` einen Altwert ungeprüft liefert; der entsteht aber nur durch eine Änderung direkt in der Datenbank.
 
-**Thema:** Tests
+### Falsche Prämissen
 
-**Fundort:** `tests/e2e-prototyp.mjs`, statischer Server (`readFileSync` ohne Prüfung auf Datei)
-
-**Beobachtung:** Eine Anfrage auf ein Verzeichnis wie `/css/` besteht die `existsSync`-Prüfung, `readFileSync` wirft dann `EISDIR` und beendet das Skript.
-
-**Ursprung:** Eigene Beobachtung bei #1
-
-**Einschätzung:** Tritt im heutigen Ablauf nicht auf, weil der Prototyp nur Dateien lädt. Mit `statSync(...).isFile()` in einer Minute behoben, falls das Skript weiterlebt.
-
-### 2026-10-15 — Runner-Image `ubuntu-latest` wechselt auf Ubuntu 26
-
-**Thema:** CI
-
-**Fundort:** `.github/workflows/prototyp.yml`, Hinweis im Actions-Log
-
-**Beobachtung:** GitHub kündigt an, dass `ubuntu-latest` ab dem 19.10.2026 auf Ubuntu 26 umgestellt wird.
-
-**Ursprung:** Deploy-Lauf nach dem Merge von #11
-
-**Einschätzung:** Für einen Workflow, der nur Node-Tests und einen Pages-Upload macht, vermutlich folgenlos. Nach dem nächsten Lauf kurz prüfen.
-
-### 2026-10-30 — TestClient warnt: httpx durch httpx2 ersetzen
-
-**Thema:** Tests
-
-**Fundort:** `pyproject.toml` (filterwarnings)
-
-**Beobachtung:** Der Starlette-TestClient meldet, dass `httpx` veraltet ist und `httpx2` verwendet werden soll.
-
-**Ursprung:** Umsetzung #13
-
-**Einschätzung:** Warnung gezielt unterdrückt. Der Wechsel auf httpx2 wäre eine neue Dependency und braucht Koschis Freigabe; spätestens nötig, wenn Starlette httpx nicht mehr unterstützt.
-
-### 2026-10-30 — Unklar, ob die GitHub-Verbindung von fly.io `main` deployt
-
-**Thema:** Betrieb
-
-**Fundort:** fly.io, App `reflexionsinstrument`, GitHub-Verbindung in der Weboberfläche
-
-**Beobachtung:** Koschi hat die App über die Weboberfläche mit GitHub verbunden, als `main` noch kein `Dockerfile` und kein `fly.toml` hatte. Nach dem Merge von #22 entstand in den ersten Minuten kein neues Release; die laufende Version stammt aus `make deploy` vom Branch.
-
-**Ursprung:** Deploy #13
-
-**Einschätzung:** Im fly-Dashboard prüfen, ob und wie die Verbindung deployt und ob sie `fly.toml` aus dem Repo verwendet (Volume `daten`). Sonst könnte ein späterer automatischer Deploy ohne Volume starten. Bis zur Klärung weiter mit `make deploy`. Nachtrag 30.10.: Die Merges #22–#26 lösten keinen Deploy aus; die einzige Bot-Bereitstellung (Stand vor dem Dockerfile) hängt seit 15:41 UTC auf «in_progress». Empfehlung an Koschi: Verbindung im Dashboard trennen. Nachtrag 30.10. abends: Erledigt. Die GitHub-App «Fly.io» ist auf GitHub deinstalliert (im fly-Dashboard gab es keinen Schalter dafür). Im Repo bleibt nur der alte Bot-Deployment-Eintrag «production», bewusst nicht gelöscht. Deploy weiterhin nur mit `make deploy`.
-
-### 2026-10-30 — Basis-Images über Tags statt Digests eingebunden
-
-**Thema:** CI
-
-**Fundort:** `Dockerfile` (`python:3.13-slim`, `ghcr.io/astral-sh/uv:0.13.6`)
-
-**Beobachtung:** Die Actions sind auf Commit-SHAs gepinnt, die Images im Dockerfile nur über Tags. Ein verschobener Tag würde beim nächsten Build ein anderes Image liefern.
-
-**Ursprung:** Gesamt-Review #13
-
-**Einschätzung:** Für einen vierwöchigen Pilot mit seltenen Deploys gering. Pinnen per `@sha256:…` wäre in Minuten gemacht, kostet aber Pflege bei Sicherheitsupdates.
-
-### 2026-10-30 — Fehlerseiten 500 ohne Sicherheits-Header, `HEAD /` gibt 405
-
-**Thema:** Sicherheit
-
-**Fundort:** `app/main.py`, `app/sicherheit.py`
-
-**Beobachtung:** Starlettes `ServerErrorMiddleware` liegt ausserhalb der eigenen Middleware, deshalb fehlen bei einem 500 die Sicherheits-Header (Antwort ist reiner Text). Ausserdem beantwortet `/` eine HEAD-Anfrage mit 405, was externe Erreichbarkeits-Prüfungen stören kann.
-
-**Ursprung:** Reviews #13
-
-**Einschätzung:** Praktisch ohne Folgen. Wird relevant, falls eine eigene Fehlerseite (HTML) oder ein Uptime-Monitor dazukommt.
-
-### 2026-10-30 — Kleine Härtungen an Migrationen und E2E-Skript
-
-**Thema:** Tests
-
-**Fundort:** `app/db.py` (`migriere`), `tests/e2e-pilot.mjs`
-
-**Beobachtung:** `migriere` liest `user_version` vor `BEGIN IMMEDIATE`; zwei gleichzeitig startende Prozesse könnten dieselbe Migration versuchen (der zweite scheitert laut). Ein Dateiname wie `1a_x.sql` führt zu `ValueError`. Im E2E-Skript wächst die Liste der CDP-Ereignisse unbegrenzt. (Erledigt mit #14: `muss` bricht den Ablauf bei Fehlschlag ab.)
-
-**Ursprung:** Task-Reviews #13
-
-**Einschätzung:** Bei einer Maschine und einem Prozess folgenlos. Die Ereignisliste ist bei der heutigen Länge der Abläufe unkritisch.
-
-### 2026-10-30 — Wiederherstellung aus einem Volume-Snapshot nie geprobt
-
-**Thema:** Betrieb
-
-**Fundort:** fly.io, Volume `daten` (`snapshot_retention = 5`)
-
-**Beobachtung:** Während der Laufzeit sind die täglichen Snapshots von fly.io die einzige Sicherung der Einträge und Aufnahmen. Ob und wie schnell sich daraus ein Volume wiederherstellen lässt (neues Volume aus Snapshot, Maschine darauf umhängen), ist nicht ausprobiert.
-
-**Ursprung:** Löschkonzept #8
-
-**Einschätzung:** Eine Probe vor dem Testlauf (#9) mit Testdaten dauert etwa eine halbe Stunde und kostet für ein paar Minuten ein zweites Volume. Ohne Probe bleibt im Ernstfall nur Ausprobieren unter Zeitdruck.
-
-### 2026-10-30 — Eingabemaske: Doppelklick legt doppelt an
-
-**Thema:** Bedienung
-
-**Fundort:** Formulare «Neue Runde», «Neue Frage» usw. unter `/verwaltung/inhalte`
-
-**Beobachtung:** Ein Doppelklick auf «Speichern» schickt das Formular zweimal ab; ohne JavaScript legt das den Eintrag doppelt an.
-
-**Ursprung:** Gesamt-Review #15
-
-**Einschätzung:** Doppelte Einträge lassen sich löschen. Eine Abhilfe wäre ein einmaliger Formular-Schlüssel oder ein kleines Skript, das den Knopf sperrt; die Maske ist bewusst ohne JavaScript.
-
-### 2026-10-30 — Eingabemaske: Doppeltes «Endgültig löschen» endet auf «Nicht gefunden»
-
-**Thema:** Bedienung
-
-**Fundort:** Löschbestätigung unter `/verwaltung/inhalte`
-
-**Beobachtung:** Bei langsamem Netz und zweimaligem Klick auf «Endgültig löschen» löscht die erste Anfrage, die zweite endet auf der Seite «Nicht gefunden» statt auf der Liste mit «Gelöscht.».
-
-**Ursprung:** Gesamt-Review #15
-
-**Einschätzung:** Folgenlos, die Daten sind richtig gelöscht; nur die Rückmeldung irritiert.
-
-### 2026-10-30 — Eingabemaske: Nur ein Fehler pro Absenden, Felder ohne Markierung
-
-**Thema:** Bedienung, Barrierefreiheit
-
-**Fundort:** Formulare der Eingabemaske
-
-**Beobachtung:** Pro Absenden wird nur der erste Fehler gemeldet. Betroffene Felder tragen weder `aria-invalid` noch einen Rahmen; der Fehler ist nur über den Text darunter erkennbar.
-
-**Ursprung:** Gesamt-Review #15
-
-**Einschätzung:** Bei den kurzen Formularen tragbar. Rahmen und `aria-invalid` sind eine kleine Ergänzung, falls die Auftraggeberin Mühe damit hat.
-
-### 2026-10-30 — Kommando rechnet mit ungeprüftem Datum
-
-**Thema:** Bedienung
-
-**Fundort:** `app/kommandos.py` (`platzhalter-laden --projektstart`), `app/inhalte.py` (`lies_projektstart`)
-
-**Beobachtung:** Seit #15 nimmt die Maske nur Jahre 2020–2099 an. Das Kommando `platzhalter-laden --projektstart` prüft den Bereich nicht; ein Jahr 9999 kann beim Addieren der Wochen einen `OverflowError` auslösen. Ein schon gespeicherter, unplausibler erster Tag wird von `lies_projektstart` ungeprüft geliefert (Vorschläge zeigen ihn, Speichern meldet dann 400).
-
-**Ursprung:** Re-Review der Fixes zu #15
-
-**Einschätzung:** Nur für Entwicklung bzw. Altdaten erreichbar, kein Absturz in der Maske. `ist_plausibel` aus `app/zeit.py` im Kommando mitbenutzen wäre eine Zeile.
-
-### 2026-10-30 — Zurückgestellte Kleinigkeiten aus den Reviews zu #14 und #15
-
-**Thema:** Tests
-
-**Fundort:** `tests/` (u. a. `test_kommandos.py`, `test_sitzung.py`, `test_anmeldeschutz.py`, `test_verwaltung.py`, `test_verwaltung_inhalte.py`, `test_inhalte.py`, `e2e-pilot.mjs`), `app/csrf.py`, `app/templates/basis.html`
-
-**Beobachtung:** Aus den Task-Reviews blieben bewusst zurückgestellte Kleinigkeiten: Testverbindungen ohne `close()`, einzelne Tests ohne Statusprüfung oder mit schwacher Aussage (Bestätigung «nur aus fester Liste», E2E «Impuls löschen», Zähltexte), fehlende Tests für einige Randzweige (Wettlauf beim Löschen, Rollback der obersten Transaktion). Dazu aus dem Gesamt-Review #14: CSRF-Fehler nutzt `KeinZugriff` mit eigenem Titel statt einer eigenen Ausnahme; auf 404-Seiten fehlen Anzeigename und «Abmelden» im Kopf; `__Host-`-Präfix für Cookies erst bei eigener Domain sinnvoll.
-
-**Ursprung:** Task-Reviews und Gesamt-Reviews #14, #15
-
-**Einschätzung:** Kein Verhalten falsch, Politur. Bei einer ruhigen Stunde gesammelt nachziehen oder bei der Auswertung verwerfen.
-
+| Eintrag | Behauptung | Gemessen |
+|---|---|---|
+| Basis-Images über Tags | «Die Actions sind auf Commit-SHAs gepinnt» | nur in `ci.yml`, nicht in `prototyp.yml` |
+| Kommando rechnet mit ungeprüftem Datum | Kommando prüft den Bereich nicht, `OverflowError` möglich | Prüfung über `speichere_allgemein`; der vorgeschlagene Fix hätte nichts behoben |
+| Zurückgestellte Kleinigkeiten | kein Test für das Rollback der obersten Transaktion | `test_allgemein_fehler_schreibt_nichts`, `test_transaktion_verschachtelt` |
+| Härtungen an Migrationen | «Bei einer Maschine und einem Prozess» | Kommandos per `fly ssh` sind ein zweiter Prozess neben der App |
+| Snapshot nie geprobt | tägliche Snapshots sind die Sicherung | am 30.10. noch kein Snapshot vorhanden |
+| Nur ein Fehler pro Absenden | Fehler nur über den Text erkennbar | `aria-describedby` verband Feld und Fehler schon; dafür behauptete der Kopfhinweis eine Markierung, die es nicht gab |
+| E2E nur lokal auf macOS | Chrome-Pfad per Umgebungsvariable wäre noch zu tun | in `e2e-pilot.mjs` schon umgesetzt (`CHROME_PFAD`) |
