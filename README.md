@@ -1,10 +1,12 @@
 # Reflexionsinstrument für Lehrpersonen
 
-Eine einfache Anwendung, mit der Lehrpersonen zu mehreren Zeitpunkten ein Reflexionsinstrument ausfüllen und ein Tagebuch führen. Jede Lehrperson sieht nur ihre eigenen Einträge. Die Auswertung erfolgt pseudonymisiert durch die Projektverantwortliche.
+Eine einfache Anwendung, mit der Lehrpersonen zu mehreren Zeitpunkten ein Reflexionsinstrument ausfüllen und ein Tagebuch führen. Jede Lehrperson sieht nur ihre eigenen Einträge. Die Projektverantwortliche sieht alle Einträge mit Namen, und die Lehrpersonen wissen das vorher.
 
 ## Stand
 
-Die Anforderungen werden noch geklärt. Es gibt einen **klickbaren Wegwerf-Prototyp**, um Feedback zu holen. Er ist nicht die spätere Pilot-Version. Aufbau und Entscheidungen: [docs/prototyp.md](docs/prototyp.md).
+Die Anforderungen an die Pilot-Version stehen in [docs/anforderungen.md](docs/anforderungen.md), die Technik in [docs/adr/ADR-001-technik-pilot.md](docs/adr/ADR-001-technik-pilot.md). Die Pilot-Version ist im Aufbau.
+
+Der **klickbare Wegwerf-Prototyp** hat dazu gedient, Feedback zu holen. Er ist nicht die Pilot-Version. Aufbau und Entscheidungen: [docs/prototyp.md](docs/prototyp.md).
 
 - Online: https://konstantinniedermann.github.io/reflexionsinstrument/
 - Lokal: `prototyp/index.html` im Browser öffnen (Doppelklick genügt)
@@ -23,4 +25,4 @@ Beides braucht nur Node (ab Version 22) und keine Dependencies. Die E2E-Prüfung
 ## Leitplanken
 
 - Einfachheit vor Funktionsumfang, auf dem Handy bedienbar
-- Datenschutz: minimal personenbezogene Daten, Pseudonyme, Hosting bevorzugt in der Schweiz oder der EU
+- Datenschutz: minimal personenbezogene Daten, keine Kontaktdaten, Hosting in der EU (Frankfurt), Löschung nach Projektende
