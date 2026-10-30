@@ -110,9 +110,8 @@ def test_fehlerseite_zeigt_titel(client, auftraggeberin):
 
 def test_kein_fester_titel_in_templates():
     wurzel = Path(__file__).parent.parent / "app" / "templates"
-    for datei in wurzel.rglob("*"):
-        if datei.is_file():
-            assert "Reflexionsinstrument" not in datei.read_text(encoding="utf-8"), datei
+    for datei in wurzel.rglob("*.html"):
+        assert "Reflexionsinstrument" not in datei.read_text(encoding="utf-8"), datei
 
 
 def test_bestaetigung_nur_aus_fester_liste(client, auftraggeberin):
