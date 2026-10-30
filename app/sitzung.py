@@ -8,7 +8,7 @@ from fastapi import Depends
 from itsdangerous import BadData, URLSafeTimedSerializer
 from starlette.requests import Request
 
-from app.cookies import loesche_cookie, setze_cookie
+from app.cookies import CSRF_MAX_AGE, loesche_cookie, setze_cookie
 from app.csrf import erneuere_csrf
 from app.db import hole_db
 from app.konten import Konto, finde_konto
@@ -78,9 +78,18 @@ def aktuelles_konto(
                 konto = kandidat
                 if dauerhaft and alter > VERLAENGERN_AB:
                     _setze_sitzungscookie(request, konto, True)
+                    # csrf-Cookie mitverlaengern (gleicher Wert), sonst scheitert ein Formular,
+                    # das am Ende der Laufzeit geladen wurde.
+                    setze_cookie(request, "csrf", request.state.csrf_wert, CSRF_MAX_AGE)
         if konto is None:
             loesche_cookie(request, COOKIE)
     request.state.konto = konto
+    return konto
+
+
+def braucht_konto(konto: Annotated[Konto | None, Depends(aktuelles_konto)]) -> Konto:
+    if konto is None:
+        raise NichtAngemeldet
     return konto
 
 

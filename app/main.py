@@ -14,7 +14,7 @@ from app.anmeldeschutz import Anmeldeschutz
 from app.config import Einstellungen, lade_einstellungen
 from app.cookies import CookieMiddleware
 from app.db import migriere, verbinde
-from app.routen import allgemein
+from app.routen import allgemein, anmeldung, lehrperson
 from app.sicherheit import SicherheitsHeaderMiddleware
 from app.vorlagen import templates
 from app.zugriff import KeinZugriff, NichtAngemeldet
@@ -52,7 +52,7 @@ def erstelle_app(einstellungen: Einstellungen | None = None) -> FastAPI:
 
     @app.exception_handler(KeinZugriff)
     async def kein_zugriff(request: Request, exc: KeinZugriff):
-        return fehlerseite(request, 403, "Kein Zugriff", exc.text)
+        return fehlerseite(request, 403, exc.titel, exc.text)
 
     @app.exception_handler(StarletteHTTPException)
     async def http_fehler(request: Request, exc: StarletteHTTPException):
@@ -65,4 +65,6 @@ def erstelle_app(einstellungen: Einstellungen | None = None) -> FastAPI:
     app.add_middleware(SicherheitsHeaderMiddleware, produktion=einstellungen.produktion)
     app.mount("/static", StaticFiles(directory=APP_VERZEICHNIS / "static"), name="static")
     app.include_router(allgemein.router)
+    app.include_router(anmeldung.router)
+    app.include_router(lehrperson.router)
     return app

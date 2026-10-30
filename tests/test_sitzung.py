@@ -56,7 +56,7 @@ def app(einstellungen):
 
     @app.get("/t/seite")
     def t_seite(request: Request, konto: Annotated[object, Depends(braucht_lehrperson)]):
-        return templates.TemplateResponse(request, "start.html", {})
+        return templates.TemplateResponse(request, "fehler.html", {"titel": "T", "meldung": "M"})
 
     return app
 
@@ -194,12 +194,16 @@ def test_lange_sitzung_nach_2_tagen_wird_verlaengert(client, lp, uhr):
     wert = anmelden_roh(client, lp)
     assert "sitzung=" not in "".join(hole(client, "/t/lp", wert).headers.get_list("set-cookie"))
     uhr(2 * VERLAENGERN_AB)
-    antwort = hole(client, "/t/lp", wert)
+    antwort = client.get("/t/lp", headers={"cookie": f"sitzung={wert}; csrf=bekannter-wert"})
     assert antwort.status_code == 200
     neu = sitzungs_wert(antwort)
     assert neu != wert
     cookie = next(c for c in antwort.headers.get_list("set-cookie") if c.startswith("sitzung="))
     assert "Max-Age=2592000" in cookie
+    # Das csrf-Cookie wird mit verlaengert (gleicher Wert), sonst scheitert ein spaet geladenes Formular.
+    csrf = next(c for c in antwort.headers.get_list("set-cookie") if c.startswith("csrf="))
+    assert "Max-Age=2592000" in csrf
+    assert csrf.split(";")[0] == "csrf=bekannter-wert"
     # Der neue Wert gilt ab jetzt, auch kurz vor Ablauf des alten.
     uhr(DAUER_LANG - 3 * VERLAENGERN_AB)
     assert hole(client, "/t/lp", neu).status_code == 200

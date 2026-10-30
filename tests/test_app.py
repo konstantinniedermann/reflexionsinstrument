@@ -43,7 +43,7 @@ def test_healthz_fehler_gibt_503(einstellungen):
     assert antwort.json() == {"status": "fehler"}
 
 
-def test_startseite_rendert(client):
+def test_login_seite_rendert(client):
     antwort = client.get("/")
     assert antwort.status_code == 200
     assert "text/html" in antwort.headers["content-type"]
@@ -52,7 +52,7 @@ def test_startseite_rendert(client):
     assert "/static/css/style.css" in antwort.text
 
 
-def test_startseite_ohne_externe_quellen(client):
+def test_login_seite_ohne_externe_quellen(client):
     text = client.get("/").text
     for verboten in ("http://", "https://", "<script", " style="):
         assert verboten not in text

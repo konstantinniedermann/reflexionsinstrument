@@ -1,7 +1,11 @@
+import re
+
 import pytest
 from fastapi.testclient import TestClient
 
 from app.config import Einstellungen
+from app.db import verbinde
+from app.konten import lege_konto_an
 from app.main import erstelle_app
 
 
@@ -16,10 +20,51 @@ def einstellungen(tmp_path):
 
 @pytest.fixture
 def client(einstellungen):
-    with TestClient(erstelle_app(einstellungen)) as c:
+    with TestClient(erstelle_app(einstellungen), follow_redirects=False) as c:
         yield c
 
 
 @pytest.fixture(autouse=True)
 def schnelles_bcrypt(monkeypatch):
     monkeypatch.setattr("app.konten.BCRYPT_RUNDEN", 4)
+
+
+def _lege_an(einstellungen, anzeigename, benutzername, passwort, rolle="lehrperson"):
+    conn = verbinde(einstellungen.db_pfad)
+    try:
+        konto = lege_konto_an(conn, anzeigename, benutzername, passwort, rolle)
+    finally:
+        conn.close()
+    return {"id": konto.id, "benutzername": benutzername, "passwort": passwort}
+
+
+@pytest.fixture
+def lehrperson(client, einstellungen):
+    return _lege_an(einstellungen, "Anna Beispiel", "lp.anna", "anna-pass-1")
+
+
+@pytest.fixture
+def zweite_lehrperson(client, einstellungen):
+    return _lege_an(einstellungen, "Ben Beispiel", "lp.ben", "ben-pass-12")
+
+
+@pytest.fixture
+def auftraggeberin(client, einstellungen):
+    return _lege_an(
+        einstellungen, "Projektleitung", "projektleitung", "leitung-pass-1", "auftraggeberin"
+    )
+
+
+def csrf_von(client, pfad="/") -> str:
+    """Liest das versteckte csrf-Feld der Seite `pfad`."""
+    treffer = re.search(r'name="csrf" value="([0-9a-f]+)"', client.get(pfad).text)
+    assert treffer, f"kein csrf-Feld auf {pfad}"
+    return treffer.group(1)
+
+
+def anmelden(client, benutzername, passwort, dauerhaft=True, headers=None):
+    """Meldet ueber die Login-Seite an; folgt keiner Weiterleitung."""
+    daten = {"csrf": csrf_von(client), "benutzername": benutzername, "passwort": passwort}
+    if dauerhaft:
+        daten["dauerhaft"] = "1"
+    return client.post("/anmelden", data=daten, headers=headers, follow_redirects=False)
