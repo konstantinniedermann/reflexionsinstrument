@@ -70,3 +70,51 @@ Letzte Auswertung: noch keine
 **Ursprung:** Umsetzung #13
 
 **Einschätzung:** Warnung gezielt unterdrückt. Der Wechsel auf httpx2 wäre eine neue Dependency und braucht Koschis Freigabe; spätestens nötig, wenn Starlette httpx nicht mehr unterstützt.
+
+### 2026-10-30 — Unklar, ob die GitHub-Verbindung von fly.io `main` deployt
+
+**Thema:** Betrieb
+
+**Fundort:** fly.io, App `reflexionsinstrument`, GitHub-Verbindung in der Weboberfläche
+
+**Beobachtung:** Koschi hat die App über die Weboberfläche mit GitHub verbunden, als `main` noch kein `Dockerfile` und kein `fly.toml` hatte. Nach dem Merge von #22 entstand in den ersten Minuten kein neues Release; die laufende Version stammt aus `make deploy` vom Branch.
+
+**Ursprung:** Deploy #13
+
+**Einschätzung:** Im fly-Dashboard prüfen, ob und wie die Verbindung deployt und ob sie `fly.toml` aus dem Repo verwendet (Volume `daten`). Sonst könnte ein späterer automatischer Deploy ohne Volume starten. Bis zur Klärung weiter mit `make deploy`.
+
+### 2026-10-30 — Basis-Images über Tags statt Digests eingebunden
+
+**Thema:** CI
+
+**Fundort:** `Dockerfile` (`python:3.13-slim`, `ghcr.io/astral-sh/uv:0.13.6`)
+
+**Beobachtung:** Die Actions sind auf Commit-SHAs gepinnt, die Images im Dockerfile nur über Tags. Ein verschobener Tag würde beim nächsten Build ein anderes Image liefern.
+
+**Ursprung:** Gesamt-Review #13
+
+**Einschätzung:** Für einen vierwöchigen Pilot mit seltenen Deploys gering. Pinnen per `@sha256:…` wäre in Minuten gemacht, kostet aber Pflege bei Sicherheitsupdates.
+
+### 2026-10-30 — Fehlerseiten 500 ohne Sicherheits-Header, `HEAD /` gibt 405
+
+**Thema:** Sicherheit
+
+**Fundort:** `app/main.py`, `app/sicherheit.py`
+
+**Beobachtung:** Starlettes `ServerErrorMiddleware` liegt ausserhalb der eigenen Middleware, deshalb fehlen bei einem 500 die Sicherheits-Header (Antwort ist reiner Text). Ausserdem beantwortet `/` eine HEAD-Anfrage mit 405, was externe Erreichbarkeits-Prüfungen stören kann.
+
+**Ursprung:** Reviews #13
+
+**Einschätzung:** Praktisch ohne Folgen. Wird relevant, falls eine eigene Fehlerseite (HTML) oder ein Uptime-Monitor dazukommt.
+
+### 2026-10-30 — Kleine Härtungen an Migrationen und E2E-Skript
+
+**Thema:** Tests
+
+**Fundort:** `app/db.py` (`migriere`), `tests/e2e-pilot.mjs`
+
+**Beobachtung:** `migriere` liest `user_version` vor `BEGIN IMMEDIATE`; zwei gleichzeitig startende Prozesse könnten dieselbe Migration versuchen (der zweite scheitert laut). Ein Dateiname wie `1a_x.sql` führt zu `ValueError`. Im E2E-Skript bricht `pruefe` den Ablauf nicht ab, und die Liste der CDP-Ereignisse wächst unbegrenzt.
+
+**Ursprung:** Task-Reviews #13
+
+**Einschätzung:** Bei einer Maschine und einem Prozess folgenlos. Die werfende Variante von `pruefe` wird nützlich, sobald Abläufe mit abhängigen Schritten (Login, Formulare) dazukommen.
