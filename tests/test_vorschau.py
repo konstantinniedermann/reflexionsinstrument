@@ -1,12 +1,13 @@
 import re
 from datetime import date
+from pathlib import Path
 
 import pytest
 import testdaten
 from conftest import als_lehrperson, als_leitung, csrf_von
 
 from app.routen.ohne_speichern import MELDUNG_VORSCHAU
-from app.routen.verwaltung_vorschau import band_vorschau
+from app.routen.verwaltung_vorschau import VorschauTag, band_vorschau, standardtag, vorschau_tage
 from app.texte import REGISTER, speichere_text
 
 V = "/verwaltung/vorschau"
@@ -233,3 +234,95 @@ def test_post_escapt(leitung, db):
     assert "&lt;script&gt;x&lt;/script&gt;" in antwort.text
     assert "**f**" in antwort.text
     assert "<script>x" not in antwort.text and "<strong>f" not in antwort.text
+
+
+def _d(tag, monat=11):
+    return date(2026, monat, tag)
+
+
+def test_standardtag():
+    assert standardtag(_d(16), _d(23)) == _d(23)
+    assert standardtag(_d(1, 12), _d(23)) == _d(1, 12)
+    assert standardtag(_d(16), None) == _d(16)
+
+
+def test_vorschau_tage():
+    runden = [
+        {"titel": "D", "freischaltdatum": "2026-11-16"},
+        {"titel": "A", "freischaltdatum": "2026-11-23"},
+        {"titel": "B", "freischaltdatum": "2026-11-23"},
+        {"titel": "C", "freischaltdatum": "2026-11-30"},
+        {"titel": "E", "freischaltdatum": "2026-11-09"},
+    ]
+    assert vorschau_tage(runden, _d(16), _d(23)) == [
+        VorschauTag(_d(9), False, None, ["E"]),
+        VorschauTag(_d(16), True, None, ["D"]),
+        VorschauTag(_d(23), False, 1, ["A", "B"]),
+        VorschauTag(_d(30), False, 2, ["C"]),
+    ]
+    assert vorschau_tage([], _d(16), _d(23)) == [VorschauTag(_d(16), True, None, [])]
+
+
+def test_auswahlseite(leitung, db):
+    _erster_tag(db)
+    testdaten.lege_runde_an(db, "Runde Eins", "2026-11-23")
+    testdaten.lege_runde_an(db, "Runde Zwei", "2026-11-23")
+    db.commit()
+    text = leitung.get(V).text
+    assert "<h1>Vorschau</h1>" in text
+    assert re.search(
+        r'href="/verwaltung/vorschau/2026-11-16"[^>]*>[^<]*(<[^>]+>\s*)*Heute, Mo 16.11.2026', text
+    )
+    assert 'href="/verwaltung/vorschau/2026-11-23"' in text
+    assert "Woche 1, ab Mo 23.11.2026: Runde Eins · Runde Zwei" in " ".join(text.split())
+    assert re.search(r'<input[^>]*name="am"[^>]*required', text) or re.search(
+        r'<input[^>]*required[^>]*name="am"', text
+    )
+    assert 'href="/gast"' in text
+    assert "Diese Ansicht ist öffentlich" in text
+    assert re.search(r'href="/verwaltung"[^>]*>\s*‹ Verwaltung', text)
+
+
+def test_auswahl_weiterleitungen(leitung, db):
+    _erster_tag(db)
+    leitung.follow_redirects = False
+    for abfrage, ziel in [
+        ("?am=2026-11-30", f"{V}/2026-11-30"),
+        ("?am=2026-11-30&ziel=info", f"{V}/2026-11-30/info"),
+        ("?ziel=info", f"{V}/2026-11-23/info"),
+    ]:
+        antwort = leitung.get(V + abfrage)
+        assert antwort.status_code == 303, abfrage
+        assert antwort.headers["location"] == ziel
+    for abfrage in ("?ziel=x", "?am=abc", "?am=2026-02-30", "?am=2019-01-01", "?am="):
+        antwort = leitung.get(V + abfrage)
+        assert antwort.status_code == 200, abfrage
+        assert "Vorschau" in antwort.text
+
+
+def test_links_in_verwaltung(leitung, db):
+    rid, _ = testdaten.lege_runde_an(db, "Runde Eins", "2026-12-07")
+    db.commit()
+    start = leitung.get("/verwaltung").text
+    assert re.search(r'<a class="karte karte--link" href="/verwaltung/vorschau"', start)
+    assert re.search(
+        r'<nav class="verwaltungsnavigation".*href="/verwaltung/vorschau".*</nav>', start, re.DOTALL
+    )
+    text = leitung.get("/verwaltung/inhalte").text
+    assert re.search(r'href="/verwaltung/vorschau"[^>]*>\s*So sieht es eine Lehrperson', text)
+    text = leitung.get("/verwaltung/inhalte/info").text
+    assert 'href="/verwaltung/vorschau?ziel=info"' in text
+    text = leitung.get(f"/verwaltung/inhalte/runden/{rid}").text
+    link = f'href="/verwaltung/vorschau/2026-12-07/runden/{rid}"'
+    assert re.search(link + r"[^>]*>\s*Diese Runde ansehen", text)
+    db.execute("UPDATE runden SET freischaltdatum = '2026-12-14'")
+    db.commit()
+    text = leitung.get(f"/verwaltung/inhalte/runden/{rid}").text
+    assert f'href="/verwaltung/vorschau/2026-12-14/runden/{rid}"' in text
+
+
+def test_kommentarzeilen_bleiben(leitung):
+    for datei in ("start.html", "rahmen.html"):
+        text = (Path("app/templates/verwaltung") / datei).read_text(encoding="utf-8")
+        assert "{# #19:" in text
+        assert "{# Trennzeile zwischen #18 und #19, nicht ändern #}" in text

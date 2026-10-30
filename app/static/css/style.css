@@ -1163,5 +1163,30 @@ input[type="checkbox"] {
 /* Ende #18 */
 
 /* Pilot: Gast und Vorschau (#19) */
+.verwaltungsnavigation {
+  flex-wrap: wrap;
+}
+
+.vorschau-tag {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.5rem 0.75rem;
+  margin: 1.5rem 0;
+}
+
+.vorschau-tag label {
+  flex-basis: 100%;
+  font-weight: 600;
+}
+
+.vorschau-tag input {
+  min-height: 2.75rem;
+  padding: 0 0.5rem;
+}
+
+.vorschau-gast {
+  margin-top: 1.5rem;
+}
 
 /* Ende #19 */
