@@ -141,3 +141,15 @@ def raeume_waisen(db: sqlite3.Connection, verzeichnis: Path, jetzt: float | None
             except OSError:
                 _log.warning("Aufnahme-Datei liess sich nicht loeschen")
     return geloescht
+
+
+def eigene_aufnahme(db: sqlite3.Connection, konto_id: int, aufnahme_id: int) -> sqlite3.Row | None:
+    """Aufnahme, nur wenn sie dem Konto gehoert."""
+    return db.execute(
+        "SELECT * FROM aufnahmen WHERE id = ? AND konto_id = ?", (aufnahme_id, konto_id)
+    ).fetchone()
+
+
+def aufnahme(db: sqlite3.Connection, aufnahme_id: int) -> sqlite3.Row | None:
+    """Aufnahme eines beliebigen Kontos (nur fuer die Auftraggeberin)."""
+    return db.execute("SELECT * FROM aufnahmen WHERE id = ?", (aufnahme_id,)).fetchone()
