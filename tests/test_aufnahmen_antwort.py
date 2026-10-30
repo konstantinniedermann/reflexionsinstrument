@@ -1,3 +1,4 @@
+import re
 from datetime import date
 from io import BytesIO
 
@@ -312,9 +313,10 @@ def test_runde_platz(client, runde, db, lehrperson, verzeichnis):
     _, aid, _ = mit_aufnahme(db, verzeichnis, f1, lehrperson["id"])
     seite = client.get(f"/lehrperson/runden/{rid}").text
     assert f'<audio controls preload="none" src="/lehrperson/aufnahmen/{aid}"' in seite
-    assert f'href="{adresse(rid, f1)}">Aufnahme ersetzen' in seite
+    assert "5 Sek." in seite
+    assert re.search(rf'name="anker" value="aufnahme-{f1}"[^>]*>Aufnahme ersetzen<', seite)
+    assert "Antwort einsprechen" not in seite
     assert f'href="{adresse(rid, f1, "aufnahme/loeschen")}">Aufnahme löschen' in seite
-    assert f'value="aufnahme-{f1}"' not in seite
 
 
 def test_runde_gast_ohne_platz(client, db, lehrperson, verzeichnis, auftraggeberin, runde):
@@ -346,3 +348,20 @@ def test_speichern_und_einsprechen(client, runde):
     assert r.status_code == 303
     assert r.headers["location"] == adresse(rid, f1)
     assert client.get(r.headers["location"]).status_code == 200
+
+
+def test_loeschen_falsche_runde_404(client, runde, db, lehrperson, verzeichnis):
+    rid, f1, _ = runde
+    fremde_runde, (fremd,) = testdaten.lege_runde_an(
+        db, titel="Andere", freischaltdatum="2026-11-16", fragen=(("freitext", "Andere"),)
+    )
+    db.commit()
+    _, _, datei = mit_aufnahme(db, verzeichnis, f1, lehrperson["id"])
+    vorher = testdaten.abzug(db)
+    for runde_id, frage_id in ((fremde_runde, f1), (rid, fremd)):
+        pfad = adresse(runde_id, frage_id, "aufnahme/loeschen")
+        assert client.get(pfad).status_code == 404
+        daten = {"csrf": csrf_von(client, "/lehrperson")}
+        assert client.post(pfad, data=daten).status_code == 404
+    assert testdaten.abzug(db) == vorher
+    assert (verzeichnis / datei.name).exists()
