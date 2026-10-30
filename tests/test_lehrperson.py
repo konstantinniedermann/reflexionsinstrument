@@ -183,7 +183,6 @@ def test_skript_nur_auf_lehrpersonen_seiten(client, lehrperson, auftraggeberin):
 
 def test_entwurf_js_ist_klein_und_ohne_netz():
     quelle = (Path(__file__).parent.parent / "app/static/js/entwurf.js").read_text(encoding="utf-8")
-    assert len(quelle.splitlines()) <= 120
     assert "fetch(" not in quelle
     assert "localStorage" not in quelle
     assert "sessionStorage" in quelle

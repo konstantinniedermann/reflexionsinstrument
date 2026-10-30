@@ -30,15 +30,17 @@
     } catch (e) {}
   }
 
-  // Wie auf dem Server: Zeilenenden vereinheitlichen, Rand abschneiden.
+  // Wie auf dem Server (app/eingaben.py): Zeilenenden vereinheitlichen, Rand abschneiden.
   function norm(text) {
-    return text.replace(/\r\n/g, "\n").trim();
+    return text.replace(/\r\n?/g, "\n").trim();
   }
 
   function schuetze(formular) {
     var vorsatz = PRAEFIX + formular.getAttribute("data-entwurf") + ":";
     var felder = formular.querySelectorAll("textarea[name]");
     var hinweis = formular.querySelector("[data-entwurf-hinweis]");
+    // Auf einer Fehlerseite ist der Feldwert der abgelehnte Text, nicht der gespeicherte.
+    var mitFehler = !!formular.querySelector(".fehler");
     var wiederhergestellt = false;
 
     felder.forEach(function (feld) {
@@ -46,7 +48,7 @@
       var entwurf = lies(schluessel);
       if (entwurf !== null) {
         if (norm(entwurf) === norm(feld.defaultValue)) {
-          schreibe(schluessel, null);
+          if (!mitFehler) schreibe(schluessel, null);
         } else {
           feld.value = entwurf;
           wiederhergestellt = true;
@@ -72,8 +74,14 @@
     }
   }
 
+  // Nach dem Anlegen: Den Entwurf des Formulars «neu» nur löschen, wenn er dem gespeicherten
+  // Text dieser Seite entspricht. Ein anderer, noch nicht gespeicherter Entwurf bleibt.
   document.querySelectorAll("form[data-entwurf-verwerfen]").forEach(function (formular) {
-    loescheAlle(PRAEFIX + formular.getAttribute("data-entwurf-verwerfen") + ":");
+    var feld = formular.querySelector("textarea[name='text']");
+    if (!feld || formular.querySelector(".fehler")) return;
+    var schluessel = PRAEFIX + formular.getAttribute("data-entwurf-verwerfen") + ":text";
+    var entwurf = lies(schluessel);
+    if (entwurf !== null && norm(entwurf) === norm(feld.defaultValue)) schreibe(schluessel, null);
   });
   document.querySelectorAll("form[data-entwurf]").forEach(schuetze);
   document.querySelectorAll("form[action='/abmelden']").forEach(function (formular) {

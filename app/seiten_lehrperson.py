@@ -244,9 +244,7 @@ def kontext_tagebuch_eintrag(
         "entwurf": _entwurf(ansicht, f"tagebuch-{eintrag['id']}"),
         "entwurf_verwerfen": (
             _entwurf(ansicht, _neu_schluessel(eintrag))
-            if neu_angelegt
-            and eintrag["art"] != "aufnahme"
-            and eintrag["geaendert"] == eintrag["erstellt"]
+            if neu_angelegt and eintrag["art"] != "aufnahme"
             else None
         ),
     }

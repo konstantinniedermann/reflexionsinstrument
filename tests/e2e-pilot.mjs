@@ -469,6 +469,12 @@ async function ablaufLehrperson() {
   pruefe((await entwurfSchluessel()) === 1, "Entwurf: neuer Eintrag legt einen Entwurf an");
   await sende(SPEICHERN);
   pruefe((await entwurfSchluessel()) === 0, "Entwurf: nach dem Anlegen kein Entwurf im Tab");
+  // Ein anderer, noch nicht gespeicherter Neu-Entwurf bleibt, wenn die Seite des Eintrags neu lädt («Zurück»)
+  const konto = await js('document.querySelector("form[data-entwurf]").dataset.entwurf.split(":")[0]');
+  await js(`sessionStorage.setItem("entwurf:${konto}:neu-frei:text", "Ein anderer, noch offener Gedanke.")`);
+  await oeffne(`${await pfad()}?erledigt=gespeichert`);
+  pruefe((await entwurfSchluessel()) === 1, "Entwurf: fremder Neu-Entwurf bleibt nach erneutem Laden der Eintragsseite");
+  await js('sessionStorage.clear()');
   // Abmelden räumt alles weg
   await oeffne(rundenPfad);
   await tippe(`#${erstesFeld}`, entwurfText);
