@@ -4,10 +4,14 @@ import sqlite3
 from collections.abc import Callable
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, HTTPException, Request
 
+from app import inhalte
 from app.ansicht import Ansicht
+from app.csrf import pruefe_csrf
 from app.db import hole_db
+from app.eingaben import InhaltFehler
+from app.eintraege import lies_runden_eingaben, lies_tagebuchtext
 from app.seiten_lehrperson import (
     VORLAGEN,
     kontext_info,
@@ -16,6 +20,7 @@ from app.seiten_lehrperson import (
     kontext_tagebuch_neu,
     kontext_tagebuch_wahl,
 )
+from app.sichtbar import sichtbare_runde
 from app.typen import Id
 from app.vorlagen import templates
 
@@ -71,3 +76,51 @@ def registriere_seiten(
     @router.get("/tagebuch/neu/leitfrage/{leitfrage_id}")
     def neu_leitfrage(request: Request, db: DB_LESEND, ansicht: ANSICHT, leitfrage_id: Id):
         return neu(request, db, ansicht, "leitfrage", leitfrage_id)
+
+    @router.post("/runden/{runde_id}", dependencies=[Depends(pruefe_csrf)])
+    async def runde_pruefen(request: Request, db: DB_LESEND, ansicht: ANSICHT, runde_id: Id):
+        if sichtbare_runde(db, runde_id, ansicht.stichtag) is None:
+            raise HTTPException(404)
+        formular = {k: v for k, v in (await request.form()).items() if isinstance(v, str)}
+        try:
+            lies_runden_eingaben(inhalte.fragen(db, runde_id), formular)
+        except InhaltFehler as e:
+            kontext = kontext_runde(
+                db, ansicht, runde_id, eingaben=formular, fehler={e.feld: e.meldung}
+            )
+            status = 400
+        else:
+            kontext = kontext_runde(db, ansicht, runde_id, eingaben=formular, meldung=meldung)
+            status = 200
+        return templates.TemplateResponse(request, VORLAGEN["runde"], kontext, status_code=status)
+
+    async def neu_pruefen(request: Request, db, ansicht: Ansicht, art: str, bezug_id: int | None):
+        text = str((await request.form()).get("text", ""))
+        try:
+            lies_tagebuchtext(text)
+        except InhaltFehler as e:
+            # der 404 fuer einen unbekannten Bezug kommt aus kontext_tagebuch_neu, vor dem 400
+            kontext = kontext_tagebuch_neu(
+                db, ansicht, art, bezug_id, text=text, fehler={e.feld: e.meldung}
+            )
+            status = 400
+        else:
+            kontext = kontext_tagebuch_neu(db, ansicht, art, bezug_id, text=text, meldung=meldung)
+            status = 200
+        return templates.TemplateResponse(
+            request, VORLAGEN["tagebuch_neu"], kontext, status_code=status
+        )
+
+    @router.post("/tagebuch/neu/frei", dependencies=[Depends(pruefe_csrf)])
+    async def neu_frei_pruefen(request: Request, db: DB_LESEND, ansicht: ANSICHT):
+        return await neu_pruefen(request, db, ansicht, "frei", None)
+
+    @router.post("/tagebuch/neu/impuls/{impuls_id}", dependencies=[Depends(pruefe_csrf)])
+    async def neu_impuls_pruefen(request: Request, db: DB_LESEND, ansicht: ANSICHT, impuls_id: Id):
+        return await neu_pruefen(request, db, ansicht, "impuls", impuls_id)
+
+    @router.post("/tagebuch/neu/leitfrage/{leitfrage_id}", dependencies=[Depends(pruefe_csrf)])
+    async def neu_leitfrage_pruefen(
+        request: Request, db: DB_LESEND, ansicht: ANSICHT, leitfrage_id: Id
+    ):
+        return await neu_pruefen(request, db, ansicht, "leitfrage", leitfrage_id)

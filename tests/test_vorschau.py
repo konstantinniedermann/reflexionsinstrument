@@ -3,8 +3,9 @@ from datetime import date
 
 import pytest
 import testdaten
-from conftest import als_lehrperson, als_leitung
+from conftest import als_lehrperson, als_leitung, csrf_von
 
+from app.routen.ohne_speichern import MELDUNG_VORSCHAU
 from app.routen.verwaltung_vorschau import band_vorschau
 from app.texte import REGISTER, speichere_text
 
@@ -136,3 +137,99 @@ def test_vorschau_nur_auftraggeberin(client, lehrperson, heute_ist):
     assert antwort.status_code == 303 and antwort.headers["location"] == "/"
     als_lehrperson(client, lehrperson)
     assert client.get(f"{V}/2026-11-30").status_code == 403
+
+
+def _runde_am_7_12(db):
+    _erster_tag(db)
+    rid, fragen = testdaten.lege_runde_an(
+        db,
+        "Runde Zwei",
+        "2026-12-07",
+        fragen=(("freitext", "Frage A"), ("skala", "Frage B")),
+    )
+    db.commit()
+    return rid, fragen
+
+
+def _runde_und_csrf(leitung, db):
+    rid, fragen = _runde_am_7_12(db)
+    ids = [f if isinstance(f, int) else f["id"] for f in fragen]
+    csrf = csrf_von(leitung, f"{V}/2026-12-07/runden/{rid}")
+    return rid, ids, csrf
+
+
+def test_post_runde_speichert_nichts(leitung, db):
+    rid, (f1, f2), csrf = _runde_und_csrf(leitung, db)
+    vorher = testdaten.abzug(db)
+    antwort = leitung.post(
+        f"{V}/2026-12-07/runden/{rid}",
+        data={"csrf": csrf, f"antwort_{f1}": "Mein Text", f"antwort_{f2}": "4"},
+    )
+    assert antwort.status_code == 200
+    assert re.search(r'role="status"[^>]*>[^<]*' + re.escape(MELDUNG_VORSCHAU), antwort.text)
+    assert re.search(r"<textarea[^>]*>\s*Mein Text", antwort.text)
+    assert re.search(
+        r'<input[^>]*value="4"[^>]*checked|<input[^>]*checked[^>]*value="4"', antwort.text
+    )
+    assert testdaten.abzug(db) == vorher
+
+
+def test_post_runde_ungueltig_400(leitung, db):
+    rid, (f1, f2), csrf = _runde_und_csrf(leitung, db)
+    vorher = testdaten.abzug(db)
+    url = f"{V}/2026-12-07/runden/{rid}"
+    antwort = leitung.post(url, data={"csrf": csrf, f"antwort_{f2}": "7"})
+    assert antwort.status_code == 400
+    assert "Bitte einen Wert von 1 bis 5 wählen." in antwort.text
+    assert MELDUNG_VORSCHAU not in antwort.text
+    antwort = leitung.post(url, data={"csrf": csrf, f"antwort_{f1}": "x" * 20_001})
+    assert antwort.status_code == 400
+    assert "höchstens 20\u00a0000 Zeichen" in antwort.text
+    assert testdaten.abzug(db) == vorher
+
+
+def test_post_runde_nicht_sichtbar_404(leitung, db):
+    rid, _, csrf = _runde_und_csrf(leitung, db)
+    vorher = testdaten.abzug(db)
+    assert leitung.post(f"{V}/2026-12-06/runden/{rid}", data={"csrf": csrf}).status_code == 404
+    assert leitung.post(f"{V}/2026-12-07/runden/999", data={"csrf": csrf}).status_code == 404
+    assert testdaten.abzug(db) == vorher
+
+
+def test_post_ohne_csrf_403(leitung, db):
+    _runde_am_7_12(db)
+    antwort = leitung.post(f"{V}/2026-12-07/runden/999", data={})
+    assert antwort.status_code == 403
+    assert "Formular abgelaufen" in antwort.text
+
+
+def test_post_tagebuch(leitung, db):
+    _, _, csrf = _runde_und_csrf(leitung, db)
+    iid = testdaten.lege_impuls_an(db, "Impuls Spaet", "2026-12-14")
+    db.commit()
+    vorher = testdaten.abzug(db)
+    basis = f"{V}/2026-12-07/tagebuch/neu"
+    antwort = leitung.post(f"{basis}/frei", data={"csrf": csrf, "text": "Notiz"})
+    assert antwort.status_code == 200
+    assert MELDUNG_VORSCHAU in antwort.text
+    assert re.search(r"<textarea[^>]*>\s*Notiz", antwort.text)
+    antwort = leitung.post(f"{basis}/frei", data={"csrf": csrf, "text": " "})
+    assert antwort.status_code == 400
+    assert "Der Eintrag ist noch leer." in antwort.text
+    for text in ("x", ""):
+        antwort = leitung.post(f"{basis}/impuls/{iid}", data={"csrf": csrf, "text": text})
+        assert antwort.status_code == 404
+    antwort = leitung.post(f"{basis}/leitfrage/999", data={"csrf": csrf, "text": "x"})
+    assert antwort.status_code == 404
+    assert testdaten.abzug(db) == vorher
+
+
+def test_post_escapt(leitung, db):
+    _, _, csrf = _runde_und_csrf(leitung, db)
+    antwort = leitung.post(
+        f"{V}/2026-12-07/tagebuch/neu/frei",
+        data={"csrf": csrf, "text": "<script>x</script> **f**"},
+    )
+    assert "&lt;script&gt;x&lt;/script&gt;" in antwort.text
+    assert "**f**" in antwort.text
+    assert "<script>x" not in antwort.text and "<strong>f" not in antwort.text
