@@ -4,13 +4,20 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.exception_handlers import http_exception_handler
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
+from app.anmeldeschutz import Anmeldeschutz
 from app.config import Einstellungen, lade_einstellungen
+from app.cookies import CookieMiddleware
 from app.db import migriere, verbinde
 from app.routen import allgemein
 from app.sicherheit import SicherheitsHeaderMiddleware
+from app.vorlagen import templates
+from app.zugriff import KeinZugriff, NichtAngemeldet
 
 APP_VERZEICHNIS = Path(__file__).parent
 
@@ -32,6 +39,29 @@ def erstelle_app(einstellungen: Einstellungen | None = None) -> FastAPI:
 
     app = FastAPI(lifespan=lebenszyklus, docs_url=None, redoc_url=None, openapi_url=None)
     app.state.einstellungen = einstellungen
+    app.state.anmeldeschutz = Anmeldeschutz()
+
+    def fehlerseite(request: Request, status: int, titel: str, meldung: str):
+        return templates.TemplateResponse(
+            request, "fehler.html", {"titel": titel, "meldung": meldung}, status_code=status
+        )
+
+    @app.exception_handler(NichtAngemeldet)
+    async def nicht_angemeldet(request: Request, exc: NichtAngemeldet):
+        return RedirectResponse("/", status_code=303)
+
+    @app.exception_handler(KeinZugriff)
+    async def kein_zugriff(request: Request, exc: KeinZugriff):
+        return fehlerseite(request, 403, "Kein Zugriff", exc.text)
+
+    @app.exception_handler(StarletteHTTPException)
+    async def http_fehler(request: Request, exc: StarletteHTTPException):
+        if exc.status_code == 404:
+            return fehlerseite(request, 404, "Nicht gefunden", "Diese Seite gibt es nicht.")
+        return await http_exception_handler(request, exc)
+
+    # Zuletzt hinzugefuegt = aeusserste Schicht: Header gelten auch fuer Fehlerantworten.
+    app.add_middleware(CookieMiddleware)
     app.add_middleware(SicherheitsHeaderMiddleware, produktion=einstellungen.produktion)
     app.mount("/static", StaticFiles(directory=APP_VERZEICHNIS / "static"), name="static")
     app.include_router(allgemein.router)

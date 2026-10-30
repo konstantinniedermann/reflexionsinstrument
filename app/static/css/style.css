@@ -825,3 +825,29 @@ textarea:focus {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 }
+
+/* Pilot: Anmeldung und Verwaltung */
+
+.seitenkopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 0.75rem 1rem 0;
+}
+
+.seitenkopf__titel {
+  font-family: var(--serif);
+  font-weight: 600;
+}
+
+.seitenkopf__rechts,
+.seitenkopf__rechts form {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0;
+}

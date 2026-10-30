@@ -33,11 +33,16 @@ class SicherheitsHeaderMiddleware:
             await self.app(scope, receive, send)
             return
 
+        # Seiten nie zwischenspeichern; statische Dateien duerfen es.
+        header = list(self._header)
+        if not scope["path"].startswith("/static/"):
+            header.append((b"cache-control", b"no-store"))
+
         async def send_mit_headern(nachricht):
             if nachricht["type"] == "http.response.start":
-                gesetzt = {name for name, _ in self._header}
+                gesetzt = {name for name, _ in header}
                 vorhanden = [h for h in nachricht.get("headers", []) if h[0].lower() not in gesetzt]
-                nachricht = {**nachricht, "headers": vorhanden + self._header}
+                nachricht = {**nachricht, "headers": vorhanden + header}
             await send(nachricht)
 
         await self.app(scope, receive, send_mit_headern)
