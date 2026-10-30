@@ -385,3 +385,43 @@ Genaue Texte (im Ton oben), Gestaltung der Export-Karte und der Personen-Karten 
 ## Offen nur für Koschi bzw. die Auftraggeberin
 
 - **Mit welchem Computer öffnet sie den Export (Windows oder Mac)?** Ändert nichts am Bau, nur an einem Hilfesatz und am Testlauf: Am Mac spielt QuickTime keine `.webm`-Dateien (Aufnahmen aus Chrome auf Android oder Windows); dort öffnet man sie mit einem Browser (Datei ins Fenster ziehen) oder VLC. Unter Windows prüft sie im Testlauf das Entpacken mit dem eingebauten Entpacker.
+
+## Klärungen nach dem Builder-Check (Claude)
+
+Geprüft gegen `main` (Stand nach #15), das Design und den Plan von #16 sowie die Designs #17 und #19.
+
+**Aufbau im Code**
+- **Drei Module statt eines:** `app/export.py` (Tabelle: `SPALTEN`, `zelle`, `woche_von`, `Exportzeile`, `exportzeilen`, `als_csv`), `app/export_zip.py` (`name_im_zip`, `ZipDatei`, `zip_dateien`, `zip_strom`, `DATEI_FEHLT`), `app/auswertung.py` (Zahlen der Seite: `Personenkarte`, `personenkarten`, `Karte`, `karten`, `Exportstand`, `exportstand`, `groesse_text`). Begründung: Jede Datei hat eine Aufgabe und eigene Tests; die Route bleibt dünn. Signaturen stehen im Plan.
+- **Eine Abfrage pro Seite:** Die Seite liest `alle_zeilen(db)` einmal und filtert für `?lehrperson=` in Python nach `konto_id`, statt zusätzlich `zeilen_von` aufzurufen. Karten oben und Liste unten zeigen so denselben Stand.
+- **`Exportzeile.geaendert` ist `datetime | None`**, `None` heisst «nie geändert». Die Tabelle braucht genau diese Unterscheidung; der Vergleich steht dann an einer Stelle.
+- **Woche einer Karte** über `woche_von(zeitstempel, projektstart)` aus `app/export.py`, dieselbe Funktion wie in der Tabelle. Die Route übergibt fertige `Karte(eintrag, woche)`; kein neuer Jinja-Filter, `app/vorlagen.py` bleibt unberührt.
+- **Bezeichnungen der Tagebuch-Arten** («Freier Eintrag», «Zur Leitfrage», «Zum Impuls», «Gesprochener Eintrag») stehen als kleine Tabelle in `_eintrag.html`; #16 stellt dafür keine öffentliche Tabelle bereit. Marken-Klassen übernimmt #18 von `lehrperson/eintraege.html` (#16).
+- **`_aufnahme.html` einbinden** mit `{% with aufnahme=zeile, url="/verwaltung/aufnahmen/" ~ zeile.aufnahme_id %}{% include "_aufnahme.html" %}{% endwith %}`.
+
+**Seite «Einträge»**
+- **Filter-Parameter:** Mit FastAPI 0.162 geprüft: leer, `abc`, `0`, `-1`, `99999999999999999999` ergeben 422, also über den Handler 404. `3.0`, `+3` und ` 3` ergeben die Person 3 (Pydantic wandelt um), bei doppeltem Parameter gilt der letzte. Das ist harmlos und wird nicht als 404 getestet.
+- **Runden-Karte in der Liste: «zuletzt gespeichert …» statt «geändert …».** Bei einer Runde ist der Erstellzeitpunkt die früheste und der Änderungszeitpunkt die späteste Antwort; wer Frage 1 am Montag und Frage 2 am Dienstag beantwortet, hätte sonst «geändert», ohne etwas überarbeitet zu haben. Für die Auswertung wäre das irreführend. Ob eine einzelne Antwort überarbeitet wurde, steht in der Tabelle (Spalte «Geändert»). Tagebuch-Karten behalten «geändert …».
+- **Personen-Karte:** Gezählt werden sichtbare Runden mit mindestens einer Frage. Gibt es keine solche (auch wenn sichtbare Runden ohne Fragen bestehen): «Noch keine Runde offen». Einzahl «1 Tagebucheintrag» über `zahl`. «zuletzt» als Datum ohne Jahr (`datum_kurz(…, mit_jahr=False)`).
+- **Chips bleiben** über der Liste, zusätzlich zu den Personen-Karten: Auf dem Handy liegen die Karten nach der Export-Karte weit oben; die Chips stehen direkt bei der Liste (wie im Prototyp).
+- **Export-Karte, Stand:** Anzahl Aufnahmen = Zeilen mit Aufnahme; Grösse = Summe von `stat()` der vorhandenen Dateien (fehlende zählen nicht). Text «etwa N MB» (Dezimal-Megabyte, gerundet), unter 1 MB «weniger als 1 MB», ohne Aufnahmen «Jetzt: 54 Zeilen, keine Aufnahmen.»
+- **Satz zu den Links in der Export-Karte:** «Die Links in der Tabelle öffnen die Aufnahme, wenn du angemeldet bist.» Nach der Anmeldung landet sie auf der Übersicht, nicht beim Link; sie öffnet ihn dann nochmals. Eine Rücksprung-Adresse nach dem Login baut #18 nicht (wäre eine offene Weiterleitung, wenn sie nicht sauber geprüft wird, und ändert #14). Das Akzeptanzkriterium «funktionieren nach Anmeldung» ist damit erfüllt.
+- **Leere Daten:** Seite ohne Zugänge zeigt «Noch keine Zugänge.» mit Link und keine Chips; Export-Karte «Jetzt: 0 Zeilen, keine Aufnahmen.», beide Knöpfe bleiben. Tabelle enthält nur die Kopfzeile, das ZIP nur `eintraege.csv`.
+- **Navigation der Verwaltung:** Mit «Einträge» (#18) und «Vorschau» (#19) hat `.verwaltungsnavigation` fünf Links; bei 17 px Schrift sind das in 390 px etwa 420 px, und die Leiste bricht nicht um (`display: flex` ohne `wrap`). #18 setzt im eigenen CSS-Abschnitt `.verwaltungsnavigation { flex-wrap: wrap; }`. Setzt #19 dasselbe, schadet die doppelte Regel nicht.
+- **Vorbereitete Plätze:** Die Kommentarzeilen `{# #18: … #}` bleiben stehen (ein Test von #16 prüft sie). In `start.html` ersetzt #18 nur den `<li>`-Block unter seinem Kommentar, in `rahmen.html` kommt der Link in eine neue Zeile direkt unter den Kommentar, vor die Trennzeile.
+
+**Tabelle**
+- **Sortierschlüssel ohne `None`:** `runde_freischaltdatum` und `frage_reihenfolge` sind bei Tagebucheinträgen `None`. Haben eine Antwort und ein Tagebucheintrag derselben Person denselben Zeitpunkt, vergleicht Python sonst `None` mit Text und bricht ab (500 beim Export). Im Schlüssel stehen sie als `""` bzw. `0`. Anzeigename mit `casefold()`.
+- **Grösse:** «unter 1 MB» stimmt nur für normale Texte. Im ungünstigsten Fall (rund 100 Zeilen mit je 20 000 Zeichen) sind es wenige MB; im Speicher ist das bei 256 MB weiterhin vertretbar.
+- **Zeitformat:** `23.11.2026 00:30` (`%d.%m.%Y %H:%M`), daran erkennt Excel mit Schweizer Einstellungen Datum und Uhrzeit.
+
+**Gesamtexport**
+- **Datei öffnen statt vorher `stat()`:** `zip_dateien` bildet nur Namen und Pfade, ohne Dateizugriff. `zip_strom` öffnet jede Datei; `FileNotFoundError` heisst «fehlt» (übersprungen), die Grösse für `ZipInfo.file_size` kommt aus `os.fstat` der offenen Datei. So gibt es kein Zeitfenster zwischen Prüfen und Lesen.
+- **Dateirechte im ZIP:** `ZipInfo.external_attr = (stat.S_IFREG | 0o644) << 16`. Ohne das schreibt Python beim Streamen `?rw-------` (lokal geprüft); manche Entpacker zeigen dann keinen Dateityp an.
+- **Tabelle im ZIP ebenfalls in Stücken:** `eintraege.csv` wird über `zf.open(info, "w")` in Stücken von 64 KiB geschrieben, nicht mit `writestr`, damit auch das letzte ausgegebene Stück die Speichergrenze einhält.
+- **Fehler mitten im Strom:** Ein `OSError` ausser `FileNotFoundError` wird mit `logging.getLogger(__name__).warning("Gesamtexport abgebrochen")` geloggt (ohne Namen und Pfade) und weitergeworfen; der Download bricht ab.
+- **Aufnahme mit Namen ohne Muster** (`aufnahme_pfad` → `None`): gilt als fehlend, Tabelle «Datei fehlt».
+
+**Prüfung**
+- **E2E unabhängig von den Daten aus #16:** `ablaufEintraege` löscht zu Beginn die Cookies (`Network.clearBrowserCookies`), meldet sich als Auftraggeberin an, legt über `legeZugangAn` (#16) einen eigenen Zugang mit langem Anzeigenamen an (Umbruch in der Personen-Karte bei 390 px) und schreibt als diese Person einen mehrzeiligen freien Eintrag. So hängt der Ablauf nicht an Passwörtern oder Variablen aus `ablaufLehrperson`.
+- **Aufnahme im E2E:** Steht auf der Seite ein `audio` (nur wenn #17 gemergt ist und `ablaufAufnahmen` eine Aufnahme angelegt hat), lädt der Ablauf `audio.src` per `fetch` und erwartet 200 und einen Typ `audio/…`. `audio.play()` wird nicht verwendet, weil Chrome ohne Nutzergeste das Abspielen verweigern kann.
+- **Tests von #16, die durch #18 brechen würden** (`tests/test_geruest.py`): `test_leere_router` (Router von #18 hat dann Routen) und `test_verwaltung_unveraendert` (zählt zweimal «folgt»). Beide würden #17, #18 und #19 an derselben Stelle ändern. Gemeldet als Bedarf an #16 (Bericht an den Orchestrator); falls #16 sie unverändert liefert, passt das erste gemergte der drei Issues die beiden Tests so an, dass sie unabhängig vom Inhalt der Router und der Karten sind.
