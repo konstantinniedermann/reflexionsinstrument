@@ -418,3 +418,11 @@ Geprüft gegen `main` (Stand nach #15), Design und Plan von #16 (inklusive «Än
 - **Ausweichlösung `Cache-Control` für Safari:** Wird sie nötig, ändert sie `app/sicherheit.py`, das auch #19 ändert (`X-Robots-Tag`). Dann erst nach dem Merge von #19 und als eigener kleiner Pull Request.
 - **Test «Link aus der Tabelle spielt ab» (#18):** Ist #18 vor #17 gemergt, ergänzt #17 ihn in der letzten Task (`tests/test_aufnahmen_routen.py`, Link aus `GET /verwaltung/eintraege/tabelle.csv` als Auftraggeberin → 200 mit den Bytes der Datei).
 - **Befund «keine Grössengrenze für Formulare»** (Abschnitt oben) ist mit `app/groesse.py` aus #16 erledigt und kommt nicht nach `docs/beobachtungen.md`.
+
+## Abgleich mit `main` nach #16 und #19 (Claude, vor der Umsetzung)
+
+Geprüft gegen `main` mit #16 und #19 gemergt. Alle Schnittstellen aus der Vorbereitung des Plans sind vorhanden. Diese Punkte gehen den Abschnitten oben vor.
+
+- **Dauer an der Frage:** `antworten_der_runde` (#16) liefert `aufnahme_id` und `aufnahme_dauer_sekunden`, `kontext_runde` gibt sie als `antworten` ans Template. Der Platz in `runde.html` zeigt deshalb `_aufnahme.html` mit Dauer; der Rückfall «Player ohne Dauer» aus den Klärungen entfällt.
+- **Gast und Vorschau sind echte Seiten:** #19 hat `/gast/tagebuch/neu`, `/gast/runden/{id}` und die Vorschau unter `/verwaltung/vorschau/{datum}/…` gebaut; sie rendern dieselben Templates. Die Tests von #17 für «ohne Link, ohne Aufnahme» laufen über diese Routen statt über eine eigene Test-Route. Die Prüfungen von #19 (`tests/test_gast.py`: keine `/aufnahmen/` in Gast-Seiten, Gast-Rundgang, festes Routen-Inventar) bleiben unverändert und müssen grün bleiben; #17 legt keine Route unter `/gast` an.
+- **#18 noch nicht auf `main`:** Der Test «Link aus der Tabelle spielt ab» entsteht erst, wenn #18 vor #17 gemergt wird (Prüfung unmittelbar vor dem Merge).
