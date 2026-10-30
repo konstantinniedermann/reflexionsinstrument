@@ -7,6 +7,7 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 
 GRENZE = 1024 * 1024
 GRENZE_UPLOAD = 16 * 1024 * 1024  # #17: MAX_ANFRAGE_BYTES = GRENZE_UPLOAD
+ZIFFERN_HOECHSTENS = 19  # Content-Length bis knapp 10^19 Bytes
 UPLOAD_PFADE = (
     re.compile(r"/lehrperson/tagebuch/neu/aufnahme"),
     re.compile(r"/lehrperson/runden/\d{1,19}/fragen/\d{1,19}/aufnahme"),
@@ -35,7 +36,10 @@ class GroessenGrenze:
 
         grenze = grenze_fuer(scope["path"])
         laenge = next((w for n, w in scope["headers"] if n == b"content-length"), None)
-        zu_gross = laenge is not None and not (laenge.isdigit() and int(laenge) <= grenze)
+        # Laenge der Ziffernfolge vor int() begrenzen; laengere Angaben gelten als zu gross.
+        zu_gross = laenge is not None and not (
+            laenge.isdigit() and len(laenge) <= ZIFFERN_HOECHSTENS and int(laenge) <= grenze
+        )
         gelesen = 0
 
         async def begrenzt():

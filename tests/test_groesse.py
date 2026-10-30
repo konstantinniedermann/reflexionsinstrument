@@ -64,14 +64,16 @@ def test_knapp_unter_grenze(client):
     assert "Benutzername oder Passwort stimmt nicht." in antwort.text
 
 
-def test_laenge_keine_zahl():
+# 5000 Ziffern: int() wuerde an der Grenze fuer Ziffernfolgen (4300) scheitern.
+@pytest.mark.parametrize("laenge", [b"abc", b"1" * 5000, b"0" * 5000])
+def test_laenge_keine_gueltige_zahl(laenge):
     async def app(scope, receive, send):
         await receive()
 
     scope = {
         "type": "http",
         "path": "/anmelden",
-        "headers": [(b"content-length", b"abc")],
+        "headers": [(b"content-length", laenge)],
     }
 
     async def ablauf():
