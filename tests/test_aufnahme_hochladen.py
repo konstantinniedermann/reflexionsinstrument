@@ -293,6 +293,8 @@ def test_aufnehmen_markup(lp):
     assert "</div>" not in text[offen[-1] : start]
     assert "Das Mikrofon ist nicht freigegeben." in text
     assert "So gibst du das Mikrofon frei" in text
+    assert 'name="text"' in text
+    assert "Etwas dazuschreiben (freiwillig)" in text
     assert re.search(r'href="/lehrperson/tagebuch/neu/frei"[^>]*>\s*Stattdessen schreiben', text)
     assert "data-entwurf" not in text
     assert "style=" not in text

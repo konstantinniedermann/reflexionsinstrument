@@ -73,11 +73,15 @@
   }
 
   async function bildschirmAn() {
+    let neu = null;
     try {
-      sperre = (await navigator.wakeLock?.request("screen")) ?? null;
+      neu = (await navigator.wakeLock?.request("screen")) ?? null;
     } catch {
-      sperre = null; // nicht erlaubt oder nicht vorhanden: dann eben ohne
+      return; // nicht erlaubt oder nicht vorhanden: dann eben ohne
     }
+    // Die Aufnahme kann schon vorbei sein, bevor die Sperre kommt.
+    if (recorder?.state === "recording") sperre = neu;
+    else neu?.release().catch(() => {});
   }
 
   function bildschirmFrei() {
@@ -132,14 +136,26 @@
     knopf("neu").focus();
   }
 
+  function brichStartAb(meldung) {
+    beendeSpuren();
+    recorder = null;
+    knopf("start").disabled = false;
+    zustand("bereit");
+    melde(meldung);
+  }
+
   async function starte() {
     melde(null);
     knopf("start").disabled = true;
     try {
       strom = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch (fehler) {
-      knopf("start").disabled = false;
-      melde(FEHLER[fehler?.name] ?? "besetzt");
+      brichStartAb(FEHLER[fehler?.name] ?? "besetzt");
+      return;
+    }
+    // Seite verlassen, waehrend der Browser nach dem Mikrofon fragte: nicht im Hintergrund aufnehmen.
+    if (document.visibilityState === "hidden") {
+      brichStartAb(null);
       return;
     }
     try {
@@ -148,26 +164,30 @@
       if (mimeType) optionen.mimeType = mimeType;
       recorder = new MediaRecorder(strom, optionen);
     } catch {
-      beendeSpuren();
-      knopf("start").disabled = false;
-      melde("nicht-unterstuetzt");
+      brichStartAb("nicht-unterstuetzt");
       return;
     }
     teile = [];
     gewarnt = false;
     stoppGrund = null;
-    recorder.addEventListener("dataavailable", (e) => {
-      if (e.data.size) teile.push(e.data);
-    });
-    recorder.addEventListener("start", () => {
+    try {
+      recorder.addEventListener("dataavailable", (e) => {
+        if (e.data.size) teile.push(e.data);
+      });
+      recorder.addEventListener("start", () => {
+        startZeit = performance.now();
+      });
+      recorder.addEventListener("stop", beendet);
+      recorder.addEventListener("error", () => halte("angehalten"));
+      strom.getTracks().forEach((spur) => spur.addEventListener("ended", () => halte("angehalten")));
       startZeit = performance.now();
-    });
-    recorder.addEventListener("stop", beendet);
-    recorder.addEventListener("error", () => halte("angehalten"));
-    strom.getTracks().forEach((spur) => spur.addEventListener("ended", () => halte("angehalten")));
-    startZeit = performance.now();
+      recorder.start(1000);
+    } catch {
+      // z. B. Mikrofon inzwischen von einem Anruf belegt, Strom schon beendet
+      brichStartAb("besetzt");
+      return;
+    }
     zeige(0);
-    recorder.start(1000);
     uhr = setInterval(ticke, 250);
     knopf("start").disabled = false;
     zustand("nimmt-auf");

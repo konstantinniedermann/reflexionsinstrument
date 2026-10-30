@@ -640,6 +640,26 @@ async function ablaufAufnahmen() {
   await keinUeberlauf("Ohne MediaRecorder 390 px");
   keineFehlerSeit(stand, "Ohne MediaRecorder");
 
+  // Start scheitert oder Seite ist beim Freigeben versteckt: Mikrofon wieder aus, «Aufnahme starten» frei
+  stand = merke();
+  const fange = `const echt = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia = async (c) => (window.__strom = await echt(c));`;
+  const spurenAus = "window.__strom?.getTracks().every((s) => s.readyState === 'ended')";
+  await oeffne(SEITE);
+  await js(`${fange} MediaRecorder.prototype.start = () => { throw new DOMException("x", "InvalidStateError"); }; true`);
+  await klick('[data-aktion="start"]');
+  await warteBis(() => sichtbar('[data-meldung="besetzt"]'), "Meldung nach gescheitertem Start erscheint nicht");
+  pruefe(await js(spurenAus), "Start scheitert: Mikrofon wieder aus");
+  pruefe((await sichtbar('[data-aktion="start"]')) && !(await js("document.querySelector('[data-aktion=\"start\"]').disabled")), "Start scheitert: «Aufnahme starten» wieder frei");
+  await oeffne(SEITE);
+  await js(`${fange} Object.defineProperty(document, "visibilityState", { get: () => "hidden" }); true`);
+  await klick('[data-aktion="start"]');
+  await warteBis(() => js("!!window.__strom"), "getUserMedia antwortet nicht");
+  await warte(300);
+  pruefe(await js(spurenAus), "Seite versteckt beim Freigeben: Mikrofon wieder aus");
+  pruefe((await sichtbar('[data-aktion="start"]')) && !(await sichtbar('[data-aktion="stopp"]')), "Seite versteckt beim Freigeben: keine Aufnahme im Hintergrund");
+  keineFehlerSeit(stand, "Start scheitert");
+
   // 3. Aufnehmen, anhören, verwerfen, nochmals aufnehmen, speichern
   stand = merke();
   const vorher = new Set(dateien());
