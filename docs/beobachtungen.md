@@ -11,6 +11,18 @@ Letzte Auswertung: 30.10.2026 (15 Einträge, alle abgeschlossen)
 
 ## Offen
 
+### 2026-10-30 — Nachweis auf fly.io endet an der Anmeldung
+
+**Thema:** Betrieb
+
+**Fundort:** Deploy-Nachweis nach #18 (`/verwaltung/eintraege` auf `reflexionsinstrument.fly.dev`).
+
+**Beobachtung:** Claude kennt kein Passwort eines Kontos auf fly.io. Der Nachweis nach dem Deploy reicht deshalb nur bis `healthz`, 303 für geschützte Adressen und gleichen Tree wie lokal geprüft; die Seite «Einträge» in 390 px, der Gesamtexport und der Link aus der Tabelle auf fly.io (Plan #18, «Nach dem Merge») sind nicht geprüft. Ein Passwort zu setzen oder ein Konto anzulegen hätte Zugangsdaten in der Produktion verändert.
+
+**Ursprung:** #18, Deploy-Nachweis.
+
+**Einschätzung:** Entweder prüft Koschi die angemeldeten Seiten auf fly.io selbst, oder es gibt ein eigenes Prüfkonto, dessen Passwort Claude lokal (gitignored) lesen darf und das vor dem Testlauf mit Lehrpersonen gelöscht wird.
+
 ### 2026-10-30 — Eingabemaske: Doppelklick legt doppelt an (Verwaltung)
 
 **Thema:** Eingabemaske
