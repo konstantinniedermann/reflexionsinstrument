@@ -2,7 +2,7 @@
 
 import sqlite3
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from pathlib import Path
 
 from fastapi import Request
@@ -84,7 +84,11 @@ def transaktion(db: sqlite3.Connection) -> Iterator[None]:
     db.execute("BEGIN IMMEDIATE")
     try:
         yield
+        db.execute("COMMIT")
     except BaseException:
-        db.execute("ROLLBACK")
+        # Auch nach gescheitertem COMMIT (z. B. SQLITE_BUSY) ist die Transaktion noch offen.
+        # Scheitert das ROLLBACK, bleibt die urspruengliche Ausnahme sichtbar.
+        if db.in_transaction:
+            with suppress(sqlite3.Error):
+                db.execute("ROLLBACK")
         raise
-    db.execute("COMMIT")

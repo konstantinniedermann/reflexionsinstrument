@@ -3,7 +3,7 @@ import threading
 
 import pytest
 
-from app.db import migriere, verbinde
+from app.db import migriere, transaktion, verbinde
 
 
 @pytest.fixture
@@ -254,3 +254,50 @@ def test_migration_mit_verwaistem_fremdschluessel_rollt_zurueck(conn, tmp_path):
     assert conn.execute("SELECT COUNT(*) FROM kind").fetchone()[0] == 2
     assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1
     assert not conn.in_transaction
+
+
+# --- transaktion ---
+
+
+def _verletze_fremdschluessel_beim_commit(db):
+    # Verzoegerte Pruefung: Erst das COMMIT scheitert, die Transaktion bleibt dann offen.
+    db.execute("PRAGMA defer_foreign_keys = ON")
+    db.execute(
+        "INSERT INTO antworten (frage_id, konto_id, text) VALUES (999, ?, 'x')", (_konto(db),)
+    )
+
+
+def test_transaktion_rollt_zurueck_wenn_commit_scheitert(db):
+    with pytest.raises(sqlite3.IntegrityError), transaktion(db):
+        _verletze_fremdschluessel_beim_commit(db)
+    assert not db.in_transaction
+    assert db.execute("SELECT COUNT(*) FROM konten").fetchone()[0] == 0
+
+
+class _RollbackScheitert(sqlite3.Connection):
+    def execute(self, sql, *args):
+        if sql == "ROLLBACK":
+            raise sqlite3.OperationalError("ROLLBACK gescheitert")
+        return super().execute(sql, *args)
+
+
+@pytest.fixture
+def ohne_rollback(tmp_path):
+    c = sqlite3.connect(tmp_path / "r.db", isolation_level=None, factory=_RollbackScheitert)
+    c.execute("CREATE TABLE t (id INTEGER PRIMARY KEY)")
+    yield c
+    c.close()
+
+
+def test_gescheitertes_rollback_ueberdeckt_ausnahme_nicht(ohne_rollback):
+    with pytest.raises(ValueError, match="urspruenglich"), transaktion(ohne_rollback):
+        ohne_rollback.execute("INSERT INTO t DEFAULT VALUES")
+        raise ValueError("urspruenglich")
+
+
+def test_gescheitertes_rollback_nach_commit_fehler(ohne_rollback):
+    ohne_rollback.execute("PRAGMA foreign_keys = ON")
+    ohne_rollback.execute("CREATE TABLE k (t_id INTEGER REFERENCES t (id))")
+    with pytest.raises(sqlite3.IntegrityError), transaktion(ohne_rollback):
+        ohne_rollback.execute("PRAGMA defer_foreign_keys = ON")
+        ohne_rollback.execute("INSERT INTO k VALUES (5)")
