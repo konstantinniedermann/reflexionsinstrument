@@ -89,9 +89,9 @@ Letzte Auswertung: 30.10.2026 (15 Einträge, alle abgeschlossen)
 
 **Fundort:** `tests/test_testdaten.py`, `tests/testdaten.py` (`abzug`), `tests/test_migration_003.py`, `tests/test_groesse.py`, `tests/test_tagebuch.py`, `tests/test_ansicht.py`
 
-**Beobachtung:** Assertion in `test_testdaten.py` verdreht formatiert; `testdaten.abzug` sortiert mit `sorted()` ohne `key` (bei `None` im Vergleich ein `TypeError`, heute unerreichbar, weil die erste Spalte eindeutig ist); ungenutzte Fixture `einstellungen` in `test_migration_003`, ungenutzte Fixture `heute_ist` in `test_gast_start_ohne_persoenliches`; Testname `test_knapp_unter_grenze` irreführend; Tupelvergleiche mit `fmt: skip` schwer lesbar.
+**Beobachtung:** Assertion in `test_testdaten.py` verdreht formatiert; `testdaten.abzug` sortiert mit `sorted()` ohne `key` (bei `None` im Vergleich ein `TypeError`, heute unerreichbar, weil die erste Spalte eindeutig ist); ungenutzte Fixture `einstellungen` in `test_migration_003`, ungenutzte Fixture `heute_ist` in `test_gast_start_ohne_persoenliches`; Testname `test_knapp_unter_grenze` irreführend; Tupelvergleiche mit `fmt: skip` schwer lesbar. Der Helfer `_gewaehlt` in `tests/test_runde.py` findet ein Skala-Feld mit `aria-invalid` nicht mehr (heute nur auf fehlerfreien Feldern benutzt). Im Code: `_pruefe_art` (`app/eintraege.py`) ohne Rückgabetyp; `app/groesse.py` lehnt eine `Content-Length` aus mehr als 19 Nullen mit 413 ab, obwohl der Wert 0 ist (ohne praktische Folgen).
 
-**Ursprung:** #16 (Tasks 1, 2, 5, 6)
+**Ursprung:** #16 (Tasks 1, 2, 5, 6; Re-Review der Fix-Welle)
 
 **Einschätzung:** Kosmetik. Trigger: wie oben.
 
