@@ -1160,6 +1160,29 @@ input[type="checkbox"] {
 
 /* Pilot: Einträge und Export (#18) */
 
+.verwaltungsnavigation {
+  flex-wrap: wrap;
+}
+
+.karte--person strong {
+  overflow-wrap: anywhere;
+}
+
+.karte--export {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.karte--export h2,
+.karte--export p {
+  margin: 0;
+}
+
+.export__zeile {
+  display: grid;
+  gap: 0.3rem;
+}
+
 /* Ende #18 */
 
 /* Pilot: Gast und Vorschau (#19) */
