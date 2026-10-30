@@ -1,0 +1,16 @@
+{% extends "verwaltung/rahmen.html" %}
+{% block titel %}{{ ueberschrift }} – Reflexionsinstrument{% endblock %}
+{% block inhalt %}
+<h1>{{ ueberschrift }}</h1>
+<section class="karte">
+  <p><strong>{{ zugang.anzeigename }}</strong></p>
+  <dl class="zugangsdaten">
+    <dt>Benutzername</dt>
+    <dd>{{ zugang.benutzername }}</dd>
+    <dt>Passwort</dt>
+    <dd>{{ passwort }}</dd>
+  </dl>
+  <p class="hinweis">Bitte notieren, es wird danach nicht mehr angezeigt.</p>
+  <p><a class="knopf" href="/verwaltung/zugaenge">Zurück zu den Zugängen</a></p>
+</section>
+{% endblock %}

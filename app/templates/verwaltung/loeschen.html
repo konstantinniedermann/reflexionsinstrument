@@ -1,0 +1,13 @@
+{% extends "verwaltung/rahmen.html" %}
+{% block titel %}Zugang löschen – Reflexionsinstrument{% endblock %}
+{% block inhalt %}
+<h1>Zugang löschen</h1>
+<section class="karte">
+  <p>Zugang <strong>{{ zugang.anzeigename }}</strong> löschen? Dabei werden auch {{ folgen }} gelöscht. Das lässt sich nicht rückgängig machen.</p>
+  <form method="post" action="/verwaltung/zugaenge/{{ zugang.id }}/loeschen" class="formular">
+    {{ csrf_feld(request) }}
+    <button type="submit" class="knopf">Endgültig löschen</button>
+    <a class="knopf knopf--leise" href="/verwaltung/zugaenge">Abbrechen</a>
+  </form>
+</section>
+{% endblock %}

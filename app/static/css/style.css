@@ -858,3 +858,48 @@ textarea:focus {
   gap: 0.5rem;
   min-height: 2.75rem;
 }
+
+.verwaltungsnavigation {
+  display: flex;
+  gap: 1rem;
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 0.5rem 1rem 0;
+}
+
+.verwaltungsnavigation a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+
+.karte--ruhend {
+  display: flex;
+  justify-content: space-between;
+  opacity: 0.7;
+}
+
+.aktionen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 1.25rem;
+  margin-top: 0.5rem;
+}
+
+.aktionen a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+
+.zugangsdaten dt {
+  color: var(--gedaempft);
+  font-size: 0.9rem;
+}
+
+.zugangsdaten dd {
+  margin: 0 0 0.75rem;
+  font-family: ui-monospace, monospace;
+  font-size: 1.15rem;
+  overflow-wrap: anywhere;
+}
