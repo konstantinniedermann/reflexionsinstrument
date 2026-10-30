@@ -46,7 +46,7 @@ Dependencies (von Koschi freigegeben): `fastapi`, `uvicorn`, `jinja2`, `python-m
 
 - Laufende Kosten von wenigen Franken pro Monat bis zum Abbau (von Koschi freigegeben).
 - Daten in der EU, aber bei einem US-Anbieter. Die Auftraggeberin klärt die Zulässigkeit selbst.
-- fly.io legt automatisch tägliche Sicherungskopien des Volumes an. Die Löschung am Schluss muss diese mit einschliessen (#8).
+- fly.io legt automatisch tägliche Sicherungskopien des Volumes an. Die Löschung am Schluss muss diese mit einschliessen (#8, Ablauf im [Löschkonzept](../loeschkonzept.md)).
 - Bei angehaltener Maschine dauert der erste Aufruf wenige Sekunden länger. Für den Pilot ist das in Ordnung. Stört es, bleibt eine Maschine dauerhaft an (Mehrkosten gering).
 - Ein signiertes Cookie allein lässt sich nicht widerrufen. Deshalb trägt es die Sitzungsversion des Kontos. Passwort zurücksetzen oder Konto löschen erhöht die Version und beendet so alle Sitzungen, auch auf vergessenen Schulcomputern.
 - Ein Volume hängt an genau einer Maschine. Die App läuft deshalb mit einer einzigen Maschine, das reicht für 5 Personen.

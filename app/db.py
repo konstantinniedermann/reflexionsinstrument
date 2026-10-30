@@ -19,6 +19,9 @@ def verbinde(db_pfad: Path) -> sqlite3.Connection:
     conn.execute("PRAGMA foreign_keys = ON")
     conn.execute("PRAGMA journal_mode = WAL")
     conn.execute("PRAGMA busy_timeout = 5000")
+    # Geloeschte Eintraege werden in der Datei ueberschrieben, nicht nur als frei markiert
+    # (docs/loeschkonzept.md).
+    conn.execute("PRAGMA secure_delete = ON")
     return conn
 
 

@@ -40,4 +40,4 @@ Beides braucht nur Node (ab Version 22) und keine Dependencies. Die E2E-Prüfung
 ## Leitplanken
 
 - Einfachheit vor Funktionsumfang, auf dem Handy bedienbar
-- Datenschutz: minimal personenbezogene Daten, keine Kontaktdaten, Hosting in der EU (Frankfurt), Löschung nach Projektende
+- Datenschutz: minimal personenbezogene Daten, keine Kontaktdaten, Hosting in der EU (Frankfurt), Löschung nach Projektende ([Datenschutz](docs/datenschutz.md), [Löschkonzept](docs/loeschkonzept.md))

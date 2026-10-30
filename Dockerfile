@@ -26,4 +26,5 @@ EXPOSE 8080
 ENV FORWARDED_ALLOW_IPS="*"
 
 ENTRYPOINT ["docker-entrypoint.sh"]
-CMD ["uvicorn", "--factory", "app.main:erstelle_app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers"]
+# Ohne Zugriffsprotokoll: es enthielte IP-Adressen und Pfade (docs/datenschutz.md).
+CMD ["uvicorn", "--factory", "app.main:erstelle_app", "--host", "0.0.0.0", "--port", "8080", "--proxy-headers", "--no-access-log"]
