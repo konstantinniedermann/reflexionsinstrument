@@ -1,11 +1,30 @@
-"""Dateien der Aufnahmen. Grundstock aus #16: Namensmuster, Pfad, Loeschen."""
+"""Dateien der Aufnahmen: Namensmuster, Pfad, Format, Schreiben, Loeschen, Waisen."""
 
 import logging
+import os
 import re
+import secrets
+import shutil
 import sqlite3
+import time
 from pathlib import Path
+from typing import BinaryIO, NamedTuple
+
+from app import groesse
+from app.db import transaktion
+from app.zeit import zeitstempel
+
+MAX_DAUER_SEKUNDEN = 600
+TOLERANZ_SEKUNDEN = 10
+MAX_BYTES = 15 * 1024 * 1024
+MAX_ANFRAGE_BYTES = groesse.GRENZE_UPLOAD
+RESERVE_BYTES = 50 * 1024 * 1024
+WAISEN_ALTER_SEKUNDEN = 3600
+BLOCK_BYTES = 1024 * 1024
 
 DATEINAME = re.compile(r"[0-9a-f]{32}\.(webm|m4a|ogg)")
+WAISE = re.compile(r"[0-9a-f]{32}\.(webm|m4a|ogg)(\.teil)?")
+MELDUNG_400 = "Diese Aufnahme liess sich nicht speichern. Bitte neu aufnehmen."
 
 _log = logging.getLogger(__name__)
 
@@ -39,3 +58,243 @@ def aufnahmen_von_eintraegen(db: sqlite3.Connection, aufnahme_ids: list[int]) ->
         f"SELECT id, dateiname FROM aufnahmen WHERE id IN ({platzhalter}) ORDER BY id",
         aufnahme_ids,
     ).fetchall()
+
+
+class AufnahmeFehler(Exception):
+    def __init__(self, status: int, meldung: str = MELDUNG_400):
+        super().__init__(meldung)
+        self.status = status
+        self.meldung = meldung
+
+
+class Datei(NamedTuple):
+    name: str
+    mime_typ: str
+    groesse: int
+
+
+def erkenne_format(anfang: bytes) -> tuple[str, str] | None:
+    """`(mime_typ, endung)` aus den ersten Bytes; `None`, wenn unbekannt."""
+    if anfang[4:8] == b"ftyp":
+        return "audio/mp4", ".m4a"
+    if anfang.startswith(b"\x1aE\xdf\xa3"):
+        return "audio/webm", ".webm"
+    if anfang.startswith(b"OggS"):
+        return "audio/ogg", ".ogg"
+    return None
+
+
+def lies_dauer(wert: str) -> int | None:
+    """Leer ergibt `None`; sonst ASCII-Ziffern bis 610, alles andere ist ein 400."""
+    if wert == "":
+        return None
+    if re.fullmatch(r"[0-9]{1,6}", wert) and int(wert) <= MAX_DAUER_SEKUNDEN + TOLERANZ_SEKUNDEN:
+        return int(wert)
+    raise AufnahmeFehler(400)
+
+
+def schreibe_datei(quelle: BinaryIO, verzeichnis: Path) -> Datei:
+    """Prueft Groesse, Platz und Format, schreibt dann ueber `.teil` atomar in den Ordner."""
+    groesse_bytes = quelle.seek(0, os.SEEK_END)
+    if groesse_bytes == 0:
+        raise AufnahmeFehler(400)
+    if groesse_bytes > MAX_BYTES:
+        raise AufnahmeFehler(413)
+    if shutil.disk_usage(verzeichnis).free - groesse_bytes < RESERVE_BYTES:
+        _log.warning("Aufnahme abgelehnt: Speicherplatz knapp")
+        raise AufnahmeFehler(503)
+    quelle.seek(0)
+    format_ = erkenne_format(quelle.read(12))
+    if format_ is None:
+        raise AufnahmeFehler(400)
+    mime_typ, endung = format_
+    quelle.seek(0)
+    name = secrets.token_hex(16) + endung
+    ziel = verzeichnis / name
+    teil = verzeichnis / (name + ".teil")
+    try:
+        fd = os.open(teil, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "wb") as ausgabe:
+            while block := quelle.read(BLOCK_BYTES):
+                ausgabe.write(block)
+        os.replace(teil, ziel)
+    except BaseException as fehler:
+        teil.unlink(missing_ok=True)
+        if isinstance(fehler, OSError):
+            # Ohne Dateinamen: Traceback und Log duerfen keinen Namen tragen.
+            _log.warning("Aufnahme liess sich nicht schreiben")
+            raise AufnahmeFehler(503) from None
+        raise
+    return Datei(name, mime_typ, groesse_bytes)
+
+
+def raeume_waisen(db: sqlite3.Connection, verzeichnis: Path, jetzt: float | None = None) -> int:
+    """Loescht alte Dateien mit Aufnahme-Namen, die keine Zeile hat; Rueckgabe: Anzahl.
+
+    Best effort: Das Speichern ist da schon abgeschlossen, ein Fehler hier wird nur geloggt.
+    """
+    try:
+        return _raeume_waisen(db, verzeichnis, jetzt)
+    except (OSError, sqlite3.Error):
+        _log.warning("Aufraeumen der Aufnahmen fehlgeschlagen")
+        return 0
+
+
+def _raeume_waisen(db: sqlite3.Connection, verzeichnis: Path, jetzt: float | None) -> int:
+    grenze = (time.time() if jetzt is None else jetzt) - WAISEN_ALTER_SEKUNDEN
+    bekannt = {r["dateiname"] for r in db.execute("SELECT dateiname FROM aufnahmen")}
+    geloescht = 0
+    with os.scandir(verzeichnis) as eintraege:
+        for eintrag in eintraege:
+            if not WAISE.fullmatch(eintrag.name) or eintrag.name in bekannt:
+                continue
+            try:
+                if not eintrag.is_file(follow_symlinks=False):
+                    continue
+                if eintrag.stat(follow_symlinks=False).st_mtime >= grenze:
+                    continue
+                os.unlink(eintrag.path)
+                geloescht += 1
+            except OSError:
+                _log.warning("Aufnahme-Datei liess sich nicht loeschen")
+    return geloescht
+
+
+def eigene_aufnahme(db: sqlite3.Connection, konto_id: int, aufnahme_id: int) -> sqlite3.Row | None:
+    """Aufnahme, nur wenn sie dem Konto gehoert."""
+    return db.execute(
+        "SELECT * FROM aufnahmen WHERE id = ? AND konto_id = ?", (aufnahme_id, konto_id)
+    ).fetchone()
+
+
+def aufnahme(db: sqlite3.Connection, aufnahme_id: int) -> sqlite3.Row | None:
+    """Aufnahme eines beliebigen Kontos (nur fuer die Auftraggeberin)."""
+    return db.execute("SELECT * FROM aufnahmen WHERE id = ?", (aufnahme_id,)).fetchone()
+
+
+def lege_aufnahme_an(
+    db: sqlite3.Connection, konto_id: int, datei: Datei, dauer_sekunden: int | None
+) -> int:
+    """Nur der `INSERT`; die Transaktion gehoert dem Aufrufer."""
+    return db.execute(
+        "INSERT INTO aufnahmen (konto_id, dateiname, mime_typ, groesse_bytes, dauer_sekunden) "
+        "VALUES (?, ?, ?, ?, ?)",
+        (konto_id, datei.name, datei.mime_typ, datei.groesse, dauer_sekunden),
+    ).lastrowid
+
+
+def aufnahme_als_tagebucheintrag(
+    db: sqlite3.Connection,
+    konto_id: int,
+    datei: Datei,
+    dauer_sekunden: int | None,
+    text: str | None,
+    jetzt: str | None = None,
+) -> int:
+    """Aufnahme und Tagebucheintrag in einer Transaktion; Rueckgabe: `eintrag_id`."""
+    from app import eintraege  # spaet: eintraege importiert dieses Modul
+
+    with transaktion(db):
+        aufnahme_id = lege_aufnahme_an(db, konto_id, datei, dauer_sekunden)
+        return eintraege.lege_tagebucheintrag_an(
+            db, konto_id, "aufnahme", text, aufnahme_id=aufnahme_id, jetzt=jetzt
+        )
+
+
+def aufnahme_der_antwort(
+    db: sqlite3.Connection, konto_id: int, frage_id: int
+) -> sqlite3.Row | None:
+    """Aufnahme (`id`, `dateiname`, `dauer_sekunden`) der Antwort dieses Kontos, sonst `None`."""
+    return db.execute(
+        "SELECT a.id, a.dateiname, a.dauer_sekunden FROM antworten w "
+        "JOIN aufnahmen a ON a.id = w.aufnahme_id AND a.konto_id = w.konto_id "
+        "WHERE w.frage_id = ? AND w.konto_id = ?",
+        (frage_id, konto_id),
+    ).fetchone()
+
+
+def _keine_laufende_transaktion(db: sqlite3.Connection) -> None:
+    if db.in_transaction:
+        raise RuntimeError(
+            "Dateien werden erst nach dem COMMIT geloescht; keine laufende Transaktion"
+        )
+
+
+def haenge_an_antwort(
+    db: sqlite3.Connection,
+    konto_id: int,
+    frage_id: int,
+    datei: Datei,
+    dauer_sekunden: int | None,
+    verzeichnis: Path,
+    jetzt: str | None = None,
+) -> None:
+    """Haengt die Aufnahme an die Antwort (legt sie an oder ersetzt die alte Aufnahme).
+
+    Eigene Transaktion; die alte Datei wird erst nach dem COMMIT geloescht.
+    """
+    _keine_laufende_transaktion(db)
+    jetzt = jetzt or zeitstempel()
+    alter_name = None
+    with transaktion(db):
+        neu = lege_aufnahme_an(db, konto_id, datei, dauer_sekunden)
+        zeile = db.execute(
+            "SELECT id, aufnahme_id FROM antworten WHERE frage_id = ? AND konto_id = ?",
+            (frage_id, konto_id),
+        ).fetchone()
+        if zeile is None:
+            db.execute(
+                "INSERT INTO antworten (frage_id, konto_id, aufnahme_id, erstellt, geaendert) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (frage_id, konto_id, neu, jetzt, jetzt),
+            )
+        else:
+            db.execute(
+                "UPDATE antworten SET aufnahme_id = ?, geaendert = ? WHERE id = ? AND konto_id = ?",
+                (neu, jetzt, zeile["id"], konto_id),
+            )
+            if zeile["aufnahme_id"] is not None:
+                alter_name = _loesche_zeile(db, konto_id, zeile["aufnahme_id"])
+    if alter_name is not None:
+        loesche_dateien(verzeichnis, [alter_name])
+
+
+def _loesche_zeile(db: sqlite3.Connection, konto_id: int, aufnahme_id: int) -> str | None:
+    """Loescht die Zeile des Kontos in `aufnahmen`; Rueckgabe: ihr Dateiname."""
+    zeile = db.execute(
+        "SELECT dateiname FROM aufnahmen WHERE id = ? AND konto_id = ?", (aufnahme_id, konto_id)
+    ).fetchone()
+    db.execute("DELETE FROM aufnahmen WHERE id = ? AND konto_id = ?", (aufnahme_id, konto_id))
+    return zeile["dateiname"] if zeile else None
+
+
+def loesche_aufnahme_der_antwort(
+    db: sqlite3.Connection,
+    konto_id: int,
+    frage_id: int,
+    verzeichnis: Path,
+    jetzt: str | None = None,
+) -> bool:
+    """Entfernt die Aufnahme der Antwort; der Text bleibt. `False`, wenn es keine gab."""
+    _keine_laufende_transaktion(db)
+    jetzt = jetzt or zeitstempel()
+    with transaktion(db):
+        zeile = db.execute(
+            "SELECT id, aufnahme_id, text, skalawert FROM antworten "
+            "WHERE frage_id = ? AND konto_id = ? AND aufnahme_id IS NOT NULL",
+            (frage_id, konto_id),
+        ).fetchone()
+        if zeile is None:
+            return False
+        db.execute(
+            "UPDATE antworten SET aufnahme_id = NULL, geaendert = ? WHERE id = ? AND konto_id = ?",
+            (jetzt, zeile["id"], konto_id),
+        )
+        if zeile["text"] is None and zeile["skalawert"] is None:
+            db.execute(
+                "DELETE FROM antworten WHERE id = ? AND konto_id = ?", (zeile["id"], konto_id)
+            )
+        name = _loesche_zeile(db, konto_id, zeile["aufnahme_id"])
+    if name is not None:
+        loesche_dateien(verzeichnis, [name])
+    return True

@@ -1,0 +1,94 @@
+{# Parameter: max_dauer, max_bytes, schreiben, optional mit_text (Feld «Etwas dazuschreiben»).
+   Texte stehen hier, aufnahme.js blendet nur ein und aus. #}
+{% set schreiben_link %}<a href="{{ schreiben }}">Stattdessen schreiben</a>{% endset %}
+<div class="aufnehmen" data-aufnehmen data-max-dauer="{{ max_dauer }}" data-max-bytes="{{ max_bytes }}">
+  <div class="aufnehmen__teil" data-teil="bereit" hidden>
+    <button type="button" class="knopf aufnehmen__start" data-aktion="start">Aufnahme starten</button>
+    <p class="gedaempft">Höchstens {{ max_dauer // 60 }} Minuten. Du kannst die Aufnahme vor dem Speichern anhören.</p>
+  </div>
+  <div class="aufnehmen__teil" data-teil="nimmt-auf" hidden>
+    <p class="aufnehmen__zeit" data-zeit>0:00 / {{ max_dauer // 60 }}:{{ "%02d" % (max_dauer % 60) }}</p>
+    <button type="button" class="knopf aufnehmen__start" data-aktion="stopp">Stopp</button>
+  </div>
+  <div class="aufnehmen__teil" data-teil="fertig" hidden>
+    <audio controls data-vorhoeren hidden></audio>
+    <button type="button" class="knopf knopf--zweit" data-aktion="neu">Neu aufnehmen</button>
+  </div>
+  <div class="aufnehmen__meldungen" role="status" data-status>
+    <div class="hinweis aufnehmen__meldung" data-meldung="verweigert" hidden>
+      <p><strong>Das Mikrofon ist nicht freigegeben.</strong></p>
+      <details class="aufklapp aufklapp--innen">
+        <summary>So gibst du das Mikrofon frei</summary>
+        <div class="aufklapp__inhalt">
+          <p>iPhone: In Safari links in der Adresszeile auf «aA» tippen, dann «Website-Einstellungen» und «Mikrofon: Erlauben». Danach die Seite neu laden.</p>
+          <p>Android: Auf das Symbol links neben der Adresse tippen, dann «Berechtigungen» und das Mikrofon erlauben. Danach die Seite neu laden.</p>
+          <p>Computer: Auf das Symbol links neben der Adresse klicken und das Mikrofon erlauben. Danach die Seite neu laden.</p>
+        </div>
+      </details>
+      <p>{{ schreiben_link }}</p>
+    </div>
+    <div class="hinweis aufnehmen__meldung" data-meldung="kein-mikrofon" hidden>
+      <p><strong>Es wurde kein Mikrofon gefunden.</strong></p>
+      <p>{{ schreiben_link }}</p>
+    </div>
+    <div class="hinweis aufnehmen__meldung" data-meldung="besetzt" hidden>
+      <p><strong>Das Mikrofon wird gerade von einer anderen App verwendet, zum Beispiel für einen Anruf.</strong> Schliesse sie und versuche es nochmals.</p>
+      <p>{{ schreiben_link }}</p>
+    </div>
+    <div class="hinweis aufnehmen__meldung" data-meldung="nicht-unterstuetzt" hidden>
+      <p><strong>Dieser Browser kann hier nicht aufnehmen.</strong> Öffne die Seite in Safari (iPhone) oder Chrome (Android, Computer). Wenn du den Link aus einer Nachricht geöffnet hast, wähle «Im Browser öffnen».</p>
+      <p>{{ schreiben_link }}</p>
+    </div>
+    <div class="hinweis aufnehmen__meldung" data-meldung="angehalten" hidden>
+      <p>Die Aufnahme wurde angehalten, weil die Seite verlassen wurde. Du kannst sie anhören und speichern oder neu aufnehmen.</p>
+    </div>
+    <div class="hinweis aufnehmen__meldung" data-meldung="noch-eine-minute" hidden>
+      <p>Noch eine Minute.</p>
+    </div>
+    <div class="hinweis aufnehmen__meldung" data-meldung="hoechstdauer" hidden>
+      <p>Die Aufnahme hat die Höchstdauer von {{ max_dauer // 60 }} Minuten erreicht. Du kannst sie anhören und speichern.</p>
+    </div>
+    <div class="hinweis aufnehmen__meldung" data-meldung="zu-gross" hidden>
+      <p><strong>Die Aufnahme ist zu gross.</strong> Du kannst sie noch anhören. Bitte nimm eine kürzere auf.</p>
+      <p>{{ schreiben_link }}</p>
+    </div>
+    <div class="hinweis aufnehmen__meldung" data-meldung="keine-verbindung" hidden>
+      <p><strong>Keine Verbindung.</strong> Die Aufnahme ist noch da. Bitte nochmals auf «Speichern» tippen.</p>
+      <p>{{ schreiben_link }}</p>
+    </div>
+    <div class="hinweis aufnehmen__meldung" data-meldung="abgemeldet" hidden>
+      <p><strong>Du bist nicht mehr angemeldet.</strong> Die Aufnahme lässt sich so nicht speichern. Bitte melde dich neu an.</p>
+      <p>{{ schreiben_link }}</p>
+    </div>
+    <div class="hinweis aufnehmen__meldung" data-meldung="abgelaufen" hidden>
+      <p><strong>Das Formular ist abgelaufen.</strong> Bitte die Seite neu laden.</p>
+      <p>{{ schreiben_link }}</p>
+    </div>
+    <div class="hinweis aufnehmen__meldung" data-meldung="ungueltig" hidden>
+      <p><strong>Diese Aufnahme liess sich nicht speichern.</strong> Bitte neu aufnehmen.</p>
+      <p>{{ schreiben_link }}</p>
+    </div>
+    <div class="hinweis aufnehmen__meldung" data-meldung="serverfehler" hidden>
+      <p><strong>Das Speichern hat gerade nicht geklappt.</strong> Bitte nochmals versuchen.</p>
+      <p>{{ schreiben_link }}</p>
+    </div>
+    <div class="hinweis aufnehmen__meldung" data-meldung="wird-gespeichert" hidden>
+      <p>Wird gespeichert …</p>
+    </div>
+  </div>
+  <div class="aufnehmen__rueckfall" data-rueckfall>
+    <p class="hinweis" data-nur-ohne-skript>Dieser Browser kann hier nicht aufnehmen. Du kannst deinen Eintrag schreiben oder eine Aufnahme aus einer anderen App hochladen.</p>
+    <div class="feld">
+      <label for="aufnahme">Aufnahme</label>
+      <input type="file" name="aufnahme" id="aufnahme" accept="audio/*">
+    </div>
+  </div>
+  {% if mit_text %}
+  <details class="feld">
+    <summary>Etwas dazuschreiben (freiwillig)</summary>
+    <textarea name="text" id="text" aria-label="Dein Text" rows="3" maxlength="20000"></textarea>
+  </details>
+  {% endif %}
+  <button type="submit" class="knopf" data-aktion="speichern">Speichern</button>
+  <p data-nur-ohne-skript><a href="{{ schreiben }}">Stattdessen schreiben</a></p>
+</div>

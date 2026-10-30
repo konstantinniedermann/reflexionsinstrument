@@ -8,7 +8,7 @@
 // screenshot() und pruefe().
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:net";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { setTimeout as warte } from "node:timers/promises";
 
 const HIER = new URL("./.e2e/", import.meta.url).pathname;
@@ -537,7 +537,320 @@ async function ablaufLehrperson() {
 }
 
 async function ablaufAufnahmen() {
-  // #17 füllt diese Funktion
+  const abmelden = ".seitenkopf form[action='/abmelden'] button";
+  const SEITE = "/lehrperson/tagebuch/neu/aufnahme";
+  const meldung = async () => (await js("document.querySelector('.meldung')?.innerText")) ?? "";
+  const knoepfeOk = (sel) =>
+    js(`[...document.querySelectorAll(${JSON.stringify(sel)})].every((e) => { const r = e.getBoundingClientRect(); return r.height >= 43.5 && r.left >= 0 && r.right <= ${sollBreite}; })`);
+  // Sichtbar heisst: nicht versteckt und mit Fläche (prüft auch die CSS-Regeln für [hidden]).
+  const sichtbar = (sel) => js(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); return !!e && e.getClientRects().length > 0; })()`);
+  const zeitText = () => js("document.querySelector('[data-zeit]').innerText.trim()");
+  const dateien = () => {
+    try {
+      return readdirSync(`${DATEN}aufnahmen/`);
+    } catch {
+      return [];
+    }
+  };
+  const nimmAuf = async (sekunden) => {
+    await klick('[data-aktion="start"]');
+    await warteBis(() => sichtbar('[data-aktion="stopp"]'), "Aufnahme startet nicht");
+    await warte(sekunden * 1000);
+    await klick('[data-aktion="stopp"]');
+    await warteBis(() => js("document.querySelector('[data-vorhoeren]').src.startsWith('blob:')"), "Kein Player nach dem Stopp");
+  };
+  await handy();
+  await farbschema("light");
+
+  // Vorbereitung: zwei Zugänge (der zweite für spätere Schritte)
+  await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
+  const pwAda = await legeZugangAn("Ada Aufnahme", "lp.e2e.aufnahme1");
+  const pwBen = await legeZugangAn("Ben Beispiel", "lp.e2e.aufnahme2");
+  await sende(abmelden);
+  await meldeAn("lp.e2e.aufnahme1", pwAda);
+  muss((await ueberschrift()) === "Hallo, Ada Aufnahme", "Aufnahmen: erste Lehrperson angemeldet");
+
+  // 1. Wahl zeigt «Frei sprechen», Seite mit beiden Hinweisen
+  let stand = merke();
+  await oeffne("/lehrperson/tagebuch/neu");
+  const karte = `a.karte--link[href='${SEITE}']`;
+  muss((await js(`document.querySelector(${JSON.stringify(karte)})?.innerText ?? ""`)).includes("Frei sprechen"), "Aufnahmen: Wahl zeigt den Link «Frei sprechen»");
+  pruefe(await knoepfeOk(karte), "Aufnahmen: Karte «Frei sprechen» ganz im Bild und tippbar hoch");
+  await keinUeberlauf("Tagebuch-Wahl mit «Frei sprechen» 390 px");
+  keineFehlerSeit(stand, "Tagebuch-Wahl mit «Frei sprechen»");
+  stand = merke();
+  await sende(karte);
+  muss((await pfad()) === SEITE && (await ueberschrift()) === "Frei sprechen", "Aufnahmen: Seite «Frei sprechen» geöffnet");
+  pruefe((await js("document.querySelectorAll('main .hinweis.formatiert').length")) === 2, "Aufnahmen: beide Hinweise stehen da");
+  muss(await sichtbar('[data-aktion="start"]'), "Aufnahmen: «Aufnahme starten» sichtbar");
+  pruefe(!(await sichtbar("[data-rueckfall]")) && !(await sichtbar("#aufnahme")), "Aufnahmen: Rückfall mit Dateifeld versteckt");
+  pruefe(!(await sichtbar('[data-aktion="speichern"]')) && !(await sichtbar("[data-vorhoeren]")), "Aufnahmen: «Speichern» und Player erst nach der Aufnahme");
+  pruefe((await zeitText()) === "0:00 / 10:00", "Aufnahmen: Zeit steht auf «0:00 / 10:00»");
+  pruefe(await knoepfeOk('[data-aktion="start"]'), "Aufnahmen: «Aufnahme starten» ganz im Bild und tippbar hoch");
+  await keinUeberlauf("Frei sprechen bereit 390 px");
+  await screenshot("39-aufnahme-bereit");
+  keineFehlerSeit(stand, "Frei sprechen bereit");
+
+  // 2. Mikrofon verweigert
+  stand = merke();
+  let perCdp = true;
+  try {
+    await cdp("Browser.setPermission", { permission: { name: "microphone" }, setting: "denied", origin: basis });
+  } catch (e) {
+    perCdp = false;
+    console.log(`info   Browser.setPermission nicht verfügbar: ${e.message}`);
+  }
+  const verweigert = '[data-meldung="verweigert"]';
+  let gezeigt = false;
+  if (perCdp) {
+    await klick('[data-aktion="start"]');
+    try {
+      gezeigt = await warteBis(() => sichtbar(verweigert), "Meldung verweigert", 15);
+    } catch {}
+    if (await sichtbar('[data-aktion="stopp"]')) await klick('[data-aktion="stopp"]'); // Einstellung griff nicht
+  }
+  console.log(`info   Mikrofon verweigert über ${gezeigt ? "Browser.setPermission" : "Ersatz von getUserMedia"}`);
+  if (!gezeigt) {
+    await oeffne(SEITE);
+    await js(`navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException("x", "NotAllowedError")); true`);
+    await klick('[data-aktion="start"]');
+    gezeigt = await warteBis(() => sichtbar(verweigert), "Meldung «Das Mikrofon ist nicht freigegeben.» erscheint nicht");
+  }
+  muss((await js(`document.querySelector(${JSON.stringify(verweigert)}).innerText`)).includes("Das Mikrofon ist nicht freigegeben."), "Mikrofon verweigert: Meldung «Das Mikrofon ist nicht freigegeben.»");
+  pruefe(await sichtbar('[data-aktion="start"]'), "Mikrofon verweigert: «Aufnahme starten» bleibt");
+  await klick(`${verweigert} summary`);
+  pruefe(await js(`document.querySelector(${JSON.stringify(verweigert + " details")}).open`), "Mikrofon verweigert: Anleitung «So gibst du das Mikrofon frei» aufklappbar");
+  pruefe(await knoepfeOk(`${verweigert} summary, ${verweigert} a`), "Mikrofon verweigert: Anleitung und Link tippbar hoch");
+  await keinUeberlauf("Mikrofon verweigert 390 px");
+  await screenshot("40-aufnahme-verweigert");
+  await sende(`${verweigert} a[href='/lehrperson/tagebuch/neu/frei']`);
+  pruefe((await pfad()) === "/lehrperson/tagebuch/neu/frei", "Mikrofon verweigert: «Stattdessen schreiben» führt zum Formular");
+  if (perCdp) await cdp("Browser.setPermission", { permission: { name: "microphone" }, setting: "granted", origin: basis });
+  keineFehlerSeit(stand, "Mikrofon verweigert");
+
+  // Browser ohne MediaRecorder: Meldung, Dateifeld und «Speichern» bleiben
+  stand = merke();
+  const ohne = await cdp("Page.addScriptToEvaluateOnNewDocument", { source: "delete window.MediaRecorder;" });
+  await oeffne(SEITE);
+  await cdp("Page.removeScriptToEvaluateOnNewDocument", { identifier: ohne.result.identifier });
+  pruefe(await sichtbar('[data-meldung="nicht-unterstuetzt"]'), "Ohne MediaRecorder: Meldung «Dieser Browser kann hier nicht aufnehmen.»");
+  pruefe(!(await sichtbar('[data-aktion="start"]')), "Ohne MediaRecorder: kein «Aufnahme starten»");
+  pruefe((await sichtbar("#aufnahme")) && (await sichtbar('[data-aktion="speichern"]')), "Ohne MediaRecorder: Dateifeld und «Speichern» bleiben");
+  pruefe((await js("[...document.querySelectorAll('.aufnehmen a')].filter((a) => a.getClientRects().length).length")) === 1, "Ohne MediaRecorder: «Stattdessen schreiben» genau einmal sichtbar");
+  await keinUeberlauf("Ohne MediaRecorder 390 px");
+  keineFehlerSeit(stand, "Ohne MediaRecorder");
+
+  // Start scheitert oder Seite ist beim Freigeben versteckt: Mikrofon wieder aus, «Aufnahme starten» frei
+  stand = merke();
+  const fange = `const echt = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+    navigator.mediaDevices.getUserMedia = async (c) => (window.__strom = await echt(c));`;
+  const spurenAus = "window.__strom?.getTracks().every((s) => s.readyState === 'ended')";
+  await oeffne(SEITE);
+  await js(`${fange} MediaRecorder.prototype.start = () => { throw new DOMException("x", "InvalidStateError"); }; true`);
+  await klick('[data-aktion="start"]');
+  await warteBis(() => sichtbar('[data-meldung="besetzt"]'), "Meldung nach gescheitertem Start erscheint nicht");
+  pruefe(await js(spurenAus), "Start scheitert: Mikrofon wieder aus");
+  pruefe((await sichtbar('[data-aktion="start"]')) && !(await js("document.querySelector('[data-aktion=\"start\"]').disabled")), "Start scheitert: «Aufnahme starten» wieder frei");
+  await oeffne(SEITE);
+  await js(`${fange} Object.defineProperty(document, "visibilityState", { get: () => "hidden" }); true`);
+  await klick('[data-aktion="start"]');
+  await warteBis(() => js("!!window.__strom"), "getUserMedia antwortet nicht");
+  await warte(300);
+  pruefe(await js(spurenAus), "Seite versteckt beim Freigeben: Mikrofon wieder aus");
+  pruefe((await sichtbar('[data-aktion="start"]')) && !(await sichtbar('[data-aktion="stopp"]')), "Seite versteckt beim Freigeben: keine Aufnahme im Hintergrund");
+  keineFehlerSeit(stand, "Start scheitert");
+
+  // 3. Aufnehmen, anhören, verwerfen, nochmals aufnehmen, speichern
+  stand = merke();
+  const vorher = new Set(dateien());
+  await oeffne(SEITE);
+  await klick('[data-aktion="start"]');
+  await warteBis(() => sichtbar('[data-aktion="stopp"]'), "Aufnahme startet nicht");
+  await warte(1300);
+  pruefe((await zeitText()) !== "0:00 / 10:00", `Aufnahme: Zeit läuft («${await zeitText()}»)`);
+  pruefe(!(await sichtbar('[data-aktion="start"]')), "Aufnahme: «Aufnahme starten» während der Aufnahme versteckt");
+  pruefe(await knoepfeOk('[data-aktion="stopp"]'), "Aufnahme: «Stopp» ganz im Bild und tippbar hoch");
+  await keinUeberlauf("Aufnahme läuft 390 px");
+  await screenshot("41-aufnahme-laeuft");
+  await warte(1700);
+  await klick('[data-aktion="stopp"]');
+  await warteBis(() => js("document.querySelector('[data-vorhoeren]').src.startsWith('blob:')"), "Kein Player nach dem Stopp");
+  pruefe(await sichtbar("[data-vorhoeren]"), "Aufnahme fertig: Player sichtbar");
+  const bereit = await js(`(async () => {
+    const p = document.querySelector("[data-vorhoeren]");
+    p.load();
+    for (let i = 0; i < 50 && p.readyState < 1; i++) await new Promise((r) => setTimeout(r, 100));
+    return p.readyState;
+  })()`);
+  pruefe(bereit >= 1, `Aufnahme fertig: Player lädt die Aufnahme (readyState ${bereit})`);
+  pruefe(await sichtbar('[data-aktion="speichern"]') && (await sichtbar('[data-aktion="neu"]')), "Aufnahme fertig: «Speichern» und «Neu aufnehmen» sichtbar");
+  pruefe(await knoepfeOk('[data-aktion="speichern"], [data-aktion="neu"]'), "Aufnahme fertig: Knöpfe ganz im Bild und tippbar hoch");
+  pruefe(!(await js("[...document.querySelectorAll('[data-meldung]')].some((e) => !e.hidden)")), "Aufnahme fertig: keine Meldung nach «Stopp»");
+  await keinUeberlauf("Aufnahme fertig 390 px");
+  await screenshot("42-aufnahme-fertig");
+  await klick('[data-aktion="neu"]');
+  pruefe(!(await sichtbar("[data-vorhoeren]")) && (await sichtbar('[data-aktion="start"]')), "Neu aufnehmen: Player weg, «Aufnahme starten» wieder da");
+  pruefe(!(await js("document.querySelector('[data-vorhoeren]').hasAttribute('src')")), "Neu aufnehmen: alte Aufnahme verworfen");
+  await nimmAuf(2);
+  await sende('[data-aktion="speichern"]');
+  muss(/^\/lehrperson\/tagebuch\/\d+$/.test(await pfad()), "Aufnahme gespeichert: Seite des Eintrags");
+  const eintragPfad = await pfad();
+  pruefe((await meldung()).includes("Gespeichert."), "Aufnahme gespeichert: «Gespeichert.»");
+  const src = await js("document.querySelector('audio')?.getAttribute('src') ?? ''");
+  muss(/^\/lehrperson\/aufnahmen\/\d+$/.test(src), `Aufnahme gespeichert: Player mit Adresse der Aufnahme (${src})`);
+  await keinUeberlauf("Eintrag mit Aufnahme 390 px");
+  await screenshot("43-aufnahme-eintrag");
+  keineFehlerSeit(stand, "Aufnehmen und Speichern");
+
+  // 4. Die Aufnahme ist abrufbar, genau eine neue Datei liegt im Ordner
+  stand = merke();
+  const antwort = await js(`fetch(${JSON.stringify(src)}, { headers: { Range: "bytes=0-1" } }).then((r) => ({ status: r.status, typ: r.headers.get("content-type") ?? "" }))`);
+  pruefe(antwort.status === 206 && antwort.typ.startsWith("audio/"), `Aufnahme abrufbar: 206 mit Audio-Typ (${antwort.status}, ${antwort.typ})`);
+  console.log(`info   Headless-Chrome nimmt auf als ${antwort.typ}`);
+  const neu = dateien().filter((n) => !vorher.has(n));
+  pruefe(neu.length === 1 && /^[0-9a-f]{32}\.(webm|m4a|ogg)$/.test(neu[0] ?? ""), `Aufnahme-Ordner: genau eine neue Datei mit passendem Namen (${neu.join(", ")})`);
+  keineFehlerSeit(stand, "Aufnahme abrufen");
+
+  // 5. Meine Einträge
+  stand = merke();
+  await oeffne("/lehrperson/eintraege");
+  const t = await text();
+  pruefe(t.includes("Gesprochener Eintrag") && /\d+ Sek\./.test(t), "Meine Einträge: «Gesprochener Eintrag» mit Dauer");
+  await keinUeberlauf("Meine Einträge mit Aufnahme 390 px");
+  keineFehlerSeit(stand, "Meine Einträge mit Aufnahme");
+
+  // 6. Runde 1: Antwort einsprechen, ersetzen, löschen; der getippte Text bleibt immer
+  stand = merke();
+  const RUNDE = "/lehrperson/runden/1";
+  await oeffne(RUNDE);
+  const feld = await js("document.querySelector('textarea')?.id ?? ''");
+  muss(/^frage-\d+$/.test(feld), `Runde 1: Freitext-Frage da (${feld})`);
+  const frageId = feld.slice("frage-".length);
+  const EINSPRECHEN = `button[value="aufnahme-${frageId}"]`;
+  const ANTWORT_SEITE = `${RUNDE}/fragen/${frageId}/aufnahme`;
+  const ander = `document.getElementById(${JSON.stringify(feld)}).closest('.feld')`;
+  const playerAnDerFrage = () => js(`[...${ander}.querySelectorAll('audio')].map((a) => a.getAttribute('src'))`);
+  const feldWert = () => js(`document.getElementById(${JSON.stringify(feld)}).value`);
+  const dateienVorRunde = dateien().length;
+  pruefe((await js(`document.querySelector(${JSON.stringify(EINSPRECHEN)})?.innerText.trim()`)) === "Antwort einsprechen", "Runde 1: Knopf «Antwort einsprechen» an der Frage");
+  pruefe(await knoepfeOk(EINSPRECHEN), "Runde 1: «Antwort einsprechen» ganz im Bild und tippbar hoch");
+  const getippt = "Erst nachfragen, dann entscheiden.";
+  await tippe(`#${feld}`, getippt);
+  await sende(EINSPRECHEN);
+  muss((await pfad()) === ANTWORT_SEITE, "Antwort einsprechen: Aufnahme-Seite der Frage");
+  pruefe((await ueberschrift()) === "Antwort einsprechen", "Antwort einsprechen: Überschrift");
+  await keinUeberlauf("Antwort einsprechen 390 px");
+  await nimmAuf(2);
+  await sende('[data-aktion="speichern"]');
+  muss((await pfad()) === RUNDE && (await js("location.hash")) === `#${feld}`, "Antwort eingesprochen: zurück an der Frage");
+  pruefe((await meldung()).includes("Gespeichert."), "Antwort eingesprochen: «Gespeichert.»");
+  const ersterPlayer = await playerAnDerFrage();
+  muss(ersterPlayer.length === 1 && /^\/lehrperson\/aufnahmen\/\d+$/.test(ersterPlayer[0]), `Antwort eingesprochen: ein Player an der Frage (${ersterPlayer.join(", ")})`);
+  pruefe((await feldWert()) === getippt, "Antwort eingesprochen: getippter Text steht im Feld");
+  pruefe((await js(`document.querySelector(${JSON.stringify(EINSPRECHEN)}).innerText.trim()`)) === "Aufnahme ersetzen", "Antwort eingesprochen: Knopf «Aufnahme ersetzen» statt «Antwort einsprechen»");
+  pruefe(await knoepfeOk(EINSPRECHEN), "Antwort eingesprochen: «Aufnahme ersetzen» ganz im Bild und tippbar hoch");
+  pruefe(dateien().length === dateienVorRunde + 1, "Antwort eingesprochen: eine Datei mehr im Ordner");
+  await keinUeberlauf("Frage mit Aufnahme 390 px");
+  await screenshot("44-aufnahme-frage");
+
+  // Ersetzen: zuerst geänderten Text tippen, er wird mit dem Knopf gespeichert
+  const geaendert = "Erst nachfragen, dann gemeinsam entscheiden.";
+  await tippe(`#${feld}`, geaendert);
+  await sende(EINSPRECHEN);
+  muss((await pfad()) === ANTWORT_SEITE, "Aufnahme ersetzen: Aufnahme-Seite der Frage");
+  pruefe((await text()).includes("Die neue Aufnahme ersetzt die bisherige."), "Aufnahme ersetzen: Hinweis «Die neue Aufnahme ersetzt die bisherige.»");
+  await nimmAuf(2);
+  await sende('[data-aktion="speichern"]');
+  muss((await pfad()) === RUNDE && (await js("location.hash")) === `#${feld}`, "Aufnahme ersetzt: zurück an der Frage");
+  const zweiterPlayer = await playerAnDerFrage();
+  pruefe(zweiterPlayer.length === 1 && zweiterPlayer[0] !== ersterPlayer[0], `Aufnahme ersetzt: genau ein Player mit neuer Adresse (${zweiterPlayer.join(", ")})`);
+  pruefe((await feldWert()) === geaendert, "Aufnahme ersetzt: geänderter Text steht im Feld");
+  pruefe(dateien().length === dateienVorRunde + 1, "Aufnahme ersetzt: alte Datei weg, weiterhin eine Datei mehr im Ordner");
+  const alteAntwort = await js(`fetch(${JSON.stringify(ersterPlayer[0])}).then((r) => r.status)`);
+  pruefe(alteAntwort === 404, `Aufnahme ersetzt: alte Adresse 404 (${alteAntwort})`);
+
+  // Löschen über die Bestätigung
+  await sende(`a[href='${ANTWORT_SEITE}/loeschen']`);
+  muss((await ueberschrift()) === "Löschen", "Aufnahme löschen: Bestätigung");
+  await keinUeberlauf("Aufnahme löschen bestätigen 390 px");
+  await sende("form.formular button[type=submit]");
+  muss((await pfad()) === RUNDE && (await js("location.hash")) === `#${feld}`, "Aufnahme gelöscht: zurück an der Frage");
+  pruefe((await meldung()).includes("Die Aufnahme wurde gelöscht."), "Aufnahme gelöscht: «Die Aufnahme wurde gelöscht.»");
+  pruefe((await playerAnDerFrage()).length === 0, "Aufnahme gelöscht: kein Player an der Frage");
+  pruefe((await feldWert()) === geaendert, "Aufnahme gelöscht: Text bleibt im Feld");
+  pruefe((await js(`document.querySelector(${JSON.stringify(EINSPRECHEN)})?.innerText.trim()`)) === "Antwort einsprechen", "Aufnahme gelöscht: «Antwort einsprechen» wieder da");
+  pruefe(dateien().length === dateienVorRunde, "Aufnahme gelöscht: Datei weg");
+  await keinUeberlauf("Aufnahme gelöscht 390 px");
+  keineFehlerSeit(stand, "Antwort einsprechen, ersetzen, löschen", ["status of 404"]);
+
+  // Dunkel: «Frei sprechen» im Zustand «Fertig» (ohne Speichern)
+  stand = merke();
+  await farbschema("dark");
+  await oeffne(SEITE);
+  await nimmAuf(1);
+  pruefe(await sichtbar('[data-aktion="speichern"]'), "Dunkel: «Frei sprechen» im Zustand «Fertig»");
+  await keinUeberlauf("Frei sprechen fertig 390 px dunkel");
+  await screenshot("45-aufnahme-dunkel");
+  await farbschema("light");
+  keineFehlerSeit(stand, "Frei sprechen dunkel");
+
+  // 1280 px: Eintrag mit Player; Wahl-Seite (390 px)
+  stand = merke();
+  await desktop();
+  await oeffne(eintragPfad);
+  pruefe((await js("document.querySelectorAll('audio').length")) === 1, "1280 px: Eintrag mit Player");
+  await keinUeberlauf("Eintrag mit Aufnahme 1280 px");
+  await screenshot("46-aufnahme-desktop");
+  await handy();
+  await oeffne("/lehrperson/tagebuch/neu");
+  await keinUeberlauf("Tagebuch-Wahl 390 px");
+  await screenshot("47-aufnahme-wahl");
+  keineFehlerSeit(stand, "Eintrag 1280 px und Wahl");
+  await sende(abmelden);
+
+  // 7. Zweite Lehrperson: fremde Aufnahme über die direkte Adresse 404 (Akzeptanzkriterium)
+  stand = merke();
+  await meldeAn("lp.e2e.aufnahme2", pwBen);
+  muss((await ueberschrift()) === "Hallo, Ben Beispiel", "Aufnahmen: zweite Lehrperson angemeldet");
+  const fremd = await js(`Promise.all([{}, { Range: "bytes=0-1" }].map((headers) => fetch(${JSON.stringify(src)}, { headers }).then((r) => ({ status: r.status, typ: r.headers.get("content-type") ?? "" }))))`);
+  pruefe(fremd.every((r) => r.status === 404 && !r.typ.startsWith("audio/")), `Fremde Aufnahme: 404 ohne Audio, auch mit Range (${fremd.map((r) => r.status).join(", ")})`);
+  keineFehlerSeit(stand, "Fremde Aufnahme", ["status of 404"]);
+  await sende(abmelden);
+
+  // 8. Auftraggeberin hört die Aufnahme
+  stand = merke();
+  await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
+  const aufnahmeId = src.split("/").pop();
+  const leitung = await js(`fetch("/verwaltung/aufnahmen/${aufnahmeId}").then((r) => ({ status: r.status, typ: r.headers.get("content-type") ?? "" }))`);
+  pruefe(leitung.status === 200 && leitung.typ.startsWith("audio/"), `Auftraggeberin: Aufnahme 200 mit Audio-Typ (${leitung.status}, ${leitung.typ})`);
+  keineFehlerSeit(stand, "Auftraggeberin hört die Aufnahme");
+  await sende(abmelden);
+
+  // 9. Erste Lehrperson löscht den gesprochenen Eintrag: Adresse 404, Datei weg
+  stand = merke();
+  await meldeAn("lp.e2e.aufnahme1", pwAda);
+  await oeffne(eintragPfad);
+  await sende(`a[href='${eintragPfad}/loeschen']`);
+  muss((await ueberschrift()) === "Löschen", "Eintrag löschen: Bestätigung");
+  await sende("form.formular button[type=submit]");
+  pruefe((await pfad()) === "/lehrperson/eintraege" && (await meldung()).includes("Gelöscht."), "Eintrag gelöscht: «Meine Einträge» mit «Gelöscht.»");
+  const geloescht = await js(`fetch(${JSON.stringify(src)}).then((r) => r.status)`);
+  pruefe(geloescht === 404, `Eintrag gelöscht: Adresse der Aufnahme 404 (${geloescht})`);
+  pruefe(!dateien().includes(neu[0]), "Eintrag gelöscht: Datei nicht mehr im Ordner");
+  keineFehlerSeit(stand, "Gesprochenen Eintrag löschen", ["status of 404"]);
+  await sende(abmelden);
+
+  // 10. Eine Aufnahme bleibt stehen, damit der Ablauf «Einträge» (#18) den Player der Verwaltung prüft
+  stand = merke();
+  await meldeAn("lp.e2e.aufnahme2", pwBen);
+  await oeffne(SEITE);
+  await nimmAuf(2);
+  await sende('[data-aktion="speichern"]');
+  pruefe(/^\/lehrperson\/tagebuch\/\d+$/.test(await pfad()) && (await meldung()).includes("Gespeichert."), "Zweite Lehrperson: gesprochener Eintrag gespeichert (bleibt für die Auswertung)");
+  keineFehlerSeit(stand, "Aufnahme für die Auswertung");
+  await handy();
+  await farbschema("light");
+  await sende(abmelden);
 }
 
 async function ablaufEintraege() {

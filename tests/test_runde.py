@@ -108,7 +108,8 @@ def test_anzeige(db, client, lehrperson, heute_ist):
     assert "Keine Angabe" in text
     assert _gewaehlt(text, f"antwort_{f3}") == ""
     assert REGISTER["hinweis_tagebuch"].vorschlag[:40] in text
-    assert text.count('name="anker"') == 2
+    assert text.count('name="anker" value="frage-') == 2
+    assert text.count('name="anker" value="aufnahme-') == 2  # #17: Antwort einsprechen
     assert f'name="anker" value="frage-{f1}"' in text
     assert len(re.findall(r'class="knopf"[^>]*>Speichern<', text)) == 1
     assert "Mo 23.11." in text

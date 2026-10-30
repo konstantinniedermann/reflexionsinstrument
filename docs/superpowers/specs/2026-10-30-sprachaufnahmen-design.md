@@ -418,3 +418,13 @@ Geprüft gegen `main` (Stand nach #15), Design und Plan von #16 (inklusive «Än
 - **Ausweichlösung `Cache-Control` für Safari:** Wird sie nötig, ändert sie `app/sicherheit.py`, das auch #19 ändert (`X-Robots-Tag`). Dann erst nach dem Merge von #19 und als eigener kleiner Pull Request.
 - **Test «Link aus der Tabelle spielt ab» (#18):** Ist #18 vor #17 gemergt, ergänzt #17 ihn in der letzten Task (`tests/test_aufnahmen_routen.py`, Link aus `GET /verwaltung/eintraege/tabelle.csv` als Auftraggeberin → 200 mit den Bytes der Datei).
 - **Befund «keine Grössengrenze für Formulare»** (Abschnitt oben) ist mit `app/groesse.py` aus #16 erledigt und kommt nicht nach `docs/beobachtungen.md`.
+
+## Abgleich mit `main` nach #16 und #19 (Claude, vor der Umsetzung)
+
+Geprüft gegen `main` mit #16 und #19 gemergt. Alle Schnittstellen aus der Vorbereitung des Plans sind vorhanden. Diese Punkte gehen den Abschnitten oben vor.
+
+- **Dauer an der Frage:** `antworten_der_runde` (#16) liefert `aufnahme_id` und `aufnahme_dauer_sekunden`, `kontext_runde` gibt sie als `antworten` ans Template. Der Platz in `runde.html` zeigt deshalb `_aufnahme.html` mit Dauer; der Rückfall «Player ohne Dauer» aus den Klärungen entfällt.
+- **Gast und Vorschau sind echte Seiten:** #19 hat `/gast/tagebuch/neu`, `/gast/runden/{id}` und die Vorschau unter `/verwaltung/vorschau/{datum}/…` gebaut; sie rendern dieselben Templates. Die Tests von #17 für «ohne Link, ohne Aufnahme» laufen über diese Routen statt über eine eigene Test-Route. Die Prüfungen von #19 (`tests/test_gast.py`: keine `/aufnahmen/` in Gast-Seiten, Gast-Rundgang, festes Routen-Inventar) bleiben unverändert und müssen grün bleiben; #17 legt keine Route unter `/gast` an.
+- **#18 ist auf `main`:** Der Branch von #17 ist auf `main` mit #18 nachgezogen. Der Test «Link aus der Tabelle spielt ab» steht in `tests/test_aufnahmen_routen.py` (`test_link_aus_tabelle_spielt_ab`): Link der Spalte «Aufnahme» aus `GET /verwaltung/eintraege/tabelle.csv` als Auftraggeberin → 200 mit den Bytes der Datei, ohne Anmeldung → 303.
+- **«Aufnahme ersetzen» und «Aufnahme löschen» in `runde.html`:** «Aufnahme ersetzen» ist ein Submit-Knopf des Runden-Formulars (`name="anker"`, `value="aufnahme-{id}"`, wie «Antwort einsprechen»); er speichert zuerst den getippten Text und führt dann auf die Aufnahme-Seite der Frage. «Aufnahme löschen» bleibt ein Link auf die Bestätigung. So geht beim Ersetzen kein ungespeicherter Text verloren.
+- **Wahl-Karte ohne Link:** Im Gast-Modus und in der Vorschau steht die Karte «Frei sprechen» als `<div class="karte karte--ruhend">` statt `<li>` (die Nachbarkarten in `tagebuch_wahl.html` stehen in keiner Liste). Ersetzt den Punkt «Wahl-Karte im Gast-Modus und in der Vorschau» in den Klärungen.

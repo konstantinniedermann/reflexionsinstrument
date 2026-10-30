@@ -9,7 +9,22 @@
   <span>Frei schreiben</span>
   <span class="pfeil" aria-hidden="true">›</span>
 </a>
-{# #17: Frei sprechen #}
+{% if ansicht.speichert %}
+<a class="karte karte--link" href="{{ ansicht.url('/tagebuch/neu/aufnahme') }}">
+  <span>
+    <span class="wahl__titel">Frei sprechen</span>
+    <span class="wahl__text gedaempft">Eintrag einsprechen, zum Beispiel direkt nach dem Unterricht.</span>
+  </span>
+  <span class="pfeil" aria-hidden="true">›</span>
+</a>
+{% else %}
+<div class="karte karte--ruhend">
+  <span>
+    <span class="wahl__titel">Frei sprechen</span>
+    <span class="wahl__text gedaempft">In dieser Ansicht nicht verfügbar.</span>
+  </span>
+</div>
+{% endif %}
 {% if impuls %}
 <a class="karte karte--link" href="{{ ansicht.url('/tagebuch/neu/impuls/' ~ impuls.id) }}">
   <span>
