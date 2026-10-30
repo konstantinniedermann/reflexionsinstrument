@@ -81,7 +81,7 @@ Letzte Auswertung: noch keine
 
 **Ursprung:** Deploy #13
 
-**Einschätzung:** Im fly-Dashboard prüfen, ob und wie die Verbindung deployt und ob sie `fly.toml` aus dem Repo verwendet (Volume `daten`). Sonst könnte ein späterer automatischer Deploy ohne Volume starten. Bis zur Klärung weiter mit `make deploy`.
+**Einschätzung:** Im fly-Dashboard prüfen, ob und wie die Verbindung deployt und ob sie `fly.toml` aus dem Repo verwendet (Volume `daten`). Sonst könnte ein späterer automatischer Deploy ohne Volume starten. Bis zur Klärung weiter mit `make deploy`. Nachtrag 30.10.: Die Merges #22–#26 lösten keinen Deploy aus; die einzige Bot-Bereitstellung (Stand vor dem Dockerfile) hängt seit 15:41 UTC auf «in_progress». Empfehlung an Koschi: Verbindung im Dashboard trennen.
 
 ### 2026-10-30 — Basis-Images über Tags statt Digests eingebunden
 
@@ -166,3 +166,28 @@ Letzte Auswertung: noch keine
 **Ursprung:** Gesamt-Review #15
 
 **Einschätzung:** Bei den kurzen Formularen tragbar. Rahmen und `aria-invalid` sind eine kleine Ergänzung, falls die Auftraggeberin Mühe damit hat.
+
+### 2026-10-30 — Kommando rechnet mit ungeprüftem Datum
+
+**Thema:** Bedienung
+
+**Fundort:** `app/kommandos.py` (`platzhalter-laden --projektstart`), `app/inhalte.py` (`lies_projektstart`)
+
+**Beobachtung:** Seit #15 nimmt die Maske nur Jahre 2020–2099 an. Das Kommando `platzhalter-laden --projektstart` prüft den Bereich nicht; ein Jahr 9999 kann beim Addieren der Wochen einen `OverflowError` auslösen. Ein schon gespeicherter, unplausibler erster Tag wird von `lies_projektstart` ungeprüft geliefert (Vorschläge zeigen ihn, Speichern meldet dann 400).
+
+**Ursprung:** Re-Review der Fixes zu #15
+
+**Einschätzung:** Nur für Entwicklung bzw. Altdaten erreichbar, kein Absturz in der Maske. `ist_plausibel` aus `app/zeit.py` im Kommando mitbenutzen wäre eine Zeile.
+
+### 2026-10-30 — Zurückgestellte Kleinigkeiten aus den Reviews zu #14 und #15
+
+**Thema:** Tests
+
+**Fundort:** `tests/` (u. a. `test_kommandos.py`, `test_sitzung.py`, `test_anmeldeschutz.py`, `test_verwaltung.py`, `test_verwaltung_inhalte.py`, `test_inhalte.py`, `e2e-pilot.mjs`), `app/csrf.py`, `app/templates/basis.html`
+
+**Beobachtung:** Aus den Task-Reviews blieben bewusst zurückgestellte Kleinigkeiten: Testverbindungen ohne `close()`, einzelne Tests ohne Statusprüfung oder mit schwacher Aussage (Bestätigung «nur aus fester Liste», E2E «Impuls löschen», Zähltexte), fehlende Tests für einige Randzweige (Wettlauf beim Löschen, Rollback der obersten Transaktion). Dazu aus dem Gesamt-Review #14: CSRF-Fehler nutzt `KeinZugriff` mit eigenem Titel statt einer eigenen Ausnahme; auf 404-Seiten fehlen Anzeigename und «Abmelden» im Kopf; `__Host-`-Präfix für Cookies erst bei eigener Domain sinnvoll.
+
+**Ursprung:** Task-Reviews und Gesamt-Reviews #14, #15
+
+**Einschätzung:** Kein Verhalten falsch, Politur. Bei einer ruhigen Stunde gesammelt nachziehen oder bei der Auswertung verwerfen.
+
