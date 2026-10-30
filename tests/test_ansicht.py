@@ -190,13 +190,14 @@ def test_vorschau_rechnet_mit_stichtag(seiten_client, db):
     assert "Runde Vier" not in text
     assert "Nächste Runde ab Mo 14.12." in text
     links = re.findall(r'href="(/[^"]*)"', text)
-    app_links = [
-        link
-        for link in links
-        if link not in ("/", "/static/css/style.css") and "verwaltung" in link
-    ]
-    assert app_links
-    assert all(link.startswith("/verwaltung/vorschau") for link in app_links)
+    praefix = "/verwaltung/vorschau/2026-12-07/"
+    assert any(link.startswith(praefix) for link in links)
+    for link in links:
+        assert link in (
+            "/static/css/style.css",
+            "/verwaltung/vorschau",
+            praefix.rstrip("/"),
+        ) or link.startswith(praefix), link
     assert "/lehrperson" not in text
 
 
