@@ -131,6 +131,26 @@ Letzte Auswertung: 30.10.2026 (15 Einträge, alle abgeschlossen)
 
 **Einschätzung:** Keine Folge im Pilot. (2) als Kommentar festhalten, falls je ein Pool kommt.
 
+### 2026-10-30 — #18 Minors aus den Reviews
+
+**Thema:** Oberfläche
+
+**Fundort:** `app/static/css/style.css` (Abschnitt #18), `app/export_zip.py`, `tests/` zu #18, Ansicht «Einträge»
+
+**Beobachtung:**
+- `.karte--eintrag strong, .karte--eintrag .eintrag__kopf { overflow-wrap: anywhere }` wirkt auch auf «Meine Einträge» (#16); harmlos.
+- Der Satz «Die Links in der Tabelle öffnen die Aufnahme, wenn du angemeldet bist.» verspricht einen Klick, Excel macht aus der Adresse aber keinen Link.
+- Ein Hinweis zum Löschen des Exports nach Projektende (Löschkonzept) steht nicht in der Oberfläche.
+- Filter-Chips am Desktop: waagrechtes Scrollen mit der Maus ist nicht sichtbar, spätere Chips sind abgeschnitten; alle Personen sind über die Karten erreichbar.
+- `eintraege.csv` im ZIP trägt das Datum 01.01.1980.
+- Der Strom liefert gelegentlich leere Byte-Stücke (harmlos).
+- Testlücken: Lesefehler mitten im Kopieren nicht getestet; `test_zip_dateien` vergleicht Instant statt Zürcher Wandzeit; `test_exportzeilen_zeitzone` prüft die Stunde nur über die CSV; Personen-Asserts in `test_uebersicht_personen` nicht an die Karte gebunden; «ohne Woche» über CSS-Klasse geprüft; lose Substring-Prüfungen in `test_verwaltung_eintraege_liste.py`; kein Listen-Test für «1 von 2»; ZIP-Tabelle nicht zeilenweise mit `tabelle.csv` verglichen; der Screenshot-Clip im E2E dupliziert die Dateinamenlogik.
+- Excel: Die Datumsspalte zeigt «#####», bis die Spalte verbreitert wird (CSV kann keine Breiten setzen); Satz für die Testanleitung (#9).
+
+**Ursprung:** Reviews zu #18
+
+**Einschätzung:** Alles klein. Satz zu den Links beim Feedback der Auftraggeberin prüfen (Spec-Entscheid), Löschhinweis in der Oberfläche ergänzen oder bei der Übergabe mitgeben, Rest bei Gelegenheit.
+
 ## Ausgewertet am 30.10.2026
 
 Alle 15 Einträge gegen `main` (Stand nach #29) geprüft, Laufzeit-Aussagen gegen GitHub Actions, fly.io und eine lokal gestartete App gemessen. Bilanz: 1 mitgemacht, 2 an bestehende Issues gehängt, 2 erledigt, 9 abgehakt mit Trigger, 1 verworfen.

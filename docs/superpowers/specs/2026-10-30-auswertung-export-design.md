@@ -430,3 +430,5 @@ Geprüft gegen `main` (Stand nach #15), das Design und den Plan von #16 sowie di
 - Namen im ZIP enthalten das grosse `W` aus `W{woche:02d}`; der Satz «nur `[a-z0-9_.-]`» meint den Schutz vor Zip-Slip, den das `W` nicht berührt. Der Test prüft `[A-Za-z0-9_.-]`.
 - `tests/test_geruest.py` hatte #16 schon angepasst; #18 ändert die Datei nicht.
 - Der E2E-Ablauf nutzt den vorhandenen Helfer `meldeAn` statt einer eigenen `anmeldenAls`.
+- Ein Lesefehler mitten im Gesamtexport wird ohne Namen geloggt und als `RuntimeError("Gesamtexport abgebrochen")` ohne Ursache weitergegeben, damit der Server-Log keinen Dateipfad enthält; der Download bricht weiterhin ab.
+- Personen-Karten am Desktop über `auto-fill`/`minmax(10rem, 1fr)` statt vier fester Spalten.
