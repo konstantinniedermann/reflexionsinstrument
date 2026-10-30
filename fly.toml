@@ -11,6 +11,9 @@ primary_region = "fra"
 [mounts]
   source = "daten"
   destination = "/data"
+  # Die Löschung bei Projektende muss auch die Snapshots des Volumes umfassen (#8).
+  initial_size = "1gb"
+  snapshot_retention = 5
 
 [http_service]
   internal_port = 8080

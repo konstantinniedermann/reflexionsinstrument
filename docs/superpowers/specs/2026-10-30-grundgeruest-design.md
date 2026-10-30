@@ -32,10 +32,13 @@ Ein lauffähiges, leeres Gerüst auf fly.io, auf dem #14 (Anmeldung), #15 (Einga
 ```
 app/
   __init__.py
-  main.py            FastAPI-App, Lebenszyklus (Migration beim Start), Routen /, /healthz
+  main.py            App-Fabrik erstelle_app: Lebenszyklus (Migration beim Start), Middleware, Router
   config.py          Einstellungen aus Umgebungsvariablen
   db.py              Verbindung, Migrationen, Dependency für Routen
   sicherheit.py      Middleware für Sicherheits-Header
+  vorlagen.py        Jinja2-Templates (eigenes Modul, damit Router sie ohne Zirkelimport nutzen)
+  routen/
+    allgemein.py     Router mit / und /healthz; ab #14 ein Router-Modul pro Bereich
   migrationen/
     001_grundschema.sql
   templates/
@@ -67,8 +70,8 @@ Die Python-Tests liegen in `tests/` neben den Tests des Prototyps. pytest sammel
 
 - SQLite aus der Standardbibliothek, eine Datei `reflexion.db` im Datenverzeichnis.
 - Pro Verbindung: `PRAGMA foreign_keys = ON`, `journal_mode = WAL`, `busy_timeout = 5000`, `row_factory = sqlite3.Row`.
-- Pro Anfrage eine Verbindung über eine FastAPI-Dependency (`hole_db`), die am Ende geschlossen wird. Bei 5 Personen genügt das; kein Pool.
-- **Migrationen:** nummerierte SQL-Dateien in `app/migrationen/`. Der Stand steht in `PRAGMA user_version`. Beim Start werden alle Dateien mit höherer Nummer der Reihe nach in einer Transaktion ausgeführt. Spätere Issues fügen `002_….sql` usw. hinzu und ändern bestehende Dateien nie. Kein Zurückrollen (YAGNI: die Datenbank lebt vier Wochen).
+- Pro Anfrage eine Verbindung über eine FastAPI-Dependency (`hole_db`), die am Ende geschlossen wird. Bei 5 Personen genügt das; kein Pool. Die Verbindung wird mit `check_same_thread=False` geöffnet, weil FastAPI Aufbau, Route und Abbau in verschiedenen Threads ausführt; sie wird nie gleichzeitig geteilt.
+- **Migrationen:** nummerierte SQL-Dateien in `app/migrationen/`. Der Stand steht in `PRAGMA user_version`. Beim Start werden alle Dateien mit höherer Nummer der Reihe nach je in einer Transaktion ausgeführt. Während der Migrationen sind die Fremdschlüssel aus, damit ein Neuaufbau einer Tabelle (neue Tabelle, kopieren, `DROP`, umbenennen) keine Kaskade auslöst; vor jedem `COMMIT` prüft `PRAGMA foreign_key_check` die Verweise, bei Fehlern wird zurückgerollt. Spätere Issues fügen `002_….sql` usw. hinzu und ändern bestehende Dateien nie. Kein Zurückrollen (YAGNI: die Datenbank lebt vier Wochen).
 - Zeitstempel als ISO-Text in UTC (`strftime('%Y-%m-%dT%H:%M:%SZ','now')`), Daten (Freischaltung, Projektstart) als `YYYY-MM-DD`.
 
 ### Grundschema (001)
@@ -122,8 +125,8 @@ HTTPS erzwingt fly.io (`force_https = true`): Anfragen über HTTP werden umgelei
 
 - `Dockerfile`: `python:3.13-slim`, uv aus dem offiziellen Image kopiert, `uv sync --frozen --no-dev` aus `uv.lock`. So installiert der Build genau die geprüften Versionen. (Munica hatte Ausfälle, weil der Build ohne Lockfile frei auflöste.)
 - Nicht-root: Entrypoint startet als root, chownt `/data` (fly mountet das Volume als root) und wechselt per `setpriv` auf `appuser`, wie bei Munica. `exec`, damit uvicorn Signale direkt bekommt.
-- `uvicorn app.main:app --host 0.0.0.0 --port 8080 --proxy-headers --forwarded-allow-ips "*"` (fly-Proxy davor).
-- `fly.toml`: App-Name `reflexionsinstrument` (neutral, ohne Personen- oder Schulnamen; von Koschi angelegt), `primary_region = "fra"`, Volume `daten` (1 GB) auf `/data`, `force_https`, `auto_stop_machines = "stop"`, `min_machines_running = 0`, Health-Check auf `/healthz`, VM `shared-cpu-1x`, 256 MB.
+- `uvicorn --factory app.main:erstelle_app --host 0.0.0.0 --port 8080 --proxy-headers` (fly-Proxy davor). Den Proxy-Adressen vertraut uvicorn über `ENV FORWARDED_ALLOW_IPS="*"` im Dockerfile, nicht über das Argument `--forwarded-allow-ips "*"`: auf fly.io wurde der Stern beim Start als Dateimuster aufgelöst.
+- `fly.toml`: App-Name `reflexionsinstrument` (neutral, ohne Personen- oder Schulnamen; von Koschi angelegt), `primary_region = "fra"`, Volume `daten` (1 GB, `snapshot_retention = 5`; die Löschung bei Projektende umfasst die Snapshots) auf `/data`, `force_https`, `auto_stop_machines = "stop"`, `min_machines_running = 0`, Health-Check auf `/healthz`, VM `shared-cpu-1x`, 256 MB.
 - **Deployment lokal mit `make deploy`** statt über GitHub Actions: So liegt kein fly-Token in GitHub, und das Repo ist öffentlich. Bei einem Betreiber und vier Wochen Laufzeit spart Automatik nichts.
 - Der erste Deploy (App anlegen, Volume, Secret) geht nach aussen und kostet Geld. Davor fragt Claude Koschi einmal. Er steht als letzte, abtrennbare Aufgabe im Plan. Der Pull Request wird erst nach dem Deploy und den Nachweisen auf fly.io gemergt, weil diese zur DoD gehören. Organisation: `reflexion`, eigens von Koschi angelegt, damit die Kosten getrennt von seinen übrigen Apps abgerechnet werden.
 
