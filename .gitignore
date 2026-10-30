@@ -11,3 +11,20 @@ intern/
 
 # Ausgabe der E2E-Prüfung
 tests/.e2e/
+
+# Python / Pilot-Version
+.daten/
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+
+# Sicherheitsnetz: Datenbanken, Geheimnisse und Aufnahmen nie ins öffentliche Repo
+*.db
+*.db-wal
+*.db-shm
+.env
+*.webm
+*.m4a
+*.mp4
+*.ogg

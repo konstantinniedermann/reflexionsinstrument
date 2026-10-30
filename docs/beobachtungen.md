@@ -58,3 +58,15 @@ Letzte Auswertung: noch keine
 **Ursprung:** Deploy-Lauf nach dem Merge von #11
 
 **Einschätzung:** Für einen Workflow, der nur Node-Tests und einen Pages-Upload macht, vermutlich folgenlos. Nach dem nächsten Lauf kurz prüfen.
+
+### 2026-10-30 — TestClient warnt: httpx durch httpx2 ersetzen
+
+**Thema:** Tests
+
+**Fundort:** `pyproject.toml` (filterwarnings)
+
+**Beobachtung:** Der Starlette-TestClient meldet, dass `httpx` veraltet ist und `httpx2` verwendet werden soll.
+
+**Ursprung:** Umsetzung #13
+
+**Einschätzung:** Warnung gezielt unterdrückt. Der Wechsel auf httpx2 wäre eine neue Dependency und braucht Koschis Freigabe; spätestens nötig, wenn Starlette httpx nicht mehr unterstützt.

@@ -1,0 +1,7 @@
+*
+!app/
+!pyproject.toml
+!uv.lock
+!.python-version
+!docker-entrypoint.sh
+__pycache__/
