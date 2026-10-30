@@ -56,7 +56,11 @@
 
 {% if karten %}
 {% for karte in karten %}
-{# Karte eines Eintrags: Task 5 #}
+{% with eintrag=karte.eintrag, mit_name=not gewaehlt %}
+{% with stand=(staende.get(eintrag.konto_id, {}).get(eintrag.runde_id) if eintrag.art == "runde" else none) %}
+{% include "verwaltung/eintraege/_eintrag.html" %}
+{% endwith %}
+{% endwith %}
 {% endfor %}
 {% else %}
 <p class="gedaempft">Noch keine Einträge.</p>

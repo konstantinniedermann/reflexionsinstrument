@@ -1183,6 +1183,11 @@ input[type="checkbox"] {
   gap: 0.3rem;
 }
 
+.karte--eintrag strong,
+.karte--eintrag .eintrag__kopf {
+  overflow-wrap: anywhere;
+}
+
 /* Ende #18 */
 
 /* Pilot: Gast und Vorschau (#19) */
