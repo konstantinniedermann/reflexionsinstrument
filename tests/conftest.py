@@ -77,3 +77,11 @@ def festes_heute(client) -> date:
     fest = date(2026, 11, 30)
     client.app.state.heute = lambda: fest
     return fest
+
+
+@pytest.fixture
+def db(einstellungen, client):
+    """Verbindung zur Test-Datenbank; die Migration hat `client` schon ausgefuehrt."""
+    conn = verbinde(einstellungen.db_pfad)
+    yield conn
+    conn.close()
