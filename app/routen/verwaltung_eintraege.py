@@ -65,7 +65,7 @@ def tabelle(request: Request, db: DB, heute: HEUTE):
     basis = str(request.base_url).rstrip("/")
 
     def link(z: Zeile) -> str:
-        return f"{basis}/verwaltung/aufnahmen/{z.aufnahme_id}" if z.aufnahme_id else ""
+        return f"{basis}/verwaltung/aufnahmen/{z.aufnahme_id}" if z.aufnahme_id is not None else ""
 
     return Response(
         als_csv(ez, link),

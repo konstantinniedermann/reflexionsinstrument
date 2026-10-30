@@ -10,6 +10,7 @@ from collections.abc import Callable, Iterator
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import BinaryIO
 
 from app.aufnahmen import aufnahme_pfad
 from app.export import Exportzeile
@@ -28,7 +29,9 @@ _log = logging.getLogger(__name__)
 
 def person_ascii(anzeigename: str, konto_id: int) -> str:
     """Namensteil fuer Dateinamen im ZIP: nur `[a-z0-9-]`, hoechstens 30 Zeichen."""
-    text = unicodedata.normalize("NFKD", anzeigename.translate(_UMLAUTE))
+    text = unicodedata.normalize(
+        "NFKD", unicodedata.normalize("NFC", anzeigename).translate(_UMLAUTE)
+    )
     text = "".join(c for c in text if not unicodedata.combining(c)).lower()
     text = _NICHT_ERLAUBT.sub("-", text).strip("-")[:30].strip("-")
     return text or f"lehrperson-{konto_id}"
@@ -83,7 +86,7 @@ class _Sammler:
         return daten
 
 
-def _stuecke(quelle) -> Iterator[bytes]:
+def _stuecke(quelle: BinaryIO) -> Iterator[bytes]:
     while stueck := quelle.read(STUECK):
         yield stueck
 
@@ -125,4 +128,5 @@ def zip_strom(
     except OSError:
         # Ohne Namen und Pfade: sie sind personenbezogen verknuepfbar.
         _log.warning("Gesamtexport abgebrochen")
-        raise
+        # Ohne Ursache: sonst traegt die Fehlermeldung des Servers den Dateipfad.
+        raise RuntimeError("Gesamtexport abgebrochen") from None

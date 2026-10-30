@@ -30,6 +30,7 @@ def _eine(projektstart=START, **abweichungen):
 
 def test_person_ascii():
     assert person_ascii("Zoë Müller", 1) == "zoe-mueller"
+    assert person_ascii("Mu\u0308ller", 1) == "mueller"
     assert person_ascii("ÄRGER Straße", 1) == "aerger-strasse"
     assert person_ascii("../../x", 1) == "x"
     assert person_ascii("***", 7) == "lehrperson-7"
@@ -144,7 +145,11 @@ def test_zip_strom_lesefehler(tmp_path, monkeypatch, caplog):
         return echtes_open(pfad, *args, **kwargs)
 
     monkeypatch.setattr(builtins, "open", open_mit_fehler)
-    with caplog.at_level("WARNING"), pytest.raises(PermissionError):
+    with caplog.at_level("WARNING"), pytest.raises(RuntimeError) as fehler:
         b"".join(zip_strom([datei], _Tabelle()))
+    assert str(fehler.value) == "Gesamtexport abgebrochen"
+    assert datei.quelle.name not in str(fehler.value)
+    assert fehler.value.__suppress_context__ is True
+    assert fehler.value.__cause__ is None
     assert "Gesamtexport abgebrochen" in caplog.text
     assert datei.quelle.name not in caplog.text
