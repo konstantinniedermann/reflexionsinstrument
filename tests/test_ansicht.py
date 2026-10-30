@@ -53,12 +53,43 @@ def seiten_client(einstellungen):
 
     from app.db import hole_db
     from app.main import erstelle_app
-    from app.seiten_lehrperson import VORLAGEN, kontext_info, kontext_start
+    from app.seiten_lehrperson import VORLAGEN, kontext_info, kontext_runde, kontext_start
     from app.vorlagen import templates
     from app.zeit import hole_heute, lies_datum
 
     kontexte = {"start": kontext_start, "info": kontext_info}
     app = erstelle_app(einstellungen)
+
+    @app.get("/test-gast/runde/{runde_id}")
+    def test_gast_runde(
+        request: Request,
+        runde_id: int,
+        db: Annotated[sqlite3.Connection, Depends(hole_db)],
+        heute: Annotated[date, Depends(hole_heute)],
+    ):
+        ansicht = fuer_gast(heute, "Band Gast", ("Anmelden", "/"))
+        kontext = kontext_runde(db, ansicht, runde_id)
+        return templates.TemplateResponse(request, VORLAGEN["runde"], kontext)
+
+    @app.get("/test-meldung/runde/{runde_id}/{frage_id}")
+    def test_runde_meldung(
+        request: Request,
+        runde_id: int,
+        frage_id: int,
+        db: Annotated[sqlite3.Connection, Depends(hole_db)],
+        heute: Annotated[date, Depends(hole_heute)],
+    ):
+        ansicht = fuer_gast(heute, "Band Gast", ("Anmelden", "/"))
+        feld = f"antwort_{frage_id}"
+        kontext = kontext_runde(
+            db,
+            ansicht,
+            runde_id,
+            eingaben={feld: "Neu"},
+            fehler={feld: "Zu lang"},
+            meldung="Nicht gespeichert.",
+        )
+        return templates.TemplateResponse(request, VORLAGEN["runde"], kontext)
 
     @app.get("/test-gast/{seite}")
     def test_gast(
@@ -128,3 +159,32 @@ def test_vorschau_rechnet_mit_stichtag(seiten_client, db):
     assert app_links
     assert all(link.startswith("/verwaltung/vorschau") for link in app_links)
     assert "/lehrperson" not in text
+
+
+def test_gast_runde(seiten_client, db, lehrperson):
+    import testdaten
+
+    rid, (f1, _) = testdaten.lege_runde_an(db, "Runde Eins", "2026-11-23")
+    testdaten.lege_antwort_an(db, f1, lehrperson["id"], "Geheimer Text")
+    db.commit()
+    seiten_client.app.state.heute = lambda: date(2026, 11, 24)
+    text = seiten_client.get(f"/test-gast/runde/{rid}").text
+    assert 'name="csrf"' in text
+    assert f'action="/gast/runden/{rid}"' in text
+    assert "data-entwurf" not in text
+    assert "löschen" not in text
+    assert "Geheimer Text" not in text
+    assert "Zuletzt gespeichert" not in text
+
+
+def test_kontext_runde_eingaben_fehler_meldung(seiten_client, db):
+    import testdaten
+
+    rid, (f1, _) = testdaten.lege_runde_an(db, "Runde Eins", "2026-11-23")
+    db.commit()
+    seiten_client.app.state.heute = lambda: date(2026, 11, 24)
+    text = seiten_client.get(f"/test-meldung/runde/{rid}/{f1}").text
+    assert re.search(rf'name="antwort_{f1}"[^>]*>\s*Neu</textarea>', text)
+    assert f'aria-describedby="fehler-antwort_{f1}"' in text
+    assert re.search(rf'id="fehler-antwort_{f1}">Zu lang<', text)
+    assert re.search(r'role="status">Nicht gespeichert\.<', text)

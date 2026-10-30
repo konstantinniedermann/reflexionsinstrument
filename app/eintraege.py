@@ -19,7 +19,9 @@ def antworten_der_runde(
 ) -> dict[int, sqlite3.Row]:
     """Antworten des Kontos zu den Fragen der Runde, nach `frage_id`."""
     zeilen = db.execute(
-        "SELECT a.* FROM antworten a JOIN fragen f ON f.id = a.frage_id "
+        "SELECT a.*, au.dauer_sekunden AS aufnahme_dauer_sekunden FROM antworten a "
+        "JOIN fragen f ON f.id = a.frage_id "
+        "LEFT JOIN aufnahmen au ON au.id = a.aufnahme_id AND au.konto_id = a.konto_id "
         "WHERE a.konto_id = ? AND f.runde_id = ?",
         (konto_id, runde_id),
     ).fetchall()

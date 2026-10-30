@@ -1,0 +1,11 @@
+{% extends "lehrperson/_rahmen.html" %}
+{% block titel %}Löschen – {{ instrument_titel }}{% endblock %}
+{% block seite %}
+<h1>Löschen</h1>
+<form class="formular" method="post" action="{{ aktion }}">
+  {{ csrf_feld(request) }}
+  <p>{{ frage_text }}</p>
+  <button type="submit" class="knopf">Endgültig löschen</button>
+  <a class="knopf knopf--zweit" href="{{ zurueck }}">Abbrechen</a>
+</form>
+{% endblock %}

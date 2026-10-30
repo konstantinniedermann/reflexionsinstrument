@@ -187,3 +187,15 @@ def test_fremde_aufnahme_bleibt(db, lehrperson, zweite_lehrperson, runde, einste
     assert loesche_antworten_der_runde(db, lehrperson["id"], rid, verzeichnis) == 1
     assert (verzeichnis / name).exists()
     assert len(aufnahmen_von_eintraegen(db, [fremd])) == 1
+
+
+def test_antworten_mit_aufnahmedauer(db, lehrperson, runde, tmp_path):
+    rid, f1, f2, _ = runde
+    k = lehrperson["id"]
+    aufnahme = testdaten.lege_aufnahme_an(db, k, tmp_path / "a", dauer_sekunden=5)
+    testdaten.lege_antwort_an(db, f1, k, "mit", None, aufnahme)
+    testdaten.lege_antwort_an(db, f2, k, None, 3)
+    zeilen = antworten_der_runde(db, k, rid)
+    assert zeilen[f1]["aufnahme_dauer_sekunden"] == 5
+    assert zeilen[f1]["aufnahme_id"] == aufnahme
+    assert zeilen[f2]["aufnahme_dauer_sekunden"] is None

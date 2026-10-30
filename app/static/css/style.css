@@ -1055,6 +1055,43 @@ input[type="checkbox"] {
   max-width: 100%;
 }
 
+.formular textarea {
+  overflow-wrap: anywhere;
+}
+
+.feld__knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.feld__knoepfe .knopf {
+  min-height: 2.75rem;
+}
+
+.formular .feld__knoepfe .knopf {
+  width: auto;
+}
+
+.skala__wert span {
+  min-height: 2.75rem;
+}
+
+.keine-angabe {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: 2.75rem;
+  font-weight: 400;
+  font-size: 0.92rem;
+  color: var(--gedaempft);
+}
+
+.keine-angabe input {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
 /* Pilot: Aufnahmen (#17) */
 
 /* Ende #17 */
