@@ -39,8 +39,13 @@ async function freierPort() {
   return port;
 }
 
+// Fehler beim Starten eines Prozesses (z. B. falscher CHROME_PFAD); lässt wartende Schritte sofort scheitern.
+let startFehler = null;
+const CDP_ZEITLIMIT = 15000;
+
 async function warteBis(pruefung, text, versuche = 100) {
   for (let i = 0; i < versuche; i++) {
+    if (startFehler) throw startFehler;
     try {
       const wert = await pruefung();
       if (wert) return wert;
@@ -58,8 +63,9 @@ async function starteApp() {
     stdio: "ignore",
     detached: true, // eigene Prozessgruppe, damit auch uvicorn (Kindprozess von uv) beendet wird
   });
+  app.once("error", (e) => (startFehler = new Error(`App startet nicht: ${e.message}`)));
   basis = `http://127.0.0.1:${port}`;
-  await warteBis(async () => (await fetch(`${basis}/healthz`)).status === 200, "App antwortet nicht auf /healthz");
+  await warteBis(async () => (await fetch(`${basis}/healthz`, { signal: AbortSignal.timeout(2000) })).status === 200, "App antwortet nicht auf /healthz");
 }
 
 async function starteChrome() {
@@ -77,8 +83,9 @@ async function starteChrome() {
     ],
     { stdio: "ignore" },
   );
+  chrome.once("error", (e) => (startFehler = new Error(`Chrome startet nicht (${CHROME}): ${e.message}`)));
   const ziel = await warteBis(async () => {
-    const liste = await (await fetch(`http://127.0.0.1:${port}/json`)).json();
+    const liste = await (await fetch(`http://127.0.0.1:${port}/json`, { signal: AbortSignal.timeout(2000) })).json();
     return liste.find((t) => t.type === "page");
   }, "Chrome startet nicht");
   ws = new WebSocket(ziel.webSocketDebuggerUrl);
@@ -86,11 +93,18 @@ async function starteChrome() {
     ws.onopen = r;
     ws.onerror = f;
   });
+  ws.onclose = () => {
+    // Chrome beendet oder abgestürzt: alle wartenden Aufrufe scheitern lassen.
+    for (const [, { reject }] of offen) reject(new Error("Verbindung zu Chrome geschlossen"));
+    offen.clear();
+  };
   ws.onmessage = (m) => {
     const d = JSON.parse(m.data);
     if (d.id && offen.has(d.id)) {
-      offen.get(d.id)(d);
+      const { resolve, reject, method } = offen.get(d.id);
       offen.delete(d.id);
+      if (d.error) reject(new Error(`${method}: ${d.error.message}`));
+      else resolve(d);
       return;
     }
     ereignisse.push(d.method);
@@ -113,10 +127,24 @@ async function starteChrome() {
 }
 
 const cdp = (method, params = {}) =>
-  new Promise((r) => {
+  new Promise((resolve, reject) => {
     const id = ++nr;
-    offen.set(id, r);
-    ws.send(JSON.stringify({ id, method, params }));
+    const timer = setTimeout(() => {
+      offen.delete(id);
+      reject(new Error(`${method}: keine Antwort von Chrome nach ${CDP_ZEITLIMIT / 1000} s`));
+    }, CDP_ZEITLIMIT);
+    offen.set(id, {
+      method,
+      resolve: (d) => (clearTimeout(timer), resolve(d)),
+      reject: (e) => (clearTimeout(timer), reject(e)),
+    });
+    try {
+      ws.send(JSON.stringify({ id, method, params }));
+    } catch (e) {
+      offen.delete(id);
+      clearTimeout(timer);
+      reject(new Error(`${method}: ${e.message}`));
+    }
   });
 
 /** Wertet JavaScript im Seitenkontext aus und gibt das Ergebnis zurück. */
@@ -167,7 +195,8 @@ function keineFehlerSeit(stand, name) {
   pruefe(neu.length === 0, `keine Konsolenfehler und CSP-Verstösse: ${name}${neu.length ? ` (${neu.join("; ")})` : ""}`);
 }
 
-async function aufraeumen() {
+/** Beendet Chrome und die App (inkl. Kindprozesse von uv). Synchron, damit es auch in Signal-Handlern geht. */
+function aufraeumen() {
   try {
     ws?.close();
   } catch {}
@@ -177,6 +206,13 @@ async function aufraeumen() {
       process.kill(-app.pid);
     } catch {}
   }
+}
+
+for (const signal of ["SIGINT", "SIGTERM"]) {
+  process.on(signal, () => {
+    aufraeumen();
+    process.exit(1);
+  });
 }
 
 // ---------------------------------------------------------------- Abläufe
@@ -223,7 +259,7 @@ try {
   abbruch = true;
   console.log(`FEHLER ${e.stack || e}`);
 } finally {
-  await aufraeumen();
+  aufraeumen();
 }
 console.log(`\n${ok} bestanden, ${probleme.length} fehlgeschlagen${abbruch ? ", Abbruch durch Ausnahme" : ""}`);
 process.exit(probleme.length || abbruch ? 1 : 0);
