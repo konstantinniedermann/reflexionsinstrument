@@ -3,11 +3,11 @@ from datetime import date
 from io import BytesIO
 
 import pytest
+import testdaten
 from conftest import als_lehrperson, als_leitung, csrf_von
 
 from app import aufnahmen
 from app.db import transaktion
-import testdaten
 
 WEBM = b"\x1aE\xdf\xa3" + bytes(60)
 JETZT = "2026-11-24T10:00:00Z"
