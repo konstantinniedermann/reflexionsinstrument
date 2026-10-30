@@ -214,11 +214,12 @@ Die Zahlen N kommen aus der Datenbank (`count(*)`), nur als Anzahl, ohne Namen. 
 ```python
 @dataclass(frozen=True)
 class Textvorlage:
-    schluessel: str      # Schlüssel in der Tabelle texte
-    bezeichnung: str     # Überschrift in der Maske, z. B. «Hinweis im Tagebuch»
-    ort: str             # wo er erscheint, in einfacher Sprache
-    bereich: str         # "allgemein" (Begrüssung) oder "hinweise"
-    vorschlag: str       # gilt, solange die Auftraggeberin nichts gespeichert hat
+    schluessel: str  # Schlüssel in der Tabelle texte
+    bezeichnung: str  # Überschrift in der Maske, z. B. «Hinweis im Tagebuch»
+    ort: str  # wo er erscheint, in einfacher Sprache
+    bereich: str  # "allgemein" (Begrüssung) oder "hinweise"
+    vorschlag: str  # gilt, solange die Auftraggeberin nichts gespeichert hat
+
 
 REGISTER: dict[str, Textvorlage]
 ```
