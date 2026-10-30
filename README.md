@@ -45,6 +45,8 @@ Auf fly.io, als `appuser`, damit die Datenbankdateien nicht `root` gehören:
 fly ssh console --pty -C "setpriv --reuid=appuser --regid=appuser --init-groups python -m app.kommandos auftraggeberin-anlegen --benutzername … --anzeigename …"
 ```
 
+Ein Anzeigename mit Leerzeichen steht in einfachen Anführungszeichen (`--anzeigename 'Vorname Nachname'`). Die Maschine schläft, wenn niemand die App benutzt, und `fly ssh` weckt sie nicht. Meldet es «has no started VMs», zuerst `fly machine start <ID>` (ID aus `fly status`) oder die Seite im Browser öffnen.
+
 Hat die Auftraggeberin ihr Passwort vergessen, setzt dieses Kommando ein neues (gleich aufgerufen, auf fly.io mit demselben `setpriv`-Vorspann); alle bestehenden Anmeldungen dieses Kontos enden dabei:
 
 ```
