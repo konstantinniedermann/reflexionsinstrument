@@ -1137,9 +1137,12 @@ input[type="checkbox"] {
 
 .bereich--eintraege .eintrag__vorschau,
 .bereich--eintraege .eintrag__titel {
-  font-weight: 600;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.bereich--eintraege .eintrag__titel {
+  font-weight: 600;
 }
 
 .skala__wert input[aria-invalid="true"] + span {
