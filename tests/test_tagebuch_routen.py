@@ -138,6 +138,24 @@ def test_neu_laden_legt_nicht_doppelt_an(client, db, welt):
     assert len(_eintraege(db)) == 1
 
 
+def test_doppelt_abgesendet_legt_einmal_an(client, db, welt):
+    pfad = f"{NEU}/leitfrage/{welt['l1']}"
+    csrf = csrf_von(client, pfad)
+    antworten = [client.post(pfad, data={"csrf": csrf, "text": "Gleich"}) for _ in range(2)]
+    (eintrag,) = _eintraege(db)
+    for antwort in antworten:
+        assert antwort.status_code == 303
+        assert antwort.headers["location"] == (
+            f"/lehrperson/tagebuch/{eintrag['id']}?erledigt=gespeichert"
+        )
+
+
+def test_anderer_text_legt_zwei_an(client, db, welt):
+    assert _anlegen(client, f"{NEU}/frei", "Erster").status_code == 303
+    assert _anlegen(client, f"{NEU}/frei", "Zweiter").status_code == 303
+    assert [e["text"] for e in _eintraege(db)] == ["Erster", "Zweiter"]
+
+
 def test_langer_text_mit_umlauten_passt(client, db, welt):
     text = "Schöne Grüsse, äöü. " * 1000
     assert _anlegen(client, f"{NEU}/frei", text).status_code == 303

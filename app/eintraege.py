@@ -167,6 +167,8 @@ def rundenstand(db: sqlite3.Connection, konto_id: int) -> dict[int, Stand]:
 # --- Tagebuch ---
 
 TAGEBUCH_ARTEN = ("frei", "leitfragen", "impuls", "aufnahme")
+# Gleicher Eintrag innert dieser Zeit gilt als doppelt abgesendetes Formular.
+DOPPELT_SEKUNDEN = 10
 
 
 def lies_tagebuchtext(text: str | None, pflicht: bool = True) -> str | None:
@@ -193,6 +195,8 @@ def lege_tagebucheintrag_an(
 ) -> int:
     """Legt einen Eintrag an; der Bezugstext wird kopiert. Gibt die neue `id` zurueck.
 
+    Hat das Konto in den letzten `DOPPELT_SEKUNDEN` schon einen Eintrag gleicher Art mit
+    gleichem Bezug und gleichem Text angelegt, entsteht keiner; zurueck kommt dessen `id`.
     Eine Kombination, die nicht zur Art passt, ist ein Programmierfehler (`ValueError`);
     ein ungueltiger Text wirft `InhaltFehler`.
     """
@@ -204,7 +208,25 @@ def lege_tagebucheintrag_an(
         raise ValueError(f"Bezug passt nicht zur Art {art!r}")
     text = lies_tagebuchtext(text, pflicht=art != "aufnahme")
     jetzt = jetzt or zeit.zeitstempel()
+    impuls_id = impuls["id"] if impuls else None
+    leitfrage_id = leitfrage["id"] if leitfrage else None
     with transaktion(db):
+        doppelt = db.execute(
+            "SELECT id FROM tagebucheintraege WHERE konto_id = ? AND art = ? AND text IS ? "
+            "AND impuls_id IS ? AND leitfrage_id IS ? AND aufnahme_id IS ? AND erstellt >= ? "
+            "ORDER BY id DESC LIMIT 1",
+            (
+                konto_id,
+                art,
+                text,
+                impuls_id,
+                leitfrage_id,
+                aufnahme_id,
+                zeit.sekunden_vorher(jetzt, DOPPELT_SEKUNDEN),
+            ),
+        ).fetchone()
+        if doppelt is not None:
+            return doppelt["id"]
         return db.execute(
             "INSERT INTO tagebucheintraege (konto_id, art, text, impuls_id, impuls_text, "
             "leitfrage_id, leitfrage_text, aufnahme_id, erstellt, geaendert) "
@@ -213,9 +235,9 @@ def lege_tagebucheintrag_an(
                 konto_id,
                 art,
                 text,
-                impuls["id"] if impuls else None,
+                impuls_id,
                 impuls["text"] if impuls else None,
-                leitfrage["id"] if leitfrage else None,
+                leitfrage_id,
                 leitfrage["text"] if leitfrage else None,
                 aufnahme_id,
                 jetzt,

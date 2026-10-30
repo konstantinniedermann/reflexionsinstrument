@@ -1,7 +1,7 @@
 """Datum in Zuerich. Einziges Modul, das die Uhr kennt."""
 
 import re
-from datetime import UTC, date, datetime
+from datetime import UTC, date, datetime, timedelta
 from typing import NamedTuple
 from zoneinfo import ZoneInfo
 
@@ -34,10 +34,18 @@ def zeitstempel(jetzt: datetime | None = None) -> str:
     return jetzt.astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
 
 
+def _utc(zeitstempel: str) -> datetime:
+    return datetime.strptime(zeitstempel, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
+
+
+def sekunden_vorher(zeitstempel_text: str, sekunden: int) -> str:
+    """Zeitstempel `sekunden` vor `zeitstempel_text`; gerechnet in UTC, nicht in Ortszeit."""
+    return zeitstempel(_utc(zeitstempel_text) - timedelta(seconds=sekunden))
+
+
 def lokal(zeitstempel: str) -> datetime:
     """UTC-Text aus der Datenbank als zeitzonenbewusste Zeit in Europe/Zurich."""
-    utc = datetime.strptime(zeitstempel, "%Y-%m-%dT%H:%M:%SZ").replace(tzinfo=UTC)
-    return utc.astimezone(ZEITZONE)
+    return _utc(zeitstempel).astimezone(ZEITZONE)
 
 
 def lies_datum(text: str) -> date | None:

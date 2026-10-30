@@ -103,3 +103,9 @@ def test_zeitpunkt_kurz():
 def test_zeitstempel():
     assert zeitstempel(datetime(2026, 11, 23, 18, 40, 5, tzinfo=ZEITZONE)) == "2026-11-23T17:40:05Z"
     assert re.fullmatch(r"\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ", zeitstempel())
+
+
+def test_sekunden_vorher():
+    assert zeit.sekunden_vorher("2026-12-01T08:00:05Z", 10) == "2026-12-01T07:59:55Z"
+    # Ueber die Umstellung auf Sommerzeit (01:00 UTC) rechnet es in UTC, nicht in Ortszeit.
+    assert zeit.sekunden_vorher("2026-03-29T01:00:05Z", 10) == "2026-03-29T00:59:55Z"

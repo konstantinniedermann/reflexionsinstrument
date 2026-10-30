@@ -90,6 +90,36 @@ def test_leer_nichts_angelegt(db, lehrperson):
     assert anzahl_tagebucheintraege(db, lehrperson["id"]) == 0
 
 
+def test_doppelt_abgesendet_legt_einmal_an(db, lehrperson):
+    k = lehrperson["id"]
+    eid = lege_tagebucheintrag_an(db, k, "frei", "Ein Tag", jetzt="2026-12-01T08:00:00Z")
+    # Zweites Absenden desselben Formulars innert 10 Sekunden, Text gleich nach Normalisierung.
+    nochmal = lege_tagebucheintrag_an(db, k, "frei", " Ein Tag\r\n", jetzt="2026-12-01T08:00:10Z")
+    assert nochmal == eid
+    assert anzahl_tagebucheintraege(db, k) == 1
+
+
+def test_gleicher_text_spaeter_neu(db, lehrperson):
+    k = lehrperson["id"]
+    eid = lege_tagebucheintrag_an(db, k, "frei", "Ein Tag", jetzt="2026-12-01T08:00:00Z")
+    assert lege_tagebucheintrag_an(db, k, "frei", "Ein Tag", jetzt="2026-12-01T08:00:11Z") != eid
+    assert anzahl_tagebucheintraege(db, k) == 2
+
+
+def test_doppelt_nur_bei_gleichem_text_bezug_und_konto(db, lehrperson, zweite_lehrperson):
+    k = lehrperson["id"]
+    eins, zwei = _leitfrage(db, "Eins"), _leitfrage(db, "Zwei")
+    ids = {
+        lege_tagebucheintrag_an(db, k, "leitfragen", "Text", leitfrage=eins, jetzt=JETZT),
+        lege_tagebucheintrag_an(db, k, "leitfragen", "Text", leitfrage=zwei, jetzt=JETZT),
+        lege_tagebucheintrag_an(db, k, "leitfragen", "Anders", leitfrage=eins, jetzt=JETZT),
+        lege_tagebucheintrag_an(db, k, "frei", "Text", jetzt=JETZT),
+        lege_tagebucheintrag_an(db, k, "impuls", "Text", impuls=_impuls(db), jetzt=JETZT),
+        lege_tagebucheintrag_an(db, zweite_lehrperson["id"], "frei", "Text", jetzt=JETZT),
+    }
+    assert len(ids) == 6
+
+
 def test_transaktion_des_aufrufers(db, lehrperson):
     with pytest.raises(RuntimeError), transaktion(db):
         lege_tagebucheintrag_an(db, lehrperson["id"], "frei", "Text")
