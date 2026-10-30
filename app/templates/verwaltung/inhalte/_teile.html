@@ -1,0 +1,11 @@
+{% macro formatier_hilfe() -%}
+<p class="hilfe">Leerzeile = neuer Absatz · Zeile mit «- » am Anfang = Aufzählung · **Wort** = fett</p>
+{%- endmacro %}
+
+{% macro fehlerkopf(fehler) -%}
+{% if fehler %}<p class="hinweis fehler" role="alert">Bitte prüfe die markierten Felder.</p>{% endif %}
+{%- endmacro %}
+
+{% macro feldfehler(fehler, feld) -%}
+{% if fehler.get(feld) %}<p class="fehler" id="fehler-{{ feld }}">{{ fehler[feld] }}</p>{% endif %}
+{%- endmacro %}

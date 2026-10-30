@@ -1,5 +1,6 @@
 """Jinja2-Templates, eigenes Modul, damit Router-Module sie ohne Zirkelimport nutzen."""
 
+import sqlite3
 from datetime import date
 from pathlib import Path
 
@@ -7,10 +8,30 @@ from fastapi.templating import Jinja2Templates
 from starlette.requests import Request
 
 from app.csrf import csrf_feld
+from app.db import verbinde
 from app.formatierung import formatiere
+from app.inhalte import STANDARD_TITEL, lies_titel
 from app.zeit import datum_kurz, zeitplan
 
-templates = Jinja2Templates(directory=Path(__file__).parent / "templates")
+
+def instrument_titel(request: Request) -> dict[str, str]:
+    """Titel des Instruments fuer jede Seite, auch Fehlerseiten: darf nie selbst scheitern."""
+    titel = STANDARD_TITEL
+    try:
+        conn = verbinde(request.app.state.einstellungen.db_pfad)
+        try:
+            titel = lies_titel(conn)
+        finally:
+            conn.close()
+    except (AttributeError, sqlite3.Error):
+        pass
+    request.state.instrument_titel = titel
+    return {"instrument_titel": titel}
+
+
+templates = Jinja2Templates(
+    directory=Path(__file__).parent / "templates", context_processors=[instrument_titel]
+)
 
 
 def konto_von(request: Request):
@@ -33,3 +54,10 @@ def datum_filter(wert: date | str | None, mit_jahr: bool = True) -> str:
 templates.env.filters["formatiert"] = formatiere
 templates.env.filters["datum"] = datum_filter
 templates.env.globals["zeitplan"] = zeitplan
+
+
+def zahl(anzahl: int, einzahl: str, mehrzahl: str) -> str:
+    return f"{anzahl} {einzahl if anzahl == 1 else mehrzahl}"
+
+
+templates.env.globals["zahl"] = zahl

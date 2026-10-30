@@ -1,0 +1,44 @@
+{% extends "verwaltung/rahmen.html" %}
+{% from "verwaltung/inhalte/_teile.html" import formatier_hilfe, fehlerkopf, feldfehler %}
+{% block titel %}Allgemein – {{ instrument_titel }}{% endblock %}
+{% block inhalt %}
+<p><a class="zurueck" href="/verwaltung/inhalte">‹ Inhalte</a></p>
+<h1>Allgemein</h1>
+{% if meldung %}
+<p class="hinweis" role="status">{{ meldung }}</p>
+{% endif %}
+<section class="karte" id="begruessung-anzeige">
+  <h2>So erscheint die Begrüssung</h2>
+  <div class="formatiert">{{ stand.inhalt | formatiert }}</div>
+</section>
+
+<section class="karte">
+  <form method="post" action="/verwaltung/inhalte/allgemein" class="formular">
+    {{ csrf_feld(request) }}
+    {{ fehlerkopf(fehler) }}
+    <div class="feld">
+      <label for="titel">Titel</label>
+      <input type="text" id="titel" name="titel" value="{{ werte.titel }}" maxlength="60"
+             autocomplete="off"{% if fehler.titel %} aria-describedby="fehler-titel"{% endif %} />
+      <p class="hilfe">Erscheint oben auf jeder Seite. Höchstens 60 Zeichen.</p>
+      {{ feldfehler(fehler, "titel") }}
+    </div>
+    <div class="feld">
+      <div class="feld__kopf">
+        <label for="begruessung">Begrüssung</label>
+        {% if not stand.bestaetigt %}<span class="marke">Vorschlag, noch nicht von dir bestätigt</span>{% endif %}
+      </div>
+      <textarea id="begruessung" name="begruessung" rows="12"{% if fehler.begruessung %} aria-describedby="fehler-begruessung"{% endif %}>{{ werte.begruessung }}</textarea>
+      {{ formatier_hilfe() }}
+      {{ feldfehler(fehler, "begruessung") }}
+    </div>
+    <div class="feld">
+      <label for="projektstart">Erster Tag für die Lehrpersonen</label>
+      <input type="date" id="projektstart" name="projektstart" value="{{ werte.projektstart }}"{% if fehler.projektstart %} aria-describedby="fehler-projektstart"{% endif %} />
+      <p class="hilfe">Daraus ergibt sich, in welcher Woche ein Eintrag entstanden ist. Die Daten der Runden und Impulse ändern sich dabei nicht.</p>
+      {{ feldfehler(fehler, "projektstart") }}
+    </div>
+    <button type="submit" class="knopf">Speichern</button>
+  </form>
+</section>
+{% endblock %}

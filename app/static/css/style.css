@@ -907,3 +907,65 @@ textarea:focus {
 .karte > .hilfe {
   margin-top: 1rem;
 }
+
+/* Pilot: Eingabemaske */
+
+input[type="text"],
+input[type="date"] {
+  width: 100%;
+  min-width: 0;
+  min-height: 2.75rem;
+  padding: 0.5rem 0.85rem;
+  border: 1px solid var(--linie);
+  border-radius: 10px;
+  background: var(--karte);
+  color: var(--tinte);
+  font: inherit;
+}
+
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+input[type="text"]:focus,
+input[type="date"]:focus {
+  outline: 2px solid var(--akzent);
+  outline-offset: 0;
+  border-color: var(--akzent);
+}
+
+.formatiert {
+  overflow-wrap: anywhere;
+}
+
+.formatiert p,
+.formatiert ul {
+  margin: 0 0 0.75rem;
+}
+
+.formatiert ul {
+  padding-left: 1.25rem;
+}
+
+.formatiert > :last-child {
+  margin-bottom: 0;
+}
+
+.feld__kopf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem 0.75rem;
+}
+
+.karte__text {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.karte > h2:first-child {
+  margin-top: 0;
+}

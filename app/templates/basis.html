@@ -4,13 +4,13 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="color-scheme" content="light dark" />
-    <title>{% block titel %}Reflexionsinstrument{% endblock %}</title>
+    <title>{% block titel %}{{ instrument_titel }}{% endblock %}</title>
     <link rel="stylesheet" href="/static/css/style.css" />
   </head>
   <body>
     {% set konto = konto_von(request) %}
     <header class="seitenkopf">
-      <span class="seitenkopf__titel">Reflexionsinstrument</span>
+      <span class="seitenkopf__titel">{{ instrument_titel }}</span>
       <div class="seitenkopf__rechts">
         {% block kopf_rechts %}
         {% if konto %}

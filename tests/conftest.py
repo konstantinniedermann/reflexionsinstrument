@@ -85,3 +85,16 @@ def db(einstellungen, client):
     conn = verbinde(einstellungen.db_pfad)
     yield conn
     conn.close()
+
+
+def als_leitung(client, auftraggeberin):
+    assert (
+        anmelden(client, auftraggeberin["benutzername"], auftraggeberin["passwort"]).status_code
+        == 303
+    )
+    return client
+
+
+def als_lehrperson(client, lehrperson):
+    assert anmelden(client, lehrperson["benutzername"], lehrperson["passwort"]).status_code == 303
+    return client

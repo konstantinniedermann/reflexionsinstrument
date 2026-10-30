@@ -21,7 +21,7 @@ from app.konten import (
 )
 from app.sitzung import braucht_auftraggeberin
 from app.typen import Id
-from app.vorlagen import templates
+from app.vorlagen import templates, zahl
 
 router = APIRouter(prefix="/verwaltung", dependencies=[Depends(braucht_auftraggeberin)])
 
@@ -36,10 +36,6 @@ def _lehrperson_oder_404(db: sqlite3.Connection, konto_id: int) -> Konto:
     if konto is None or konto.rolle != "lehrperson":
         raise HTTPException(404)
     return konto
-
-
-def _zahl(anzahl: int, einzahl: str, mehrzahl: str) -> str:
-    return f"{anzahl} {einzahl if anzahl == 1 else mehrzahl}"
 
 
 def _zugaenge_seite(request: Request, db: sqlite3.Connection, status=200, **kontext):
@@ -120,9 +116,9 @@ def loeschen_formular(request: Request, konto_id: Id, db: DB):
     konto = _lehrperson_oder_404(db, konto_id)
     zahlen = zaehle_daten(db, konto.id)
     folgen = [
-        _zahl(zahlen["antworten"], "Antwort", "Antworten"),
-        _zahl(zahlen["tagebucheintraege"], "Tagebucheintrag", "Tagebucheinträge"),
-        _zahl(zahlen["aufnahmen"], "Aufnahme", "Aufnahmen"),
+        zahl(zahlen["antworten"], "Antwort", "Antworten"),
+        zahl(zahlen["tagebucheintraege"], "Tagebucheintrag", "Tagebucheinträge"),
+        zahl(zahlen["aufnahmen"], "Aufnahme", "Aufnahmen"),
     ]
     return templates.TemplateResponse(
         request,

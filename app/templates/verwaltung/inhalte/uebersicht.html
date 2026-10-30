@@ -1,0 +1,67 @@
+{% extends "verwaltung/rahmen.html" %}
+{% block titel %}Inhalte – {{ instrument_titel }}{% endblock %}
+{% macro offen() %}<span class="marke marke--offen">Noch offen</span>{% endmacro %}
+{% block inhalt %}
+<h1>Inhalte</h1>
+<p class="gedaempft">Hier legst du fest, was die Lehrpersonen im Instrument sehen.</p>
+{# #19: Vorschau-Link #}
+<ul class="liste-ohne">
+  <li>
+    <a class="karte karte--link" id="bereich-allgemein" href="/verwaltung/inhalte/allgemein">
+      <span class="karte__text">
+        <strong>Allgemein</strong>
+        <span class="gedaempft">Titel, Begrüssung, erster Tag</span>
+        <span class="gedaempft">{% if projektstart %}Erster Tag: {{ projektstart | datum }}{% else %}Erster Tag noch nicht festgelegt{% endif %}</span>
+      </span>
+      {% if not projektstart or begruessung_offen %}{{ offen() }}{% endif %}
+    </a>
+  </li>
+  <li>
+    <a class="karte karte--link" id="bereich-info" href="/verwaltung/inhalte/info">
+      <span class="karte__text">
+        <strong>Infoblock</strong>
+        <span class="gedaempft">Abschnitte, die über den Runden stehen</span>
+        <span class="gedaempft">{{ zahl(zahlen.info_abschnitte, "Abschnitt", "Abschnitte") }}</span>
+      </span>
+    </a>
+  </li>
+  <li>
+    <a class="karte karte--link" id="bereich-runden" href="/verwaltung/inhalte/runden">
+      <span class="karte__text">
+        <strong>Runden</strong>
+        <span class="gedaempft">Fallbeispiele und Fragen</span>
+        <span class="gedaempft">{{ zahl(zahlen.runden, "Runde", "Runden") }}, {{ zahl(zahlen.fragen, "Frage", "Fragen") }}</span>
+      </span>
+      {% if zahlen.runden == 0 or zahlen.runden_ohne_fragen > 0 %}{{ offen() }}{% endif %}
+    </a>
+  </li>
+  <li>
+    <a class="karte karte--link" id="bereich-leitfragen" href="/verwaltung/inhalte/leitfragen">
+      <span class="karte__text">
+        <strong>Leitfragen</strong>
+        <span class="gedaempft">Fragen fürs Tagebuch</span>
+        <span class="gedaempft">{{ zahl(zahlen.leitfragen, "Leitfrage", "Leitfragen") }}</span>
+      </span>
+    </a>
+  </li>
+  <li>
+    <a class="karte karte--link" id="bereich-impulse" href="/verwaltung/inhalte/impulse">
+      <span class="karte__text">
+        <strong>Impulse</strong>
+        <span class="gedaempft">Anregungen für zwischendurch</span>
+        <span class="gedaempft">{{ zahl(zahlen.impulse, "Impuls", "Impulse") }}</span>
+      </span>
+    </a>
+  </li>
+  <li>
+    <a class="karte karte--link" id="bereich-hinweise" href="/verwaltung/inhalte/hinweise">
+      <span class="karte__text">
+        <strong>Hinweise</strong>
+        <span class="gedaempft">Texte zu Datenschutz und Aufnahmen</span>
+        <span class="gedaempft">{{ hinweise_bestaetigt }} von {{ hinweise_gesamt }} Hinweisen bestätigt</span>
+      </span>
+      {% if hinweise_bestaetigt < hinweise_gesamt %}{{ offen() }}{% endif %}
+    </a>
+  </li>
+</ul>
+{% endblock %}

@@ -1,20 +1,12 @@
 import re
 
 import pytest
-from conftest import anmelden, csrf_von
+from conftest import als_leitung, anmelden, csrf_von
 from fastapi.testclient import TestClient
 
 from app.db import verbinde
 
 MUSTER_VORSCHLAG = re.compile(r"[a-z]{4}-[a-z]{4}-[a-z]{4}-\d{2}")
-
-
-def als_leitung(client, auftraggeberin):
-    assert (
-        anmelden(client, auftraggeberin["benutzername"], auftraggeberin["passwort"]).status_code
-        == 303
-    )
-    return client
 
 
 def neues_fenster(client):
@@ -37,6 +29,7 @@ def test_uebersicht(client, auftraggeberin):
     antwort = client.get("/verwaltung")
     assert antwort.status_code == 200
     assert 'href="/verwaltung/zugaenge"' in antwort.text
+    assert 'href="/verwaltung/inhalte"' in antwort.text
     for name in ("Inhalte", "Einträge", "Vorschau"):
         assert name in antwort.text
     assert "folgt" in antwort.text
