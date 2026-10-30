@@ -51,17 +51,18 @@ flowchart LR
 
 ## Bausteine
 
-**Muss**: ohne das kein Pilot. **Soll**: geplant, fällt nur bei Zeitnot weg. **Kann**: nur wenn alles andere steht.
+**Muss**: ohne das kein Pilot. **Soll**: geplant, fällt nur bei Zeitnot weg. «Kann»-Punkte gibt es bewusst keine; was nicht Muss oder Soll ist, steht unter «Bewusst nicht gebaut».
 
 ### Anmeldung und Konten
 
 | Prio | Anforderung | Herkunft |
 |---|---|---|
-| Muss | Login-Seite mit Benutzername und Passwort, getrennt für Lehrpersonen und die Auftraggeberin | A |
+| Muss | Eine Login-Seite mit Benutzername und Passwort. Jede Person hat ihr eigenes Konto, die Rolle hängt am Konto. | A |
 | Muss | Eine Lehrperson sieht ausschliesslich ihre eigenen Einträge, auch nicht über direkte Adressen | A |
 | Muss | Die Auftraggeberin legt Konten an (Anzeigename, Benutzername, Passwort), setzt Passwörter zurück und löscht Konten samt Einträgen | C: Sie verteilt die Zugänge bei der Einführung selbst. Löschen braucht es für die Testkonten. |
 | Muss | «Angemeldet bleiben» (etwa 30 Tage) als Häkchen beim Login, standardmässig an. Abmelden ist jederzeit möglich. | C: Das Tagebuch lebt vom Moment. Das Häkchen lässt sich auf gemeinsam genutzten Schulcomputern abwählen. |
 | Muss | Schutz gegen das Durchprobieren von Passwörtern | C |
+| Muss | Passwort zurücksetzen oder Konto löschen beendet alle Sitzungen dieses Kontos, auf allen Geräten | C: für vergessene Anmeldungen auf gemeinsam genutzten Geräten |
 | — | Kein «Passwort vergessen» per E-Mail. Die Auftraggeberin setzt es zurück. | C: Es werden keine E-Mail-Adressen gespeichert |
 
 ### Runden mit Fallbeispiel und Fragen
@@ -106,7 +107,6 @@ flowchart LR
 | Muss | Formulare für alle Inhalte oben, inklusive Reihenfolge und Freischaltdaten | A: «Sie soll die Texte selbst bearbeiten und einfügen» |
 | Muss | Vorschau: So sieht es eine Lehrperson, auch für noch nicht freigeschaltete Runden. Nur für die Auftraggeberin. | A |
 | Muss | Projektstart festlegen (daraus ergibt sich die Woche jedes Eintrags) | C: wird für den Export gebraucht |
-| Muss | Muss **vor** dem Rest fertig sein, damit sie ihre Inhalte erfassen kann | C: Zeitplan |
 
 ### Einträge lesen und Export
 
@@ -164,8 +164,8 @@ Schätzung von Claude:
 | Mo 2.11. | Zusammenfassung dieser Anforderungen an die Auftraggeberin | Koschi |
 | Fr 6.11. | Rückmeldung zur Zusammenfassung, Input zu Stil und Farben | Auftraggeberin |
 | Mi 11.11. | Login, Konten und Eingabemaske online. Sie kann Inhalte erfassen. | Claude |
-| Fr 13.11. | Vorschau ihrer Inhalte. Sie öffnet den Link einmal im Schul-WLAN und auf einem Schulgerät. | Claude, Auftraggeberin |
-| Mo 16.11. | Alles Übrige fertig, Testlauf kann beginnen | Claude |
+| Fr 13.11. | Lehrpersonen-Ansicht (noch ohne Aufnahmen) und Vorschau ihrer Inhalte. Sie öffnet den Link einmal im Schul-WLAN und auf einem Schulgerät. | Claude, Auftraggeberin |
+| Mo 16.11. | Sprachaufnahmen, Ansicht der Einträge, Export fertig. Testlauf kann beginnen. | Claude |
 | Fr 20.11. | Inhalte erfasst, Testlauf gemacht (inklusive Aufnahme auf einem Schulgerät), Testdaten gelöscht, Konten der Lehrpersonen angelegt | Auftraggeberin |
 | Mo 23.11. | Start | alle |
 | Fr 18.12. | Ende der Laufzeit | |

@@ -1,6 +1,6 @@
 # Reflexionsinstrument für Lehrpersonen
 
-Eine einfache Anwendung, mit der Lehrpersonen zu mehreren Zeitpunkten ein Reflexionsinstrument ausfüllen und ein Tagebuch führen. Jede Lehrperson sieht nur ihre eigenen Einträge. Die Auswertung erfolgt pseudonymisiert durch die Projektverantwortliche.
+Eine einfache Anwendung, mit der Lehrpersonen zu mehreren Zeitpunkten ein Reflexionsinstrument ausfüllen und ein Tagebuch führen. Jede Lehrperson sieht nur ihre eigenen Einträge. Die Projektverantwortliche sieht alle Einträge mit Namen, und die Lehrpersonen wissen das vorher.
 
 ## Stand
 
@@ -25,4 +25,4 @@ Beides braucht nur Node (ab Version 22) und keine Dependencies. Die E2E-Prüfung
 ## Leitplanken
 
 - Einfachheit vor Funktionsumfang, auf dem Handy bedienbar
-- Datenschutz: minimal personenbezogene Daten, Pseudonyme, Hosting bevorzugt in der Schweiz oder der EU
+- Datenschutz: minimal personenbezogene Daten, keine Kontaktdaten, Hosting in der EU (Frankfurt), Löschung nach Projektende

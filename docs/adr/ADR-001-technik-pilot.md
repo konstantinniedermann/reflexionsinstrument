@@ -27,7 +27,7 @@ Aus den [Anforderungen](../anforderungen.md) ergeben sich Punkte, die der statis
 - **Python mit FastAPI**, Seiten serverseitig mit **Jinja2** gerendert, wenig JavaScript (Sprachaufnahme, Aufklappen, Vorschau)
 - **SQLite** (in Python eingebaut) als Datenbank, Aufnahmen als Dateien, beides auf einem persistenten Volume
 - **Hosting auf fly.io**, Region Frankfurt (EU), eine kleine Maschine, neutrale Adresse unter `fly.dev` ohne Personennamen
-- Passwörter mit **bcrypt**, Sitzung als signiertes Cookie (**itsdangerous**), Formulare und Uploads mit **python-multipart**
+- Passwörter mit **bcrypt**, Sitzung als signiertes Cookie (**itsdangerous**) mit einer Sitzungsversion pro Konto in der Datenbank, Formulare und Uploads mit **python-multipart**
 - Sprachaufnahme über die **MediaRecorder-Schnittstelle** des Browsers, gespeichert im Format, das der Browser liefert (WebM/Opus oder MP4/AAC); keine Umwandlung auf dem Server
 - Export als **CSV** im Excel-Format (Semikolon, UTF-8 mit BOM), mit Schutz vor Formel-Injection wie im Prototyp
 - Gestaltung (CSS) aus dem Prototyp übernehmen. Der Prototyp selbst bleibt als Referenz bestehen, bis die Pilot-Version läuft.
@@ -48,5 +48,6 @@ Dependencies (von Koschi freigegeben): `fastapi`, `uvicorn`, `jinja2`, `python-m
 - Daten in der EU, aber bei einem US-Anbieter. Die Auftraggeberin klärt die Zulässigkeit selbst.
 - fly.io legt automatisch tägliche Sicherungskopien des Volumes an. Die Löschung am Schluss muss diese mit einschliessen (#8).
 - Bei angehaltener Maschine dauert der erste Aufruf wenige Sekunden länger. Für den Pilot ist das in Ordnung. Stört es, bleibt eine Maschine dauerhaft an (Mehrkosten gering).
+- Ein signiertes Cookie allein lässt sich nicht widerrufen. Deshalb trägt es die Sitzungsversion des Kontos. Passwort zurücksetzen oder Konto löschen erhöht die Version und beendet so alle Sitzungen, auch auf vergessenen Schulcomputern.
 - Ein Volume hängt an genau einer Maschine. Die App läuft deshalb mit einer einzigen Maschine, das reicht für 5 Personen.
 - Neue Prüfungen: pytest für Logik und Zugriffsschutz, E2E im Browser in Handy-Breite wie beim Prototyp.
