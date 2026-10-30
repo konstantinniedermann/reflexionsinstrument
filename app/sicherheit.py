@@ -14,6 +14,7 @@ def sicherheits_header(produktion: bool) -> dict[str, str]:
         "Referrer-Policy": "no-referrer",
         "Permissions-Policy": "microphone=(self), camera=(), geolocation=()",
         "X-Frame-Options": "DENY",
+        "X-Robots-Tag": "noindex, nofollow",
     }
     if produktion:
         header["Strict-Transport-Security"] = "max-age=31536000"

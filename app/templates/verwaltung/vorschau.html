@@ -1,0 +1,26 @@
+{% extends "verwaltung/rahmen.html" %}
+{% block titel %}Vorschau – {{ instrument_titel }}{% endblock %}
+{% block inhalt %}
+<p><a class="zurueck" href="/verwaltung">‹ Verwaltung</a></p>
+<h1>Vorschau</h1>
+<p class="gedaempft">So sieht es eine Lehrperson an einem bestimmten Tag. In der Vorschau wird nichts gespeichert.</p>
+<ul class="liste-ohne">
+  {% for t in tage %}
+  <li>
+    <a class="karte karte--link" href="/verwaltung/vorschau/{{ t.datum.isoformat() }}">
+      <strong>{% if t.ist_heute %}Heute, {{ t.datum | datum }}{% elif t.woche %}Woche {{ t.woche }}, ab {{ t.datum | datum }}{% else %}Ab {{ t.datum | datum }}{% endif %}{% if t.titel %}: {{ t.titel | join(" · ") }}{% endif %}</strong>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+<form class="vorschau-tag" method="get" action="/verwaltung/vorschau">
+  <label for="vorschau-am">Anderer Tag</label>
+  <input id="vorschau-am" type="date" name="am" required min="2020-01-01" max="2099-12-31">
+  <button class="knopf" type="submit">Ansehen</button>
+</form>
+<section class="karte vorschau-gast">
+  <h2>Ansicht ohne Konto</h2>
+  <p>So sehen es Gäste, heute. Diese Ansicht ist öffentlich: Wer die Adresse kennt, sieht die schon freigeschalteten Runden und Impulse mit Fallbeispielen und Fragen.</p>
+  <p><a href="/gast">Ansicht ohne Konto ansehen</a></p>
+</section>
+{% endblock %}

@@ -95,6 +95,42 @@ Letzte Auswertung: 30.10.2026 (15 Einträge, alle abgeschlossen)
 
 **Einschätzung:** Kosmetik. Trigger: wie oben.
 
+### 2026-10-30 — Tests von Gast und Vorschau: Lücken
+
+**Thema:** Tests
+
+**Fundort:** `tests/test_vorschau.py`, `tests/test_gast.py`, `tests/test_ohne_speichern.py`, `tests/e2e-pilot.mjs` (`ablaufGast`)
+
+**Beobachtung:** (1) `test_post_runde_nicht_sichtbar_404` schickt keine ungültige Eingabe (Skala `7`) an eine noch nicht sichtbare Runde; genau der Fall «404, nie 400» ist nur durch die Reihenfolge im Code gesichert. (2) `test_gast_speichern_verworfen` prüft bei Skala `7` nur den Status 400, nicht den Fehlertext am Feld (`test_vorschau` prüft ihn). (3) Nach der Freischaltung prüft `test_gast_nicht_freigeschaltet` nur GET, keinen POST auf dieselbe Runde. (4) `test_seiten_nutzen_lesende_verbindung` prüft, dass `hole_db_lesend` im Abhängigkeitsbaum steht, nicht dass es vor einer schreibenden Abhängigkeit aufgelöst wird. (5) Im E2E wird das Label «Diese Runde ansehen» nicht geprüft (Auswahl per `href`), es gibt keinen Dunkel-Screenshot der Gast-Startseite, und die Tage rechnet Node aus der eigenen Uhr: Ein Lauf über Mitternacht würde an «Woche 3» scheitern.
+
+**Ursprung:** Task-Reviews und Gesamt-Review zu #19
+
+**Einschätzung:** Verhalten heute korrekt, nur Absicherung gegen Rückschritte. (1) bis (3) je eine Zeile.
+
+### 2026-10-30 — Tests von Gast und Vorschau: Lesbarkeit
+
+**Thema:** Tests
+
+**Fundort:** `app/routen/ohne_speichern.py`, `tests/test_vorschau.py`, `tests/test_gast.py`, `tests/test_sicherheit.py`
+
+**Beobachtung:** Lokale Variable `ANSICHT` in Grossbuchstaben und untypisiertes `db` in den Helfern `neu`/`neu_pruefen`; in `test_vorschau.py` dieselbe Adresse zweimal abgefragt, `Path("app/templates/verwaltung")` relativ (scheitert, wenn pytest nicht im Repo-Wurzelverzeichnis läuft), schwer lesbare Regex in `test_auswahlseite`, `isinstance`-Absicherung beim Rückgabewert von `testdaten.lege_runde_an`; Regex `ZIEL` in `test_gast.py` doppelt zu `test_vorschau.py`; `test_robots_header` als Schleife statt `parametrize`; `test_datenschutz_nennt_gast_ansicht` prüft den Testnamen nur als Text.
+
+**Ursprung:** Task-Reviews und Gesamt-Review zu #19
+
+**Einschätzung:** Kosmetik, beim nächsten Anfassen der Dateien mitnehmen.
+
+### 2026-10-30 — Gast und Vorschau: Randfälle im Betrieb
+
+**Thema:** Betrieb
+
+**Fundort:** `app/routen/ohne_speichern.py` (`hole_db_lesend`), `app/templates/verwaltung/inhalte/runde.html`, Plan #19 «Nach dem Merge»
+
+**Beobachtung:** (1) Alle Routen antworten auf `HEAD` mit 405 (FastAPI, schon vor #19); `curl -I` für den Nachweis nach dem Deploy zeigt darum 405, die Header kommen trotzdem. Besser `curl -s -D - -o /dev/null`. (2) `PRAGMA query_only` bleibt an der Verbindung; heute folgenlos, weil `hole_db` pro Anfrage eine eigene Verbindung öffnet und schliesst. Ein späterer Verbindungspool müsste das zurücksetzen. (3) Der Link «Diese Runde ansehen» nimmt das rohe `freischaltdatum`; läge es ausserhalb 2020–2099, endete er in 404. Die Eingabemaske prüft das beim Speichern schon.
+
+**Ursprung:** Gesamt-Review und cas-reviewer zu #19
+
+**Einschätzung:** Keine Folge im Pilot. (2) als Kommentar festhalten, falls je ein Pool kommt.
+
 ## Ausgewertet am 30.10.2026
 
 Alle 15 Einträge gegen `main` (Stand nach #29) geprüft, Laufzeit-Aussagen gegen GitHub Actions, fly.io und eine lokal gestartete App gemessen. Bilanz: 1 mitgemacht, 2 an bestehende Issues gehängt, 2 erledigt, 9 abgehakt mit Trigger, 1 verworfen.

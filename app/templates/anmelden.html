@@ -25,5 +25,11 @@
   </form>
   <p class="hilfe">Den Zugang erhältst du von der Projektleitung.</p>
 </section>
-{% block gast %}{% endblock %}
+{% block gast %}
+<section class="karte karte--gast">
+  <p>Du möchtest das Instrument nur ansehen?</p>
+  <a class="knopf knopf--zweit" href="/gast">Ansehen ohne Konto</a>
+  <p class="hilfe">Ohne Anmeldung. Es wird nichts gespeichert.</p>
+</section>
+{% endblock %}
 {% endblock %}

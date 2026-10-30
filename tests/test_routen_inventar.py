@@ -8,10 +8,27 @@ from fastapi.routing import APIRoute, iter_route_contexts
 
 from app.main import erstelle_app
 
-# Ohne Anmeldung erreichbar. #19 ergaenzt `/gast...`; neue Ausnahmen nur mit Begruendung.
-OEFFENTLICH = {"/", "/healthz"}
-# Nur zum Anmelden selbst gedacht: laeuft ohne Sitzung, aber mit CSRF-Schutz.
-OHNE_SITZUNG = {"/anmelden"}
+# Gast-Ansicht (#19): ohne Anmeldung erreichbar, speichert nichts (Datenbank nur lesend,
+# Nachweis in test_gast.py). Jede /gast-Route steht einzeln hier; eine neue braucht eine
+# bewusste Ergaenzung mit Begruendung im Pull Request.
+GAST_GET = {
+    "/gast",
+    "/gast/info",
+    "/gast/runden/1",
+    "/gast/tagebuch/neu",
+    "/gast/tagebuch/neu/frei",
+    "/gast/tagebuch/neu/impuls/1",
+    "/gast/tagebuch/neu/leitfrage/1",
+}
+GAST_POST = {
+    "/gast/runden/1",
+    "/gast/tagebuch/neu/frei",
+    "/gast/tagebuch/neu/impuls/1",
+    "/gast/tagebuch/neu/leitfrage/1",
+}
+OEFFENTLICH = {"/", "/healthz"} | GAST_GET
+# Laeuft ohne Sitzung, aber mit CSRF-Schutz: Anmelden und die Formulare der Gast-Ansicht.
+OHNE_SITZUNG = {"/anmelden"} | GAST_POST
 
 
 def inventar(einstellungen, methode):
@@ -66,6 +83,11 @@ def test_einziger_mount_ist_static(einstellungen):
         f"Weitere Mounts oder Routen ohne Inventar: {andere}. "
         "Sie waeren ohne Anmeldung erreichbar, bis das Inventar sie pruefen kann."
     )
+
+
+def test_gast_liste_deckt_sich_mit_den_routen(einstellungen):
+    assert {p for p in inventar(einstellungen, "GET") if p.startswith("/gast")} == GAST_GET
+    assert {p for p in inventar(einstellungen, "POST") if p.startswith("/gast")} == GAST_POST
 
 
 def test_get_routen_brauchen_anmeldung(client, einstellungen):
