@@ -11,8 +11,9 @@
 {% endif %}
 {% if zeilen %}
 <div class="hinweis formatiert">{{ hinweis | formatiert }}</div>
-<form class="formular" method="post" action="{{ ansicht.url('/runden/' ~ runde.id) }}">
+<form class="formular" method="post" action="{{ ansicht.url('/runden/' ~ runde.id) }}"{% if entwurf %} data-entwurf="{{ entwurf }}"{% endif %}{% if entwurf_verwerfen %} data-entwurf-verwerfen="{{ entwurf_verwerfen }}"{% endif %}>
   {{ csrf_feld(request) }}
+  {% include "lehrperson/_entwurf_hinweis.html" %}
   {% for zeile in zeilen %}
   {% set frage = zeile.frage %}
   {% if frage.typ == "skala" %}

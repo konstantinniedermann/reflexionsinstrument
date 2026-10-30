@@ -1,4 +1,7 @@
 {% extends "basis.html" %}
+{% block kopf_zusatz %}
+{% if ansicht.speichert %}<script src="/static/js/entwurf.js" defer></script>{% endif %}
+{% endblock %}
 {% block kopf_rechts %}
 {{ super() }}
 {% if ansicht.ausgang %}

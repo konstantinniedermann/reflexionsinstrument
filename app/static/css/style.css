@@ -1019,6 +1019,23 @@ input[type="checkbox"] {
   color: var(--akzent);
 }
 
+.hinweis--entwurf {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem 0.9rem;
+  color: var(--tinte);
+}
+
+.formular .hinweis--entwurf .knopf {
+  width: auto;
+  min-height: 2.75rem;
+}
+
+.hinweis--entwurf[hidden] {
+  display: none;
+}
+
 .meldung {
   margin: 0;
   padding: 0.7rem 0.9rem;

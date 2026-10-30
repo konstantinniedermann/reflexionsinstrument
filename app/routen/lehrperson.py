@@ -219,7 +219,13 @@ def _eigener_eintrag(db, ansicht: Ansicht, eintrag_id: int):
 @router.get("/tagebuch/{eintrag_id}")
 def eintrag_anzeigen(request: Request, db: DB, ansicht: ANSICHT, eintrag_id: Id):
     eintrag = _eigener_eintrag(db, ansicht, eintrag_id)
-    kontext = kontext_tagebuch_eintrag(db, ansicht, eintrag, meldung=_meldung(request))
+    kontext = kontext_tagebuch_eintrag(
+        db,
+        ansicht,
+        eintrag,
+        meldung=_meldung(request),
+        neu_angelegt=request.query_params.get("erledigt") == "gespeichert",
+    )
     return templates.TemplateResponse(request, VORLAGEN["tagebuch_eintrag"], kontext)
 
 

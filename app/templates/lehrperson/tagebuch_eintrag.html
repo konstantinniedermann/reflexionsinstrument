@@ -16,8 +16,9 @@
 {% include "_aufnahme.html" %}
 {# #17: Aufnahme ersetzen oder löschen #}
 {% endif %}
-<form class="formular" method="post" action="{{ ansicht.url('/tagebuch/' ~ eintrag.id) }}">
+<form class="formular" method="post" action="{{ ansicht.url('/tagebuch/' ~ eintrag.id) }}"{% if entwurf %} data-entwurf="{{ entwurf }}"{% endif %}{% if entwurf_verwerfen %} data-entwurf-verwerfen="{{ entwurf_verwerfen }}"{% endif %}>
   {{ csrf_feld(request) }}
+  {% include "lehrperson/_entwurf_hinweis.html" %}
   <div class="feld">
     <label for="text">{% if eintrag.art == "aufnahme" %}Notiz zur Aufnahme (freiwillig){% else %}Dein Eintrag{% endif %}</label>
     {% if fehler %}<p class="fehler" id="fehler-text">{{ fehler }}</p>{% endif %}

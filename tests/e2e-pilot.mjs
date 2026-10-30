@@ -332,7 +332,7 @@ async function ablaufLehrperson() {
   muss((await ueberschrift()) === titelRunde1, "Runde 1: Titel");
   const rundenPfad = await pfad();
   pruefe(!!(await js("document.querySelector('.fall')")), "Runde 1: Fallbeispiel steht da");
-  pruefe(await knoepfeOk("main .knopf"), "Runde 1: Knöpfe ganz im Bild und mindestens 44 px hoch");
+  pruefe(await knoepfeOk("main .knopf:not([data-entwurf-hinweis] .knopf)"), "Runde 1: Knöpfe ganz im Bild und mindestens 44 px hoch");
   await keinUeberlauf("Runde 1 390 px");
   await screenshot("24-lp-runde");
   const erstesFeld = await js("document.querySelector('textarea').id");
@@ -435,6 +435,48 @@ async function ablaufLehrperson() {
   await oeffne("/lehrperson/eintraege");
   pruefe((await js("document.querySelectorAll('a.karte--eintrag').length")) === 3, "Meine Einträge: nach dem Löschen drei Karten");
   keineFehlerSeit(stand, "Tagebuch und Meine Einträge");
+
+  // 6. Entwurfsschutz: tippen, ohne Speichern neu laden
+  stand = merke();
+  const entwurfSchluessel = () => js('Object.keys(sessionStorage).filter((k) => k.startsWith("entwurf:")).length');
+  const hinweisSichtbar = () => js('(() => { const h = document.querySelector("[data-entwurf-hinweis]"); return !!h && !h.hidden && h.getBoundingClientRect().height > 0; })()');
+  await oeffne(rundenPfad);
+  const gespeichert = await js(`document.getElementById(${JSON.stringify(erstesFeld)}).value`);
+  pruefe(!(await hinweisSichtbar()), "Entwurf: ohne Änderung kein Hinweis");
+  const entwurfText = "Noch nicht gespeichert: ein Gedanke zum Fall.";
+  await tippe(`#${erstesFeld}`, entwurfText);
+  pruefe((await entwurfSchluessel()) === 1, "Entwurf: beim Tippen liegt ein Entwurf im Tab");
+  await oeffne(rundenPfad);
+  muss((await js(`document.getElementById(${JSON.stringify(erstesFeld)}).value`)) === entwurfText, "Entwurf: nach neuem Laden steht der getippte Text im Feld");
+  pruefe(await hinweisSichtbar(), "Entwurf: Hinweis ist sichtbar");
+  pruefe((await text()).includes("Nicht gespeicherter Text wurde wiederhergestellt."), "Entwurf: Text des Hinweises");
+  pruefe(await knoepfeOk("[data-entwurf-hinweis] button"), "Entwurf: «Verwerfen» ganz im Bild und tippbar hoch");
+  await keinUeberlauf("Entwurf 390 px");
+  await screenshot("32-lp-entwurf");
+  await klick("[data-entwurf-hinweis] button");
+  pruefe((await js(`document.getElementById(${JSON.stringify(erstesFeld)}).value`)) === gespeichert, "Entwurf: «Verwerfen» setzt das Feld auf den gespeicherten Stand");
+  pruefe(!(await hinweisSichtbar()), "Entwurf: nach «Verwerfen» kein Hinweis");
+  pruefe((await entwurfSchluessel()) === 0, "Entwurf: nach «Verwerfen» kein Entwurf im Tab");
+  await oeffne(rundenPfad);
+  pruefe(!(await hinweisSichtbar()) && (await js(`document.getElementById(${JSON.stringify(erstesFeld)}).value`)) === gespeichert, "Entwurf: nach neuem Laden bleibt der gespeicherte Stand");
+  // Speichern räumt den Entwurf weg
+  await tippe(`#${erstesFeld}`, `${gespeichert} Ergänzung.`);
+  await sende("form.formular > button[type=submit]");
+  pruefe((await entwurfSchluessel()) === 0, "Entwurf: nach dem Speichern kein Entwurf im Tab");
+  // Neuer Tagebucheintrag: nach dem Anlegen ist der Entwurf des Formulars «neu» weg
+  await oeffne("/lehrperson/tagebuch/neu/frei");
+  await tippe("#text", "Ein Eintrag, der gleich gespeichert wird.");
+  pruefe((await entwurfSchluessel()) === 1, "Entwurf: neuer Eintrag legt einen Entwurf an");
+  await sende(SPEICHERN);
+  pruefe((await entwurfSchluessel()) === 0, "Entwurf: nach dem Anlegen kein Entwurf im Tab");
+  // Abmelden räumt alles weg
+  await oeffne(rundenPfad);
+  await tippe(`#${erstesFeld}`, entwurfText);
+  pruefe((await entwurfSchluessel()) === 1, "Entwurf: vor dem Abmelden liegt ein Entwurf im Tab");
+  await sende(abmelden);
+  pruefe((await entwurfSchluessel()) === 0, "Entwurf: nach «Abmelden» kein Entwurf im Tab");
+  await meldeAn("lp.e2e.eins", pwEins);
+  keineFehlerSeit(stand, "Entwurfsschutz");
 
   // Dunkel und Computer
   stand = merke();

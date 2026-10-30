@@ -60,3 +60,8 @@ def test_vorlagen_und_css_laden_nichts_von_aussen():
         text = namensraum.sub("", datei.read_text(encoding="utf-8"))
         treffer = verboten.search(text)
         assert treffer is None, f"{datei.relative_to(PROJEKT)}: {treffer.group(0)!r}"
+
+
+def test_datenschutz_nennt_entwurf():
+    text = (PROJEKT / "docs" / "datenschutz.md").read_text(encoding="utf-8")
+    assert "sessionStorage" in text

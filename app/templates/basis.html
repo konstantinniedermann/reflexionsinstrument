@@ -6,6 +6,7 @@
     <meta name="color-scheme" content="light dark" />
     <title>{% block titel %}{{ instrument_titel }}{% endblock %}</title>
     <link rel="stylesheet" href="/static/css/style.css" />
+    {% block kopf_zusatz %}{% endblock %}
   </head>
   <body>
     {% set konto = konto_von(request) %}

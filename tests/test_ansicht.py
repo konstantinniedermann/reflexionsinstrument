@@ -211,6 +211,7 @@ def test_gast_runde(seiten_client, db, lehrperson):
     assert 'name="csrf"' in text
     assert f'action="/gast/runden/{rid}"' in text
     assert "data-entwurf" not in text
+    assert "entwurf.js" not in text
     assert "löschen" not in text
     assert "Geheimer Text" not in text
     assert "Zuletzt gespeichert" not in text
@@ -245,6 +246,7 @@ def test_gast_tagebuch(seiten_client, db):
     assert 'action="/gast/tagebuch/neu/impuls/' in formular
     assert 'name="csrf"' in formular
     assert "data-entwurf" not in formular
+    assert "entwurf.js" not in formular
     assert "Impuls Eins" in formular
 
 

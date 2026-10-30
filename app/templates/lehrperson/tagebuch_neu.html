@@ -11,8 +11,9 @@
 </section>
 {% endif %}
 <div class="hinweis formatiert">{{ hinweis | formatiert }}</div>
-<form class="formular" method="post" action="{{ aktion }}">
+<form class="formular" method="post" action="{{ aktion }}"{% if entwurf %} data-entwurf="{{ entwurf }}"{% endif %}{% if entwurf_verwerfen %} data-entwurf-verwerfen="{{ entwurf_verwerfen }}"{% endif %}>
   {{ csrf_feld(request) }}
+  {% include "lehrperson/_entwurf_hinweis.html" %}
   <div class="feld">
     <label for="text">Dein Eintrag</label>
     {% if fehler %}<p class="fehler" id="fehler-text">{{ fehler }}</p>{% endif %}

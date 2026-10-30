@@ -41,6 +41,11 @@ VORLAGEN: dict[str, str] = {
 MELDUNG_FEHLER = "Bitte prüfe die markierten Felder."
 
 
+def _entwurf(ansicht: Ansicht, formular: str) -> str | None:
+    """Schlüssel für den Entwurfsschutz im Browser; nur im Modus Lehrperson (sonst kein Schutz)."""
+    return f"{ansicht.konto_id}:{formular}" if ansicht.speichert else None
+
+
 def _marke(stand: Stand | None) -> tuple[str, str] | None:
     """Text und Klasse der Marke einer Runde; ohne Stand oder ohne Fragen keine Marke."""
     if stand is None or stand.fragen == 0:
@@ -122,6 +127,7 @@ def kontext_runde(
         "antworten": antworten,
         "zuletzt": max((a["geaendert"] for a in antworten.values()), default=None),
         "hinweis": lies_text(db, "hinweis_tagebuch"),
+        "entwurf": _entwurf(ansicht, f"runde-{runde_id}"),
     }
 
 
@@ -183,6 +189,7 @@ def kontext_tagebuch_neu(
         "text": text or "",
         "fehler": fehler.get("text"),
         "hinweis": lies_text(db, "hinweis_tagebuch"),
+        "entwurf": _entwurf(ansicht, "neu-frei" if bezug is None else f"neu-{art}-{bezug['id']}"),
     }
 
 
@@ -194,6 +201,15 @@ ARTEN_EINTRAG = {
 }
 
 
+def _neu_schluessel(eintrag: sqlite3.Row) -> str:
+    """Formular «neu», aus dem der Eintrag entstand (aus Art und Bezug, nicht aus der Adresse)."""
+    if eintrag["art"] == "impuls" and eintrag["impuls_id"] is not None:
+        return f"neu-impuls-{eintrag['impuls_id']}"
+    if eintrag["art"] == "leitfragen" and eintrag["leitfrage_id"] is not None:
+        return f"neu-leitfrage-{eintrag['leitfrage_id']}"
+    return "neu-frei"
+
+
 def kontext_tagebuch_eintrag(
     db: sqlite3.Connection,
     ansicht: Ansicht,
@@ -201,8 +217,12 @@ def kontext_tagebuch_eintrag(
     text: str | None = None,
     fehler: dict[str, str] | None = None,
     meldung: str | None = None,
+    neu_angelegt: bool = False,
 ) -> dict:
-    """Ein eigener Eintrag; `eintrag` kommt aus `hole_tagebucheintrag` (nur eigene)."""
+    """Ein eigener Eintrag; `eintrag` kommt aus `hole_tagebucheintrag` (nur eigene).
+
+    `neu_angelegt`: die Seite folgt direkt auf das Anlegen; dann gehört der Entwurf des
+    Formulars «neu» zu Art und Bezug dieses Eintrags und kann verworfen werden."""
     fehler = fehler or {}
     aufnahme = None
     if eintrag["aufnahme_id"] is not None:
@@ -221,6 +241,14 @@ def kontext_tagebuch_eintrag(
         "text": (eintrag["text"] or "") if text is None else text,
         "fehler": fehler.get("text"),
         "geaendert": eintrag["geaendert"] != eintrag["erstellt"],
+        "entwurf": _entwurf(ansicht, f"tagebuch-{eintrag['id']}"),
+        "entwurf_verwerfen": (
+            _entwurf(ansicht, _neu_schluessel(eintrag))
+            if neu_angelegt
+            and eintrag["art"] != "aufnahme"
+            and eintrag["geaendert"] == eintrag["erstellt"]
+            else None
+        ),
     }
 
 
