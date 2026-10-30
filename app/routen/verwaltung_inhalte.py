@@ -14,15 +14,20 @@ from app.eingaben import Gesperrt, InhaltFehler
 from app.inhalte import (
     NichtGefunden,
     aendere_frage,
+    aendere_impuls,
     aendere_info,
     aendere_leitfrage,
     aendere_runde,
+    datum_vorschlag_impuls,
     datum_vorschlag_runde,
     frage,
     fragen,
+    impuls,
+    impulse,
     info_abschnitt,
     info_abschnitte,
     lege_frage_an,
+    lege_impuls_an,
     lege_info_an,
     lege_leitfrage_an,
     lege_runde_an,
@@ -31,6 +36,7 @@ from app.inhalte import (
     lies_projektstart,
     lies_titel,
     loesche_frage,
+    loesche_impuls,
     loesche_info,
     loesche_leitfrage,
     loesche_runde,
@@ -43,7 +49,7 @@ from app.inhalte import (
     zaehle_inhalte,
 )
 from app.sitzung import braucht_auftraggeberin
-from app.texte import lies_text, lies_texte, lies_textstand
+from app.texte import REGISTER, lies_text, lies_texte, lies_textstand, speichere_text
 from app.typen import Id
 from app.vorlagen import templates, zahl
 from app.zeit import hole_heute, zeitplan
@@ -750,3 +756,191 @@ def leitfrage_loeschen(leitfrage_id: Id, db: DB):
     with _vorhanden():
         loesche_leitfrage(db, leitfrage_id)
     return _weiter(LEITFRAGEN, "geloescht")
+
+
+# ---------- Impulse ----------
+
+IMPULSE = f"{INHALTE}/impulse"
+
+
+@router.get("/impulse")
+def impulse_liste(request: Request, db: DB, heute: HEUTE):
+    alle = impulse(db)
+    tage = [i["sichtbar_ab"] for i in alle]
+    return templates.TemplateResponse(
+        request,
+        "verwaltung/inhalte/impulse.html",
+        {
+            "impulse": alle,
+            "doppelte_tage": {t for t in tage if tage.count(t) > 1},
+            "projektstart": lies_projektstart(db),
+            "heute": heute,
+            "meldung": _meldung(request),
+        },
+    )
+
+
+def _impuls_formular(
+    request: Request, ueberschrift, aktion, abbrechen, werte, fehler, status=200, eintraege=0
+):
+    return templates.TemplateResponse(
+        request,
+        "verwaltung/inhalte/formular_impuls.html",
+        {
+            "ueberschrift": ueberschrift,
+            "aktion": aktion,
+            "abbrechen": abbrechen,
+            "werte": werte,
+            "fehler": fehler or {},
+            "anzahl_eintraege": eintraege,
+        },
+        status_code=status,
+    )
+
+
+def _neuer_impuls_seite(request: Request, db, werte=None, fehler=None, status=200):
+    if werte is None:
+        vorschlag = datum_vorschlag_impuls(db)
+        werte = {"text": "", "sichtbar_ab": "" if vorschlag is None else vorschlag.isoformat()}
+    return _impuls_formular(request, "Neuer Impuls", IMPULSE, IMPULSE, werte, fehler, status)
+
+
+@router.get("/impulse/neu")
+def impuls_neu(request: Request, db: DB):
+    return _neuer_impuls_seite(request, db)
+
+
+@router.post("/impulse", dependencies=[Depends(pruefe_csrf)])
+def impuls_anlegen(
+    request: Request,
+    db: DB,
+    text: Annotated[str, Form()] = "",
+    sichtbar_ab: Annotated[str, Form()] = "",
+):
+    try:
+        impuls_id = lege_impuls_an(db, text, sichtbar_ab)
+    except InhaltFehler as fehler:
+        werte = {"text": text, "sichtbar_ab": sichtbar_ab}
+        return _neuer_impuls_seite(request, db, werte, {fehler.feld: fehler.meldung}, 400)
+    return _weiter(IMPULSE, "angelegt", f"impuls-{impuls_id}")
+
+
+def _impuls_bearbeiten_seite(request: Request, zeile, werte=None, fehler=None, status=200):
+    werte = werte or {"text": zeile["text"], "sichtbar_ab": zeile["sichtbar_ab"]}
+    return _impuls_formular(
+        request,
+        "Impuls bearbeiten",
+        f"{IMPULSE}/{zeile['id']}",
+        f"{IMPULSE}#impuls-{zeile['id']}",
+        werte,
+        fehler,
+        status,
+        zeile["anzahl_eintraege"],
+    )
+
+
+@router.get("/impulse/{impuls_id}")
+def impuls_bearbeiten(request: Request, impuls_id: Id, db: DB):
+    return _impuls_bearbeiten_seite(request, _oder_404(impuls(db, impuls_id)))
+
+
+@router.post("/impulse/{impuls_id}", dependencies=[Depends(pruefe_csrf)])
+def impuls_speichern(
+    request: Request,
+    impuls_id: Id,
+    db: DB,
+    text: Annotated[str, Form()] = "",
+    sichtbar_ab: Annotated[str, Form()] = "",
+):
+    zeile = _oder_404(impuls(db, impuls_id))
+    try:
+        with _vorhanden():
+            aendere_impuls(db, impuls_id, text, sichtbar_ab)
+    except InhaltFehler as fehler:
+        werte = {"text": text, "sichtbar_ab": sichtbar_ab}
+        return _impuls_bearbeiten_seite(request, zeile, werte, {fehler.feld: fehler.meldung}, 400)
+    return _weiter(IMPULSE, "gespeichert", f"impuls-{impuls_id}")
+
+
+def _impuls_loeschen_seite(request: Request, zeile):
+    kontext = {
+        "ueberschrift": "Impuls löschen",
+        "frage_text": f"Impuls ‹{zeile['text']}› löschen?",
+        "aktion": f"{IMPULSE}/{zeile['id']}/loeschen",
+        "zurueck": f"{IMPULSE}#impuls-{zeile['id']}",
+    }
+    if zeile["anzahl_eintraege"]:
+        kontext["folgen"] = (
+            "Einträge, die sich darauf beziehen, bleiben erhalten. "
+            "Sie behalten den Text, den die Lehrperson damals gesehen hat."
+        )
+    return _loeschen_seite(request, **kontext)
+
+
+@router.get("/impulse/{impuls_id}/loeschen")
+def impuls_loeschen_seite(request: Request, impuls_id: Id, db: DB):
+    return _impuls_loeschen_seite(request, _oder_404(impuls(db, impuls_id)))
+
+
+@router.post("/impulse/{impuls_id}/loeschen", dependencies=[Depends(pruefe_csrf)])
+def impuls_loeschen(impuls_id: Id, db: DB):
+    _oder_404(impuls(db, impuls_id))
+    with _vorhanden():
+        loesche_impuls(db, impuls_id)
+    return _weiter(IMPULSE, "geloescht")
+
+
+# ---------- Hinweise ----------
+
+HINWEISE = f"{INHALTE}/hinweise"
+
+
+def _hinweis_stand(db: sqlite3.Connection, schluessel: str):
+    """Nur Hinweise aus dem Register; die Begruessung hat ihre Seite unter «Allgemein»."""
+    vorlage = REGISTER.get(schluessel)
+    if vorlage is None or vorlage.bereich != "hinweise":
+        raise HTTPException(404)
+    return lies_textstand(db, schluessel)
+
+
+@router.get("/hinweise")
+def hinweise_liste(request: Request, db: DB):
+    return templates.TemplateResponse(
+        request,
+        "verwaltung/inhalte/hinweise.html",
+        {"hinweise": lies_texte(db, "hinweise"), "meldung": _meldung(request)},
+    )
+
+
+def _hinweis_seite(request: Request, stand, werte=None, fehler=None, status=200):
+    return templates.TemplateResponse(
+        request,
+        "verwaltung/inhalte/formular_hinweis.html",
+        {
+            "stand": stand,
+            "werte": werte or {"inhalt": stand.inhalt},
+            "fehler": fehler or {},
+            "aktion": f"{HINWEISE}/{stand.vorlage.schluessel}",
+            "abbrechen": f"{HINWEISE}#hinweis-{stand.vorlage.schluessel}",
+        },
+        status_code=status,
+    )
+
+
+@router.get("/hinweise/{schluessel}")
+def hinweis_bearbeiten(request: Request, schluessel: str, db: DB):
+    return _hinweis_seite(request, _hinweis_stand(db, schluessel))
+
+
+@router.post("/hinweise/{schluessel}", dependencies=[Depends(pruefe_csrf)])
+def hinweis_speichern(
+    request: Request, schluessel: str, db: DB, inhalt: Annotated[str, Form()] = ""
+):
+    stand = _hinweis_stand(db, schluessel)
+    try:
+        speichere_text(db, schluessel, inhalt)
+    except InhaltFehler as fehler:
+        return _hinweis_seite(
+            request, stand, {"inhalt": inhalt}, {fehler.feld: fehler.meldung}, 400
+        )
+    return _weiter(HINWEISE, "gespeichert", f"hinweis-{schluessel}")

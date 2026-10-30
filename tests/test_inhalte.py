@@ -10,15 +10,20 @@ from app.eingaben import Gesperrt, InhaltFehler, kurzer_text
 from app.inhalte import (
     NichtGefunden,
     aendere_frage,
+    aendere_impuls,
     aendere_info,
     aendere_leitfrage,
     aendere_runde,
+    datum_vorschlag_impuls,
     datum_vorschlag_runde,
     frage,
     fragen,
+    impuls,
+    impulse,
     info_abschnitt,
     info_abschnitte,
     lege_frage_an,
+    lege_impuls_an,
     lege_info_an,
     lege_leitfrage_an,
     lege_runde_an,
@@ -27,6 +32,7 @@ from app.inhalte import (
     lies_projektstart,
     lies_titel,
     loesche_frage,
+    loesche_impuls,
     loesche_info,
     loesche_leitfrage,
     loesche_runde,
@@ -503,3 +509,59 @@ def test_leitfrage_mit_eintrag_loeschen(db):
     assert zeile["leitfrage_id"] is None
     assert zeile["leitfrage_text"] == "Alt"
     assert leitfragen(db) == []
+
+
+# ---------- Impulse ----------
+
+
+def test_impulse_nach_datum(db):
+    a = lege_impuls_an(db, "A", "2026-12-07")
+    b = lege_impuls_an(db, "B", "2026-11-23")
+    c = lege_impuls_an(db, "C", "2026-11-23")
+    assert [i["id"] for i in impulse(db)] == [b, c, a]
+    assert impuls(db, a)["anzahl_eintraege"] == 0
+    assert impuls(db, 999) is None
+
+
+def test_datum_vorschlag_impuls(db):
+    assert datum_vorschlag_impuls(db) is None
+    db.execute("INSERT INTO einstellungen (schluessel, wert) VALUES ('projektstart', '2026-11-23')")
+    assert datum_vorschlag_impuls(db) == date(2026, 11, 23)
+    lege_impuls_an(db, "A", "2026-11-30")
+    assert datum_vorschlag_impuls(db) == date(2026, 12, 7)
+
+
+def test_impuls_ungueltig(db):
+    with pytest.raises(InhaltFehler) as fehler:
+        lege_impuls_an(db, " ", "2026-11-23")
+    assert (fehler.value.feld, fehler.value.meldung) == ("text", "Bitte einen Impuls eingeben.")
+    with pytest.raises(InhaltFehler) as fehler:
+        lege_impuls_an(db, "x" * 501, "2026-11-23")
+    assert fehler.value.feld == "text"
+    for datum in ("2026-11-31", ""):
+        with pytest.raises(InhaltFehler) as fehler:
+            lege_impuls_an(db, "Text", datum)
+        assert fehler.value.feld == "sichtbar_ab"
+    iid = lege_impuls_an(db, "a\nb", "2026-11-23")
+    assert impuls(db, iid)["text"] == "a b"
+    with pytest.raises(InhaltFehler):
+        aendere_impuls(db, iid, "", "2026-11-23")
+    with pytest.raises(NichtGefunden):
+        aendere_impuls(db, 999, "x", "2026-11-23")
+    with pytest.raises(NichtGefunden):
+        loesche_impuls(db, 999)
+
+
+def test_impuls_mit_eintrag_aendern_und_loeschen(db):
+    iid = lege_impuls_an(db, "Alt", "2026-11-23")
+    eid = lege_eintrag_an(db, _konto(db), art="impuls", impuls_id=iid)
+    assert impuls(db, iid)["anzahl_eintraege"] == 1
+    aendere_impuls(db, iid, "Neu", "2026-11-30")
+    zeile = db.execute("SELECT * FROM tagebucheintraege WHERE id = ?", (eid,)).fetchone()
+    assert (zeile["impuls_text"], zeile["impuls_id"]) == ("Alt", iid)
+    assert impuls(db, iid)["text"] == "Neu"
+    loesche_impuls(db, iid)
+    zeile = db.execute("SELECT * FROM tagebucheintraege WHERE id = ?", (eid,)).fetchone()
+    assert zeile["impuls_id"] is None
+    assert zeile["impuls_text"] == "Alt"
+    assert impulse(db) == []

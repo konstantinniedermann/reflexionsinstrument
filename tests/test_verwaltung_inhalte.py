@@ -1,3 +1,4 @@
+import html
 import re
 from pathlib import Path
 
@@ -760,3 +761,133 @@ def test_richtung_ungueltig_400_info_leitfragen(client, auftraggeberin, db):
     melde_an(client, auftraggeberin)
     assert sende(client, f"{INFO}/{a}/verschieben", INFO, richtung="x").status_code == 400
     assert sende(client, f"{LEITFRAGEN}/{lid}/verschieben", INFO).status_code == 400
+
+
+# ---------- Impulse ----------
+
+IMPULSE = "/verwaltung/inhalte/impulse"
+HINWEISE = "/verwaltung/inhalte/hinweise"
+
+
+def neuer_impuls(db, text="Impuls", datum="2026-11-23"):
+    return db.execute(
+        "INSERT INTO impulse (text, sichtbar_ab) VALUES (?, ?)", (text, datum)
+    ).lastrowid
+
+
+def test_impuls_anlegen_mit_vorschlag(client, auftraggeberin, db):
+    erster_tag(db)
+    melde_an(client, auftraggeberin)
+    assert 'value="2026-11-23"' in client.get(f"{IMPULSE}/neu").text
+    antwort = sende(
+        client, IMPULSE, IMPULSE, text="Was fiel dir heute auf?", sichtbar_ab="2026-11-23"
+    )
+    assert antwort.status_code == 303
+    iid = db.execute("SELECT id FROM impulse").fetchone()[0]
+    assert antwort.headers["location"] == f"{IMPULSE}?erledigt=angelegt#impuls-{iid}"
+    seite = client.get(f"{IMPULSE}?erledigt=angelegt").text
+    assert f'id="impuls-{iid}"' in seite and "Angelegt." in seite
+    assert 'value="2026-11-30"' in client.get(f"{IMPULSE}/neu").text
+    antwort = sende(client, f"{IMPULSE}/{iid}", IMPULSE, text="Neu", sichtbar_ab="2026-12-01")
+    assert antwort.headers["location"] == f"{IMPULSE}?erledigt=gespeichert#impuls-{iid}"
+    assert "Neu" in client.get(IMPULSE).text
+    fehler = sende(client, IMPULSE, IMPULSE, text=" ", sichtbar_ab="2026-11-23")
+    assert fehler.status_code == 400 and "Bitte einen Impuls eingeben." in fehler.text
+    fehler = sende(client, IMPULSE, IMPULSE, text="x", sichtbar_ab="")
+    assert fehler.status_code == 400 and "Bitte ein Datum wählen." in fehler.text
+
+
+def test_impulse_gleicher_tag_hinweis(client, auftraggeberin, db):
+    neuer_impuls(db, "Eins", "2026-11-23")
+    melde_an(client, auftraggeberin)
+    assert "Am selben Tag gibt es noch einen Impuls." not in client.get(IMPULSE).text
+    neuer_impuls(db, "Zwei", "2026-11-23")
+    neuer_impuls(db, "Drei", "2026-11-30")
+    text = client.get(IMPULSE).text
+    assert text.count("Am selben Tag gibt es noch einen Impuls.") == 2
+    assert "Auf der Startseite erscheint der zuletzt erfasste." in text
+
+
+def test_impuls_mit_eintrag_hinweise_und_loeschen_ueber_bestaetigung(client, auftraggeberin, db):
+    iid = neuer_impuls(db, "Impulstext")
+    lege_eintrag_an(db, neues_konto(db, "a"), art="impuls", impuls_id=iid)
+    melde_an(client, auftraggeberin)
+    assert "1 Tagebucheintrag bezieht sich darauf" in client.get(f"{IMPULSE}/{iid}").text
+    bestaetigung = client.get(f"{IMPULSE}/{iid}/loeschen")
+    assert "Einträge, die sich darauf beziehen, bleiben erhalten." in bestaetigung.text
+    assert "Endgültig löschen" in bestaetigung.text
+    assert db.execute("SELECT COUNT(*) FROM impulse").fetchone()[0] == 1
+    antwort = sende(client, f"{IMPULSE}/{iid}/loeschen", f"{IMPULSE}/{iid}/loeschen")
+    assert antwort.headers["location"] == f"{IMPULSE}?erledigt=geloescht"
+    assert db.execute("SELECT COUNT(*) FROM impulse").fetchone()[0] == 0
+    eintrag = db.execute("SELECT impuls_id, impuls_text FROM tagebucheintraege").fetchone()
+    assert eintrag[:] == (None, "Impulstext")
+
+
+def test_unbekannte_ids_404_impulse(client, auftraggeberin, db):
+    melde_an(client, auftraggeberin)
+    token = csrf_von(client, IMPULSE)
+    daten = {"csrf": token, "text": "X", "sichtbar_ab": "2026-11-23"}
+    for pfad in ("999", "999/loeschen"):
+        assert client.get(f"{IMPULSE}/{pfad}").status_code == 404, pfad
+        assert client.post(f"{IMPULSE}/{pfad}", data=daten).status_code == 404, pfad
+    assert client.get(f"{IMPULSE}/99999999999999999999").status_code == 404
+
+
+# ---------- Hinweise ----------
+
+
+def test_hinweise_liste(client, auftraggeberin):
+    text = als_leitung(client, auftraggeberin).get(HINWEISE).text
+    for schluessel, vorlage in REGISTER.items():
+        if vorlage.bereich == "hinweise":
+            assert f'id="hinweis-{schluessel}"' in text
+            assert f"{HINWEISE}/{schluessel}" in text
+        else:
+            assert f'id="hinweis-{schluessel}"' not in text
+    assert text.count("Erscheint:") == 5
+    assert text.count("Vorschlag, noch nicht von dir bestätigt") == 5
+
+
+def test_hinweis_unveraendert_bestaetigen(client, auftraggeberin, db):
+    melde_an(client, auftraggeberin)
+    schluessel = "hinweis_aufnahme"
+    pfad = f"{HINWEISE}/{schluessel}"
+    seite = client.get(pfad).text
+    assert "Bestätigen heisst speichern, auch unverändert." in seite
+    feld = re.search(r'<textarea[^>]*name="inhalt"[^>]*>(.*?)</textarea>', seite, re.DOTALL)
+    vorschlag = html.unescape(feld.group(1)).strip()
+    assert vorschlag == REGISTER[schluessel].vorschlag
+    antwort = sende(client, pfad, pfad, inhalt=vorschlag)
+    assert antwort.status_code == 303
+    assert antwort.headers["location"] == f"{HINWEISE}?erledigt=gespeichert#hinweis-{schluessel}"
+    liste = client.get(HINWEISE).text
+    karte = re.search(rf'id="hinweis-{schluessel}".*?</article>', liste, re.DOTALL).group(0)
+    assert "Bestätigt" in karte and "noch nicht von dir bestätigt" not in karte
+    assert liste.count("Vorschlag, noch nicht von dir bestätigt") == 4
+    assert "1 von 5 Hinweisen bestätigt" in client.get("/verwaltung/inhalte").text
+    assert "Bestätigen heisst speichern" not in client.get(pfad).text
+
+
+def test_hinweis_leer_400(client, auftraggeberin, db):
+    melde_an(client, auftraggeberin)
+    pfad = f"{HINWEISE}/hinweis_gast"
+    antwort = sende(client, pfad, pfad, inhalt="  \n ")
+    assert antwort.status_code == 400
+    assert "Bitte einen Text eingeben." in antwort.text
+    assert db.execute("SELECT COUNT(*) FROM texte").fetchone()[0] == 0
+
+
+def test_hinweis_unbekannt_404(client, auftraggeberin):
+    melde_an(client, auftraggeberin)
+    token = csrf_von(client, HINWEISE)
+    for schluessel in ("begruessung", "gibts_nicht"):
+        pfad = f"{HINWEISE}/{schluessel}"
+        assert client.get(pfad).status_code == 404, schluessel
+        assert client.post(pfad, data={"csrf": token, "inhalt": "X"}).status_code == 404, schluessel
+
+
+def test_datenschutz_link_im_infoblock_fuehrt_zum_hinweis(client, auftraggeberin):
+    melde_an(client, auftraggeberin)
+    assert f"{HINWEISE}/hinweis_datenspeicherung" in client.get("/verwaltung/inhalte/info").text
+    assert client.get(f"{HINWEISE}/hinweis_datenspeicherung").status_code == 200

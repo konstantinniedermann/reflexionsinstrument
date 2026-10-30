@@ -375,6 +375,57 @@ def loesche_leitfrage(db: sqlite3.Connection, leitfrage_id: int) -> None:
         _nummeriere(db, "leitfrage", None)
 
 
+# ---------- Impulse ----------
+
+_IMPULSE_SQL = (
+    "SELECT i.*, "
+    "(SELECT COUNT(*) FROM tagebucheintraege t WHERE t.impuls_id = i.id) AS anzahl_eintraege "
+    "FROM impulse i"
+)
+
+
+def impulse(db: sqlite3.Connection) -> list[sqlite3.Row]:
+    return db.execute(f"{_IMPULSE_SQL} ORDER BY i.sichtbar_ab, i.id").fetchall()
+
+
+def impuls(db: sqlite3.Connection, impuls_id: int) -> sqlite3.Row | None:
+    return db.execute(f"{_IMPULSE_SQL} WHERE i.id = ?", (impuls_id,)).fetchone()
+
+
+def datum_vorschlag_impuls(db: sqlite3.Connection) -> date | None:
+    """Eine Woche nach dem letzten Impuls, ohne Impulse der erste Tag, sonst nichts."""
+    letzter = db.execute("SELECT MAX(sichtbar_ab) FROM impulse").fetchone()[0]
+    if letzter is not None:
+        return date.fromisoformat(letzter) + timedelta(days=7)
+    return lies_projektstart(db)
+
+
+def _pruefe_impuls(text: str, sichtbar_ab: str):
+    sauberer_text = kurzer_text(text, "text", LAENGE_KURZ, "Bitte einen Impuls eingeben.")
+    return sauberer_text, datum_feld(sichtbar_ab, "sichtbar_ab", pflicht=True)
+
+
+def lege_impuls_an(db: sqlite3.Connection, text: str, sichtbar_ab: str) -> int:
+    werte = _pruefe_impuls(text, sichtbar_ab)
+    return db.execute("INSERT INTO impulse (text, sichtbar_ab) VALUES (?, ?)", werte).lastrowid
+
+
+def aendere_impuls(db: sqlite3.Connection, impuls_id: int, text: str, sichtbar_ab: str) -> None:
+    werte = _pruefe_impuls(text, sichtbar_ab)
+    aenderungen = db.execute(
+        "UPDATE impulse SET text = ?, sichtbar_ab = ? WHERE id = ?", (*werte, impuls_id)
+    ).rowcount
+    if aenderungen == 0:
+        raise NichtGefunden(impuls_id)
+
+
+def loesche_impuls(db: sqlite3.Connection, impuls_id: int) -> None:
+    """Eintraege behalten ihren Text; ihr Verweis wird von der Datenbank geleert."""
+    geloescht = db.execute("DELETE FROM impulse WHERE id = ?", (impuls_id,)).rowcount
+    if geloescht == 0:
+        raise NichtGefunden(impuls_id)
+
+
 # ---------- Reihenfolge ----------
 
 
