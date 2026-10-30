@@ -1160,12 +1160,13 @@ input[type="checkbox"] {
 
 /* Pilot: Einträge und Export (#18) */
 
-.verwaltungsnavigation {
-  flex-wrap: wrap;
+.raster-personen {
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
 }
 
 .karte--person strong {
   overflow-wrap: anywhere;
+  hyphens: auto;
 }
 
 .karte--export {

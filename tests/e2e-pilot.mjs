@@ -638,6 +638,8 @@ async function ablaufEintraege() {
   await desktop();
   await oeffne("/verwaltung/eintraege");
   await keinUeberlauf("Einträge 1280 px");
+  const schmal = await js(`[...document.querySelectorAll('.karte--person')].filter((k) => k.getBoundingClientRect().width < 180).length`);
+  pruefe(schmal === 0, `Personen-Karten 1280 px mindestens 180 px breit (zu schmal: ${schmal})`);
   await screenshot("42-eintraege-desktop");
   keineFehlerSeit(stand, "Einträge dunkel und Desktop");
   await handy();
