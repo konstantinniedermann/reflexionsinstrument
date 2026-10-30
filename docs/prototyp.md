@@ -1,6 +1,6 @@
 # Klickbarer Prototyp (#1)
 
-Ein Wegwerf-Prototyp, um Feedback von der Auftraggeberin zu holen. Er ist **nicht** die Pilot-Version. Die Technik der Pilot-Version wird in #5 entschieden.
+Ein Wegwerf-Prototyp, um Feedback von der Auftraggeberin zu holen. Er ist **nicht** die Pilot-Version. Das Feedback ist in die [Anforderungen](anforderungen.md) eingeflossen. Die Technik der Pilot-Version steht in [ADR-001](adr/ADR-001-technik-pilot.md).
 
 ## Ziel
 Die Auftraggeberin klickt auf ihrem Handy durch, wie sich das Instrument für eine Lehrperson und für sie selbst anfühlt, und sagt, was gut ist, was weg kann und was fehlt.

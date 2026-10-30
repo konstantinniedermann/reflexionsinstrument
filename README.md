@@ -4,7 +4,9 @@ Eine einfache Anwendung, mit der Lehrpersonen zu mehreren Zeitpunkten ein Reflex
 
 ## Stand
 
-Die Anforderungen werden noch geklärt. Es gibt einen **klickbaren Wegwerf-Prototyp**, um Feedback zu holen. Er ist nicht die spätere Pilot-Version. Aufbau und Entscheidungen: [docs/prototyp.md](docs/prototyp.md).
+Die Anforderungen an die Pilot-Version stehen in [docs/anforderungen.md](docs/anforderungen.md), die Technik in [docs/adr/ADR-001-technik-pilot.md](docs/adr/ADR-001-technik-pilot.md). Die Pilot-Version ist im Aufbau.
+
+Der **klickbare Wegwerf-Prototyp** hat dazu gedient, Feedback zu holen. Er ist nicht die Pilot-Version. Aufbau und Entscheidungen: [docs/prototyp.md](docs/prototyp.md).
 
 - Online: https://konstantinniedermann.github.io/reflexionsinstrument/
 - Lokal: `prototyp/index.html` im Browser öffnen (Doppelklick genügt)
