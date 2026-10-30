@@ -110,10 +110,32 @@ def test_konto_loeschen_entfernt_eintraege(db):
         "INSERT INTO tagebucheintraege (konto_id, art, text) VALUES (?, 'frei', 't')",
         (konto,),
     )
+    for tabelle in ("antworten", "tagebucheintraege", "aufnahmen"):
+        assert db.execute(f"SELECT COUNT(*) FROM {tabelle}").fetchone()[0] == 1
     db.execute("DELETE FROM konten WHERE id = ?", (konto,))
     for tabelle in ("antworten", "tagebucheintraege", "aufnahmen"):
         assert db.execute(f"SELECT COUNT(*) FROM {tabelle}").fetchone()[0] == 0
-    assert aufnahme
+    assert db.execute("SELECT 1 FROM aufnahmen WHERE id = ?", (aufnahme,)).fetchone() is None
+
+
+def test_aufnahme_loeschen_behaelt_eintraege(db):
+    konto = _konto(db)
+    _, frage = _runde_frage(db)
+    aufnahme = _aufnahme(db, konto)
+    db.execute(
+        "INSERT INTO antworten (frage_id, konto_id, text, aufnahme_id) VALUES (?, ?, 'a', ?)",
+        (frage, konto, aufnahme),
+    )
+    db.execute(
+        "INSERT INTO tagebucheintraege (konto_id, art, text, aufnahme_id)"
+        " VALUES (?, 'aufnahme', 't', ?)",
+        (konto, aufnahme),
+    )
+    db.execute("DELETE FROM aufnahmen WHERE id = ?", (aufnahme,))
+    for tabelle in ("antworten", "tagebucheintraege"):
+        zeilen = db.execute(f"SELECT aufnahme_id FROM {tabelle}").fetchall()
+        assert len(zeilen) == 1
+        assert zeilen[0]["aufnahme_id"] is None
 
 
 def test_frage_mit_antwort_nicht_loeschbar(db):
@@ -187,3 +209,48 @@ def test_fehlerhafte_migration_rollt_zurueck(conn, tmp_path):
     }
     assert "a" in tabellen
     assert "b" not in tabellen
+
+
+ELTERN_KIND = """
+CREATE TABLE eltern (id INTEGER PRIMARY KEY, name TEXT);
+CREATE TABLE kind (
+    id INTEGER PRIMARY KEY,
+    eltern_id INTEGER NOT NULL REFERENCES eltern (id) ON DELETE CASCADE
+);
+INSERT INTO eltern (id, name) VALUES (1, 'a'), (2, 'b');
+INSERT INTO kind (eltern_id) VALUES (1), (2);
+"""
+
+
+def _neuaufbau_eltern(bedingung="1"):
+    # SQLite-Muster fuer Schemaaenderungen: neue Tabelle, kopieren, alte loeschen, umbenennen.
+    return f"""
+CREATE TABLE eltern_neu (id INTEGER PRIMARY KEY, name TEXT, notiz TEXT);
+INSERT INTO eltern_neu (id, name) SELECT id, name FROM eltern WHERE {bedingung};
+DROP TABLE eltern;
+ALTER TABLE eltern_neu RENAME TO eltern;
+"""
+
+
+def test_tabellen_neuaufbau_loest_keine_kaskade_aus(conn, tmp_path):
+    verzeichnis = tmp_path / "mig"
+    verzeichnis.mkdir()
+    (verzeichnis / "001_eltern_kind.sql").write_text(ELTERN_KIND)
+    (verzeichnis / "002_neuaufbau.sql").write_text(_neuaufbau_eltern())
+    assert migriere(conn, verzeichnis) == 2
+    assert conn.execute("SELECT COUNT(*) FROM kind").fetchone()[0] == 2
+    assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1
+
+
+def test_migration_mit_verwaistem_fremdschluessel_rollt_zurueck(conn, tmp_path):
+    verzeichnis = tmp_path / "mig"
+    verzeichnis.mkdir()
+    (verzeichnis / "001_eltern_kind.sql").write_text(ELTERN_KIND)
+    (verzeichnis / "002_verliert_zeile.sql").write_text(_neuaufbau_eltern("id <> 1"))
+    with pytest.raises(sqlite3.IntegrityError):
+        migriere(conn, verzeichnis)
+    assert conn.execute("PRAGMA user_version").fetchone()[0] == 1
+    assert conn.execute("SELECT COUNT(*) FROM eltern").fetchone()[0] == 2
+    assert conn.execute("SELECT COUNT(*) FROM kind").fetchone()[0] == 2
+    assert conn.execute("PRAGMA foreign_keys").fetchone()[0] == 1
+    assert not conn.in_transaction
