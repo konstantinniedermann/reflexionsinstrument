@@ -81,7 +81,7 @@ Letzte Auswertung: noch keine
 
 **Ursprung:** Deploy #13
 
-**Einschätzung:** Im fly-Dashboard prüfen, ob und wie die Verbindung deployt und ob sie `fly.toml` aus dem Repo verwendet (Volume `daten`). Sonst könnte ein späterer automatischer Deploy ohne Volume starten. Bis zur Klärung weiter mit `make deploy`. Nachtrag 30.10.: Die Merges #22–#26 lösten keinen Deploy aus; die einzige Bot-Bereitstellung (Stand vor dem Dockerfile) hängt seit 15:41 UTC auf «in_progress». Empfehlung an Koschi: Verbindung im Dashboard trennen.
+**Einschätzung:** Im fly-Dashboard prüfen, ob und wie die Verbindung deployt und ob sie `fly.toml` aus dem Repo verwendet (Volume `daten`). Sonst könnte ein späterer automatischer Deploy ohne Volume starten. Bis zur Klärung weiter mit `make deploy`. Nachtrag 30.10.: Die Merges #22–#26 lösten keinen Deploy aus; die einzige Bot-Bereitstellung (Stand vor dem Dockerfile) hängt seit 15:41 UTC auf «in_progress». Empfehlung an Koschi: Verbindung im Dashboard trennen. Nachtrag 30.10. abends: Erledigt. Die GitHub-App «Fly.io» ist auf GitHub deinstalliert (im fly-Dashboard gab es keinen Schalter dafür). Im Repo bleibt nur der alte Bot-Deployment-Eintrag «production», bewusst nicht gelöscht. Deploy weiterhin nur mit `make deploy`.
 
 ### 2026-10-30 — Basis-Images über Tags statt Digests eingebunden
 
