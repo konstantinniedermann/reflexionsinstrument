@@ -32,21 +32,21 @@
     </fieldset>
     <div class="feld">
       <label for="text">Frage</label>
-      <textarea id="text" name="text" rows="3"{% if fehler.text %} aria-describedby="fehler-text"{% endif %}>{{ werte.text }}</textarea>
+      <textarea id="text" name="text" rows="3"{% if fehler.text %} aria-invalid="true" aria-describedby="fehler-text"{% endif %}>{{ werte.text }}</textarea>
       <p class="hilfe">Höchstens 500 Zeichen.</p>
       {{ feldfehler(fehler, "text") }}
     </div>
     <div class="feld">
       <label for="skala_min_text">Beschriftung bei 1</label>
       <input type="text" id="skala_min_text" name="skala_min_text" value="{{ werte.skala_min_text }}" maxlength="60"
-             autocomplete="off"{% if fehler.skala_min_text %} aria-describedby="fehler-skala_min_text"{% endif %} />
+             autocomplete="off"{% if fehler.skala_min_text %} aria-invalid="true" aria-describedby="fehler-skala_min_text"{% endif %} />
       <p class="hilfe">Nur bei der Skala nötig.</p>
       {{ feldfehler(fehler, "skala_min_text") }}
     </div>
     <div class="feld">
       <label for="skala_max_text">Beschriftung bei 5</label>
       <input type="text" id="skala_max_text" name="skala_max_text" value="{{ werte.skala_max_text }}" maxlength="60"
-             autocomplete="off"{% if fehler.skala_max_text %} aria-describedby="fehler-skala_max_text"{% endif %} />
+             autocomplete="off"{% if fehler.skala_max_text %} aria-invalid="true" aria-describedby="fehler-skala_max_text"{% endif %} />
       <p class="hilfe">Nur bei der Skala nötig.</p>
       {{ feldfehler(fehler, "skala_max_text") }}
     </div>

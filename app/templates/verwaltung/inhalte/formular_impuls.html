@@ -13,13 +13,13 @@
     {{ fehlerkopf(fehler) }}
     <div class="feld">
       <label for="text">Impuls</label>
-      <textarea id="text" name="text" rows="3"{% if fehler.text %} aria-describedby="fehler-text"{% endif %}>{{ werte.text }}</textarea>
+      <textarea id="text" name="text" rows="3"{% if fehler.text %} aria-invalid="true" aria-describedby="fehler-text"{% endif %}>{{ werte.text }}</textarea>
       <p class="hilfe">Höchstens 500 Zeichen.</p>
       {{ feldfehler(fehler, "text") }}
     </div>
     <div class="feld">
       <label for="sichtbar_ab">Sichtbar ab</label>
-      <input type="date" id="sichtbar_ab" name="sichtbar_ab" value="{{ werte.sichtbar_ab }}"{% if fehler.sichtbar_ab %} aria-describedby="fehler-sichtbar_ab"{% endif %} />
+      <input type="date" id="sichtbar_ab" name="sichtbar_ab" value="{{ werte.sichtbar_ab }}"{% if fehler.sichtbar_ab %} aria-invalid="true" aria-describedby="fehler-sichtbar_ab"{% endif %} />
       <p class="hilfe">Ab diesem Tag erscheint der Impuls auf der Startseite, bis der nächste an der Reihe ist.</p>
       {{ feldfehler(fehler, "sichtbar_ab") }}
     </div>

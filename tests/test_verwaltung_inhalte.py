@@ -87,7 +87,8 @@ def test_allgemein_fehler(client, auftraggeberin):
     assert antwort.status_code == 400
     assert "Bitte prüfe die markierten Felder." in antwort.text
     assert "Bitte ein Datum wählen." in antwort.text
-    assert 'aria-describedby="fehler-projektstart"' in antwort.text
+    assert 'aria-invalid="true" aria-describedby="fehler-projektstart"' in antwort.text
+    assert antwort.text.count('aria-invalid="true"') == 1
     assert 'id="fehler-projektstart"' in antwort.text
     assert 'value="Mein Titel"' in antwort.text
 
@@ -216,7 +217,8 @@ def test_runde_anlegen_fehler(client, auftraggeberin, db):
     assert antwort.status_code == 400
     assert "Bitte prüfe die markierten Felder." in antwort.text
     assert "Bitte einen Titel eingeben." in antwort.text
-    assert 'aria-describedby="fehler-titel"' in antwort.text
+    assert 'aria-invalid="true" aria-describedby="fehler-titel"' in antwort.text
+    assert antwort.text.count('aria-invalid="true"') == 1
     assert "Fall</textarea>" in antwort.text
     datum = sende(client, RUNDEN, **runde_felder(freischaltdatum=""))
     assert datum.status_code == 400
