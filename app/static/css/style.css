@@ -1156,6 +1156,109 @@ input[type="checkbox"] {
 
 /* Pilot: Aufnahmen (#17) */
 
+.aufnehmen {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.aufnehmen > * {
+  margin: 0;
+}
+
+/* Klassen unten setzen display; ohne diese Regel blieben versteckte Teile sichtbar. */
+.aufnehmen [hidden] {
+  display: none;
+}
+
+.aufnehmen__teil,
+.aufnehmen__rueckfall {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.aufnehmen__teil > p {
+  margin: 0;
+}
+
+.aufnehmen .knopf {
+  width: 100%;
+}
+
+.aufnehmen__start {
+  gap: 0.65rem;
+  min-height: 3.5rem;
+  font-size: 1.1rem;
+}
+
+.aufnehmen [data-aktion="start"]::before,
+.aufnehmen [data-aktion="stopp"]::before {
+  content: "";
+  flex: none;
+  width: 0.8rem;
+  height: 0.8rem;
+  background: currentColor;
+}
+
+.aufnehmen [data-aktion="start"]::before {
+  border-radius: 50%;
+}
+
+.aufnehmen [data-aktion="stopp"]::before {
+  border-radius: 2px;
+}
+
+.aufnehmen__zeit {
+  font-size: 2.25rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+  text-align: center;
+  color: var(--tinte);
+}
+
+.aufnehmen audio {
+  display: block;
+  width: 100%;
+}
+
+/* Ohne sichtbare Meldung hebt der negative Rand den Abstand auf, mit Meldung gleicht ihn diese aus. */
+.aufnehmen > .aufnehmen__meldungen {
+  margin-top: -1rem;
+}
+
+.aufnehmen__meldung {
+  margin: 1rem 0 0;
+  background: var(--hinweis);
+  border-color: var(--hinweis-linie);
+  color: var(--tinte);
+  overflow-wrap: anywhere;
+}
+
+.aufnehmen__meldung p {
+  margin: 0 0 0.5rem;
+}
+
+.aufnehmen__meldung > :last-child {
+  margin-bottom: 0;
+}
+
+.aufnehmen__meldung details {
+  margin-bottom: 0.5rem;
+}
+
+.aufnehmen summary {
+  min-height: 2.75rem;
+  padding: 0.6rem 0;
+  cursor: pointer;
+}
+
+.aufnehmen a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.75rem;
+}
+
 /* Ende #17 */
 
 /* Pilot: Einträge und Export (#18) */

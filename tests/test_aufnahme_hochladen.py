@@ -5,11 +5,13 @@ import re
 import shutil
 import time
 from collections import namedtuple
+from datetime import date
+from pathlib import Path
 
 import pytest
 import starlette.requests
 import testdaten
-from conftest import als_lehrperson, csrf_von
+from conftest import als_lehrperson, als_leitung, csrf_von
 from fastapi.routing import APIRoute, iter_route_contexts
 
 from app import aufnahmen, eintraege, groesse
@@ -240,8 +242,6 @@ def test_eintrag_loeschen_mit_echter_datei(lp, db, einstellungen):
 
 
 def test_auftraggeberin_403(client, auftraggeberin):
-    from conftest import als_leitung
-
     als_leitung(client, auftraggeberin)
     assert client.get(SEITE).status_code == 403
 
@@ -259,3 +259,80 @@ def test_aufraeumen_fehler_aendert_nichts(lp, db, einstellungen, monkeypatch, ca
     assert len(ordner(einstellungen)) == 1
     meldungen = [x.getMessage() for x in caplog.records if "Aufraeumen" in x.getMessage()]
     assert meldungen == ["Aufraeumen der Aufnahmen fehlgeschlagen"]
+
+
+MELDUNGEN = (
+    "verweigert",
+    "kein-mikrofon",
+    "besetzt",
+    "nicht-unterstuetzt",
+    "angehalten",
+    "noch-eine-minute",
+    "hoechstdauer",
+    "zu-gross",
+    "keine-verbindung",
+    "abgemeldet",
+    "abgelaufen",
+    "ungueltig",
+    "serverfehler",
+    "wird-gespeichert",
+)
+
+
+def test_aufnehmen_markup(lp):
+    text = lp.get(SEITE).text
+    assert 'data-max-dauer="600"' in text
+    assert 'data-max-bytes="15728640"' in text
+    assert re.search(r'<script src="/static/js/aufnahme\.js" defer></script>', text)
+    for name in MELDUNGEN:
+        assert re.search(rf'<[^>]+data-meldung="{name}"[^>]*\shidden', text), name
+    # Der Start-Knopf steckt in einem versteckten Teil: ohne JavaScript nicht sichtbar.
+    start = text.index('data-aktion="start"')
+    offen = [m.start() for m in re.finditer(r"<div[^>]*\shidden", text[:start])]
+    assert offen
+    assert "</div>" not in text[offen[-1] : start]
+    assert "Das Mikrofon ist nicht freigegeben." in text
+    assert "So gibst du das Mikrofon frei" in text
+    assert re.search(r'href="/lehrperson/tagebuch/neu/frei"[^>]*>\s*Stattdessen schreiben', text)
+    assert "data-entwurf" not in text
+    assert "style=" not in text
+    assert not re.search(r"<script(?![^>]*\ssrc=)", text)
+    assert not re.search(r"<[^>]+\son\w+=", text)
+
+
+def test_skript_nur_auf_aufnahme_seiten(lp):
+    for pfad in ("/lehrperson", "/lehrperson/tagebuch/neu", "/lehrperson/tagebuch/neu/frei"):
+        r = lp.get(pfad)
+        assert r.status_code == 200, pfad
+        assert "aufnahme.js" not in r.text, pfad
+
+
+def test_wahl_frei_sprechen(lp):
+    text = lp.get("/lehrperson/tagebuch/neu").text
+    assert 'href="/lehrperson/tagebuch/neu/aufnahme"' in text
+    assert "Frei sprechen" in text
+    assert "Eintrag einsprechen, zum Beispiel direkt nach dem Unterricht." in text
+
+
+def _wahl_ohne_link(text):
+    assert "Frei sprechen" in text
+    assert "In dieser Ansicht nicht verfügbar." in text
+    assert "karte--ruhend" in text
+    assert "/aufnahme" not in text
+    assert "Eintrag einsprechen" not in text
+
+
+def test_wahl_gast_ohne_link(client, auftraggeberin, heute_ist):
+    heute_ist(date(2026, 11, 24))
+    r = client.get("/gast/tagebuch/neu")
+    assert r.status_code == 200
+    _wahl_ohne_link(r.text)
+    als_leitung(client, auftraggeberin)
+    r = client.get("/verwaltung/vorschau/2026-11-24/tagebuch/neu")
+    assert r.status_code == 200
+    _wahl_ohne_link(r.text)
+
+
+def test_eintrag_ohne_platzhalter():
+    vorlage = Path(__file__).parent.parent / "app/templates/lehrperson/tagebuch_eintrag.html"
+    assert "#17:" not in vorlage.read_text(encoding="utf-8")

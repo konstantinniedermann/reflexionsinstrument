@@ -11,11 +11,9 @@
   {{ csrf_feld(request) }}
   <input type="hidden" name="dauer_sekunden">
   <section class="karte">
+    {% set mit_text = true %}
     {% include "lehrperson/_aufnehmen.html" %}
   </section>
-  <details class="feld">
-    <summary>Etwas dazuschreiben (freiwillig)</summary>
-    <textarea name="text" id="text" aria-label="Dein Text" rows="3" maxlength="20000"></textarea>
-  </details>
 </form>
+<script src="/static/js/aufnahme.js" defer></script>
 {% endblock %}

@@ -8,7 +8,7 @@
 // screenshot() und pruefe().
 import { spawn, spawnSync } from "node:child_process";
 import { createServer } from "node:net";
-import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { setTimeout as warte } from "node:timers/promises";
 
 const HIER = new URL("./.e2e/", import.meta.url).pathname;
@@ -537,7 +537,167 @@ async function ablaufLehrperson() {
 }
 
 async function ablaufAufnahmen() {
-  // #17 füllt diese Funktion
+  const abmelden = ".seitenkopf form[action='/abmelden'] button";
+  const SEITE = "/lehrperson/tagebuch/neu/aufnahme";
+  const meldung = async () => (await js("document.querySelector('.meldung')?.innerText")) ?? "";
+  const knoepfeOk = (sel) =>
+    js(`[...document.querySelectorAll(${JSON.stringify(sel)})].every((e) => { const r = e.getBoundingClientRect(); return r.height >= 43.5 && r.left >= 0 && r.right <= ${sollBreite}; })`);
+  // Sichtbar heisst: nicht versteckt und mit Fläche (prüft auch die CSS-Regeln für [hidden]).
+  const sichtbar = (sel) => js(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); return !!e && e.getClientRects().length > 0; })()`);
+  const zeitText = () => js("document.querySelector('[data-zeit]').innerText.trim()");
+  const dateien = () => {
+    try {
+      return readdirSync(`${DATEN}aufnahmen/`);
+    } catch {
+      return [];
+    }
+  };
+  const nimmAuf = async (sekunden) => {
+    await klick('[data-aktion="start"]');
+    await warteBis(() => sichtbar('[data-aktion="stopp"]'), "Aufnahme startet nicht");
+    await warte(sekunden * 1000);
+    await klick('[data-aktion="stopp"]');
+    await warteBis(() => js("document.querySelector('[data-vorhoeren]').src.startsWith('blob:')"), "Kein Player nach dem Stopp");
+  };
+  await handy();
+  await farbschema("light");
+
+  // Vorbereitung: zwei Zugänge (der zweite für spätere Schritte)
+  await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
+  const pwAda = await legeZugangAn("Ada Aufnahme", "lp.e2e.aufnahme1");
+  await legeZugangAn("Ben Beispiel", "lp.e2e.aufnahme2");
+  await sende(abmelden);
+  await meldeAn("lp.e2e.aufnahme1", pwAda);
+  muss((await ueberschrift()) === "Hallo, Ada Aufnahme", "Aufnahmen: erste Lehrperson angemeldet");
+
+  // 1. Wahl zeigt «Frei sprechen», Seite mit beiden Hinweisen
+  let stand = merke();
+  await oeffne("/lehrperson/tagebuch/neu");
+  const karte = `a.karte--link[href='${SEITE}']`;
+  muss((await js(`document.querySelector(${JSON.stringify(karte)})?.innerText ?? ""`)).includes("Frei sprechen"), "Aufnahmen: Wahl zeigt den Link «Frei sprechen»");
+  pruefe(await knoepfeOk(karte), "Aufnahmen: Karte «Frei sprechen» ganz im Bild und tippbar hoch");
+  await keinUeberlauf("Tagebuch-Wahl mit «Frei sprechen» 390 px");
+  keineFehlerSeit(stand, "Tagebuch-Wahl mit «Frei sprechen»");
+  stand = merke();
+  await sende(karte);
+  muss((await pfad()) === SEITE && (await ueberschrift()) === "Frei sprechen", "Aufnahmen: Seite «Frei sprechen» geöffnet");
+  pruefe((await js("document.querySelectorAll('main .hinweis.formatiert').length")) === 2, "Aufnahmen: beide Hinweise stehen da");
+  muss(await sichtbar('[data-aktion="start"]'), "Aufnahmen: «Aufnahme starten» sichtbar");
+  pruefe(!(await sichtbar("[data-rueckfall]")) && !(await sichtbar("#aufnahme")), "Aufnahmen: Rückfall mit Dateifeld versteckt");
+  pruefe(!(await sichtbar('[data-aktion="speichern"]')) && !(await sichtbar("[data-vorhoeren]")), "Aufnahmen: «Speichern» und Player erst nach der Aufnahme");
+  pruefe((await zeitText()) === "0:00 / 10:00", "Aufnahmen: Zeit steht auf «0:00 / 10:00»");
+  pruefe(await knoepfeOk('[data-aktion="start"]'), "Aufnahmen: «Aufnahme starten» ganz im Bild und tippbar hoch");
+  await keinUeberlauf("Frei sprechen bereit 390 px");
+  await screenshot("39-aufnahme-bereit");
+  keineFehlerSeit(stand, "Frei sprechen bereit");
+
+  // 2. Mikrofon verweigert
+  stand = merke();
+  let perCdp = true;
+  try {
+    await cdp("Browser.setPermission", { permission: { name: "microphone" }, setting: "denied", origin: basis });
+  } catch (e) {
+    perCdp = false;
+    console.log(`info   Browser.setPermission nicht verfügbar: ${e.message}`);
+  }
+  const verweigert = '[data-meldung="verweigert"]';
+  let gezeigt = false;
+  if (perCdp) {
+    await klick('[data-aktion="start"]');
+    try {
+      gezeigt = await warteBis(() => sichtbar(verweigert), "Meldung verweigert", 15);
+    } catch {}
+    if (await sichtbar('[data-aktion="stopp"]')) await klick('[data-aktion="stopp"]'); // Einstellung griff nicht
+  }
+  console.log(`info   Mikrofon verweigert über ${gezeigt ? "Browser.setPermission" : "Ersatz von getUserMedia"}`);
+  if (!gezeigt) {
+    await oeffne(SEITE);
+    await js(`navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException("x", "NotAllowedError")); true`);
+    await klick('[data-aktion="start"]');
+    gezeigt = await warteBis(() => sichtbar(verweigert), "Meldung «Das Mikrofon ist nicht freigegeben.» erscheint nicht");
+  }
+  muss((await js(`document.querySelector(${JSON.stringify(verweigert)}).innerText`)).includes("Das Mikrofon ist nicht freigegeben."), "Mikrofon verweigert: Meldung «Das Mikrofon ist nicht freigegeben.»");
+  pruefe(await sichtbar('[data-aktion="start"]'), "Mikrofon verweigert: «Aufnahme starten» bleibt");
+  await klick(`${verweigert} summary`);
+  pruefe(await js(`document.querySelector(${JSON.stringify(verweigert + " details")}).open`), "Mikrofon verweigert: Anleitung «So gibst du das Mikrofon frei» aufklappbar");
+  pruefe(await knoepfeOk(`${verweigert} summary, ${verweigert} a`), "Mikrofon verweigert: Anleitung und Link tippbar hoch");
+  await keinUeberlauf("Mikrofon verweigert 390 px");
+  await screenshot("40-aufnahme-verweigert");
+  await sende(`${verweigert} a[href='/lehrperson/tagebuch/neu/frei']`);
+  pruefe((await pfad()) === "/lehrperson/tagebuch/neu/frei", "Mikrofon verweigert: «Stattdessen schreiben» führt zum Formular");
+  if (perCdp) await cdp("Browser.setPermission", { permission: { name: "microphone" }, setting: "granted", origin: basis });
+  keineFehlerSeit(stand, "Mikrofon verweigert");
+
+  // Browser ohne MediaRecorder: Meldung, Dateifeld und «Speichern» bleiben
+  stand = merke();
+  const ohne = await cdp("Page.addScriptToEvaluateOnNewDocument", { source: "delete window.MediaRecorder;" });
+  await oeffne(SEITE);
+  await cdp("Page.removeScriptToEvaluateOnNewDocument", { identifier: ohne.result.identifier });
+  pruefe(await sichtbar('[data-meldung="nicht-unterstuetzt"]'), "Ohne MediaRecorder: Meldung «Dieser Browser kann hier nicht aufnehmen.»");
+  pruefe(!(await sichtbar('[data-aktion="start"]')), "Ohne MediaRecorder: kein «Aufnahme starten»");
+  pruefe((await sichtbar("#aufnahme")) && (await sichtbar('[data-aktion="speichern"]')), "Ohne MediaRecorder: Dateifeld und «Speichern» bleiben");
+  pruefe((await js("[...document.querySelectorAll('.aufnehmen a')].filter((a) => a.getClientRects().length).length")) === 1, "Ohne MediaRecorder: «Stattdessen schreiben» genau einmal sichtbar");
+  await keinUeberlauf("Ohne MediaRecorder 390 px");
+  keineFehlerSeit(stand, "Ohne MediaRecorder");
+
+  // 3. Aufnehmen, anhören, verwerfen, nochmals aufnehmen, speichern
+  stand = merke();
+  const vorher = new Set(dateien());
+  await oeffne(SEITE);
+  await klick('[data-aktion="start"]');
+  await warteBis(() => sichtbar('[data-aktion="stopp"]'), "Aufnahme startet nicht");
+  await warte(1300);
+  pruefe((await zeitText()) !== "0:00 / 10:00", `Aufnahme: Zeit läuft («${await zeitText()}»)`);
+  pruefe(!(await sichtbar('[data-aktion="start"]')), "Aufnahme: «Aufnahme starten» während der Aufnahme versteckt");
+  pruefe(await knoepfeOk('[data-aktion="stopp"]'), "Aufnahme: «Stopp» ganz im Bild und tippbar hoch");
+  await keinUeberlauf("Aufnahme läuft 390 px");
+  await screenshot("41-aufnahme-laeuft");
+  await warte(1700);
+  await klick('[data-aktion="stopp"]');
+  await warteBis(() => js("document.querySelector('[data-vorhoeren]').src.startsWith('blob:')"), "Kein Player nach dem Stopp");
+  pruefe(await sichtbar("[data-vorhoeren]"), "Aufnahme fertig: Player sichtbar");
+  const bereit = await js(`(async () => {
+    const p = document.querySelector("[data-vorhoeren]");
+    p.load();
+    for (let i = 0; i < 50 && p.readyState < 1; i++) await new Promise((r) => setTimeout(r, 100));
+    return p.readyState;
+  })()`);
+  pruefe(bereit >= 1, `Aufnahme fertig: Player lädt die Aufnahme (readyState ${bereit})`);
+  pruefe(await sichtbar('[data-aktion="speichern"]') && (await sichtbar('[data-aktion="neu"]')), "Aufnahme fertig: «Speichern» und «Neu aufnehmen» sichtbar");
+  pruefe(await knoepfeOk('[data-aktion="speichern"], [data-aktion="neu"]'), "Aufnahme fertig: Knöpfe ganz im Bild und tippbar hoch");
+  pruefe(!(await js("[...document.querySelectorAll('[data-meldung]')].some((e) => !e.hidden)")), "Aufnahme fertig: keine Meldung nach «Stopp»");
+  await keinUeberlauf("Aufnahme fertig 390 px");
+  await screenshot("42-aufnahme-fertig");
+  await klick('[data-aktion="neu"]');
+  pruefe(!(await sichtbar("[data-vorhoeren]")) && (await sichtbar('[data-aktion="start"]')), "Neu aufnehmen: Player weg, «Aufnahme starten» wieder da");
+  pruefe(!(await js("document.querySelector('[data-vorhoeren]').hasAttribute('src')")), "Neu aufnehmen: alte Aufnahme verworfen");
+  await nimmAuf(2);
+  await sende('[data-aktion="speichern"]');
+  muss(/^\/lehrperson\/tagebuch\/\d+$/.test(await pfad()), "Aufnahme gespeichert: Seite des Eintrags");
+  pruefe((await meldung()).includes("Gespeichert."), "Aufnahme gespeichert: «Gespeichert.»");
+  const src = await js("document.querySelector('audio')?.getAttribute('src') ?? ''");
+  muss(/^\/lehrperson\/aufnahmen\/\d+$/.test(src), `Aufnahme gespeichert: Player mit Adresse der Aufnahme (${src})`);
+  await keinUeberlauf("Eintrag mit Aufnahme 390 px");
+  await screenshot("43-aufnahme-eintrag");
+  keineFehlerSeit(stand, "Aufnehmen und Speichern");
+
+  // 4. Die Aufnahme ist abrufbar, genau eine neue Datei liegt im Ordner
+  stand = merke();
+  const antwort = await js(`fetch(${JSON.stringify(src)}, { headers: { Range: "bytes=0-1" } }).then((r) => ({ status: r.status, typ: r.headers.get("content-type") ?? "" }))`);
+  pruefe(antwort.status === 206 && antwort.typ.startsWith("audio/"), `Aufnahme abrufbar: 206 mit Audio-Typ (${antwort.status}, ${antwort.typ})`);
+  console.log(`info   Headless-Chrome nimmt auf als ${antwort.typ}`);
+  const neu = dateien().filter((n) => !vorher.has(n));
+  pruefe(neu.length === 1 && /^[0-9a-f]{32}\.(webm|m4a|ogg)$/.test(neu[0] ?? ""), `Aufnahme-Ordner: genau eine neue Datei mit passendem Namen (${neu.join(", ")})`);
+  keineFehlerSeit(stand, "Aufnahme abrufen");
+
+  // 5. Meine Einträge
+  stand = merke();
+  await oeffne("/lehrperson/eintraege");
+  const t = await text();
+  pruefe(t.includes("Gesprochener Eintrag") && /\d+ Sek\./.test(t), "Meine Einträge: «Gesprochener Eintrag» mit Dauer");
+  await keinUeberlauf("Meine Einträge mit Aufnahme 390 px");
+  keineFehlerSeit(stand, "Meine Einträge mit Aufnahme");
+  await sende(abmelden);
 }
 
 async function ablaufEintraege() {
