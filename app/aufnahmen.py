@@ -12,6 +12,7 @@ from typing import BinaryIO, NamedTuple
 
 from app import groesse
 from app.db import transaktion
+from app.zeit import zeitstempel
 
 MAX_DAUER_SEKUNDEN = 600
 TOLERANZ_SEKUNDEN = 10
@@ -194,3 +195,102 @@ def aufnahme_als_tagebucheintrag(
         return eintraege.lege_tagebucheintrag_an(
             db, konto_id, "aufnahme", text, aufnahme_id=aufnahme_id, jetzt=jetzt
         )
+
+
+def aufnahme_der_antwort(
+    db: sqlite3.Connection, konto_id: int, frage_id: int
+) -> sqlite3.Row | None:
+    """Aufnahme (`id`, `dateiname`, `dauer_sekunden`) der Antwort dieses Kontos, sonst `None`."""
+    return db.execute(
+        "SELECT a.id, a.dateiname, a.dauer_sekunden FROM antworten w "
+        "JOIN aufnahmen a ON a.id = w.aufnahme_id AND a.konto_id = w.konto_id "
+        "WHERE w.frage_id = ? AND w.konto_id = ?",
+        (frage_id, konto_id),
+    ).fetchone()
+
+
+def _keine_laufende_transaktion(db: sqlite3.Connection) -> None:
+    if db.in_transaction:
+        raise RuntimeError(
+            "Dateien werden erst nach dem COMMIT geloescht; keine laufende Transaktion"
+        )
+
+
+def haenge_an_antwort(
+    db: sqlite3.Connection,
+    konto_id: int,
+    frage_id: int,
+    datei: Datei,
+    dauer_sekunden: int | None,
+    verzeichnis: Path,
+    jetzt: str | None = None,
+) -> None:
+    """Haengt die Aufnahme an die Antwort (legt sie an oder ersetzt die alte Aufnahme).
+
+    Eigene Transaktion; die alte Datei wird erst nach dem COMMIT geloescht.
+    """
+    _keine_laufende_transaktion(db)
+    jetzt = jetzt or zeitstempel()
+    alter_name = None
+    with transaktion(db):
+        neu = lege_aufnahme_an(db, konto_id, datei, dauer_sekunden)
+        zeile = db.execute(
+            "SELECT id, aufnahme_id FROM antworten WHERE frage_id = ? AND konto_id = ?",
+            (frage_id, konto_id),
+        ).fetchone()
+        if zeile is None:
+            db.execute(
+                "INSERT INTO antworten (frage_id, konto_id, aufnahme_id, erstellt, geaendert) "
+                "VALUES (?, ?, ?, ?, ?)",
+                (frage_id, konto_id, neu, jetzt, jetzt),
+            )
+        else:
+            db.execute(
+                "UPDATE antworten SET aufnahme_id = ?, geaendert = ? WHERE id = ? AND konto_id = ?",
+                (neu, jetzt, zeile["id"], konto_id),
+            )
+            if zeile["aufnahme_id"] is not None:
+                alter_name = _loesche_zeile(db, konto_id, zeile["aufnahme_id"])
+    if alter_name is not None:
+        loesche_dateien(verzeichnis, [alter_name])
+
+
+def _loesche_zeile(db: sqlite3.Connection, konto_id: int, aufnahme_id: int) -> str | None:
+    """Loescht die Zeile des Kontos in `aufnahmen`; Rueckgabe: ihr Dateiname."""
+    zeile = db.execute(
+        "SELECT dateiname FROM aufnahmen WHERE id = ? AND konto_id = ?", (aufnahme_id, konto_id)
+    ).fetchone()
+    db.execute("DELETE FROM aufnahmen WHERE id = ? AND konto_id = ?", (aufnahme_id, konto_id))
+    return zeile["dateiname"] if zeile else None
+
+
+def loesche_aufnahme_der_antwort(
+    db: sqlite3.Connection,
+    konto_id: int,
+    frage_id: int,
+    verzeichnis: Path,
+    jetzt: str | None = None,
+) -> bool:
+    """Entfernt die Aufnahme der Antwort; der Text bleibt. `False`, wenn es keine gab."""
+    _keine_laufende_transaktion(db)
+    jetzt = jetzt or zeitstempel()
+    with transaktion(db):
+        zeile = db.execute(
+            "SELECT id, aufnahme_id, text, skalawert FROM antworten "
+            "WHERE frage_id = ? AND konto_id = ? AND aufnahme_id IS NOT NULL",
+            (frage_id, konto_id),
+        ).fetchone()
+        if zeile is None:
+            return False
+        db.execute(
+            "UPDATE antworten SET aufnahme_id = NULL, geaendert = ? WHERE id = ? AND konto_id = ?",
+            (jetzt, zeile["id"], konto_id),
+        )
+        if zeile["text"] is None and zeile["skalawert"] is None:
+            db.execute(
+                "DELETE FROM antworten WHERE id = ? AND konto_id = ?", (zeile["id"], konto_id)
+            )
+        name = _loesche_zeile(db, konto_id, zeile["aufnahme_id"])
+    if name is not None:
+        loesche_dateien(verzeichnis, [name])
+    return True
