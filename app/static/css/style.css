@@ -1160,6 +1160,35 @@ input[type="checkbox"] {
 
 /* Pilot: Einträge und Export (#18) */
 
+.raster-personen {
+  grid-template-columns: repeat(auto-fill, minmax(10rem, 1fr));
+}
+
+.karte--person strong {
+  overflow-wrap: anywhere;
+  hyphens: auto;
+}
+
+.karte--export {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.karte--export h2,
+.karte--export p {
+  margin: 0;
+}
+
+.export__zeile {
+  display: grid;
+  gap: 0.3rem;
+}
+
+.karte--eintrag strong,
+.karte--eintrag .eintrag__kopf {
+  overflow-wrap: anywhere;
+}
+
 /* Ende #18 */
 
 /* Pilot: Gast und Vorschau (#19) */

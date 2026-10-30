@@ -1,0 +1,27 @@
+{# Parameter: karte (Karte), stand (Stand oder None, nur bei Runde), mit_name (bool). Texte nie formatiert, nie safe. #}
+{% set eintrag = karte.eintrag %}
+{% set bezeichnungen = {"frei": "Freier Eintrag", "leitfragen": "Zur Leitfrage", "impuls": "Zum Impuls", "aufnahme": "Gesprochener Eintrag"} %}
+<article class="karte karte--eintrag">
+  <div class="eintrag__kopf">
+    <span class="marke{% if eintrag.art == 'runde' %} marke--runde{% endif %}">{{ {"runde": "Runde", "impuls": "Impuls"}.get(eintrag.art, "Tagebuch") }}</span>
+    <span class="gedaempft">{% if mit_name %}{{ eintrag.anzeigename }} · {% endif %}{% if karte.woche %}Woche {{ karte.woche }} · {% endif %}{{ eintrag.erstellt | zeitpunkt }}{% if eintrag.geaendert != eintrag.erstellt %} · {{ "zuletzt gespeichert" if eintrag.art == "runde" else "geändert" }} {{ eintrag.geaendert | zeitpunkt }}{% endif %}</span>
+  </div>
+  {% if eintrag.art == "runde" %}
+  <strong>{{ eintrag.zeilen[0].runde_titel }}{% if stand %} <span class="gedaempft">{{ stand.beantwortet }} von {{ stand.fragen }} Fragen beantwortet</span>{% endif %}</strong>
+  {% else %}
+  <strong>{{ bezeichnungen.get(eintrag.zeilen[0].tagebuch_art, "Eintrag") }}</strong>
+  {% endif %}
+  {% for zeile in eintrag.zeilen %}
+  <div class="antwort">
+    {% if zeile.frage %}<p class="antwort__frage">{{ zeile.frage }}</p>{% endif %}
+    {% if zeile.skalawert is not none %}
+    <p class="antwort__text">{{ zeile.skalawert }} von 5</p>
+    {% elif zeile.text %}
+    <p class="antwort__text">{{ zeile.text }}</p>
+    {% endif %}
+    {% if zeile.aufnahme_id %}
+    {% with aufnahme=zeile, url="/verwaltung/aufnahmen/" ~ zeile.aufnahme_id %}{% include "_aufnahme.html" %}{% endwith %}
+    {% endif %}
+  </div>
+  {% endfor %}
+</article>

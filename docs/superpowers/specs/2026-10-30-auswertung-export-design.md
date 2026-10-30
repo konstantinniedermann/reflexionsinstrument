@@ -425,3 +425,10 @@ Geprüft gegen `main` (Stand nach #15), das Design und den Plan von #16 sowie di
 - **E2E unabhängig von den Daten aus #16:** `ablaufEintraege` löscht zu Beginn die Cookies (`Network.clearBrowserCookies`), meldet sich als Auftraggeberin an, legt über `legeZugangAn` (#16) einen eigenen Zugang mit langem Anzeigenamen an (Umbruch in der Personen-Karte bei 390 px) und schreibt als diese Person einen mehrzeiligen freien Eintrag. So hängt der Ablauf nicht an Passwörtern oder Variablen aus `ablaufLehrperson`.
 - **Aufnahme im E2E:** Steht auf der Seite ein `audio` (nur wenn #17 gemergt ist und `ablaufAufnahmen` eine Aufnahme angelegt hat), lädt der Ablauf `audio.src` per `fetch` und erwartet 200 und einen Typ `audio/…`. `audio.play()` wird nicht verwendet, weil Chrome ohne Nutzergeste das Abspielen verweigern kann.
 - **Tests von #16, die durch #18 brechen würden** (`tests/test_geruest.py`): `test_leere_router` (Router von #18 hat dann Routen) und `test_verwaltung_unveraendert` (zählt zweimal «folgt»). Beide würden #17, #18 und #19 an derselben Stelle ändern. Gemeldet als Bedarf an #16 (Bericht an den Orchestrator); falls #16 sie unverändert liefert, passt das erste gemergte der drei Issues die beiden Tests so an, dass sie unabhängig vom Inhalt der Router und der Karten sind.
+
+**Aus der Umsetzung von #18**
+- Namen im ZIP enthalten das grosse `W` aus `W{woche:02d}`; der Satz «nur `[a-z0-9_.-]`» meint den Schutz vor Zip-Slip, den das `W` nicht berührt. Der Test prüft `[A-Za-z0-9_.-]`.
+- `tests/test_geruest.py` hatte #16 schon angepasst; #18 ändert die Datei nicht.
+- Der E2E-Ablauf nutzt den vorhandenen Helfer `meldeAn` statt einer eigenen `anmeldenAls`.
+- Ein Lesefehler mitten im Gesamtexport wird ohne Namen geloggt und als `RuntimeError("Gesamtexport abgebrochen")` ohne Ursache weitergegeben, damit der Server-Log keinen Dateipfad enthält; der Download bricht weiterhin ab.
+- Personen-Karten am Desktop über `auto-fill`/`minmax(10rem, 1fr)` statt vier fester Spalten.

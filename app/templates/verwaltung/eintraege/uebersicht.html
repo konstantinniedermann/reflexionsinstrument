@@ -1,0 +1,68 @@
+{% extends "verwaltung/rahmen.html" %}
+{% block titel %}Einträge – {{ instrument_titel }}{% endblock %}
+{% block inhalt %}
+{% if woche %}<p class="ueberzeile">Woche {{ woche }}</p>{% endif %}
+<h1>Einträge</h1>
+
+{% if personen %}
+<ul class="liste-ohne raster-personen">
+  {% for p in personen %}
+  <li>
+    <a class="karte karte--person{% if gewaehlt and gewaehlt.konto_id == p.konto_id %} ist-aktiv{% endif %}" href="/verwaltung/eintraege?lehrperson={{ p.konto_id }}#eintraege"{% if gewaehlt and gewaehlt.konto_id == p.konto_id %} aria-current="page"{% endif %}>
+      <strong>{{ p.anzeigename }}</strong>
+      {% if p.runden %}
+      <span>Runden {{ p.beantwortet }} von {{ p.runden }}</span>
+      {% if p.angefangen %}<span class="gedaempft">{{ p.angefangen }} angefangen</span>{% endif %}
+      {% else %}
+      <span class="gedaempft">Noch keine Runde offen</span>
+      {% endif %}
+      <span>{{ zahl(p.tagebucheintraege, "Tagebucheintrag", "Tagebucheinträge") }}</span>
+      <span class="gedaempft">{% if p.zuletzt %}zuletzt {{ p.zuletzt | datum(false) }}{% else %}noch nichts{% endif %}</span>
+    </a>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<div class="karte">
+  <p class="gedaempft">Noch keine Zugänge. <a href="/verwaltung/zugaenge">Zugänge</a></p>
+</div>
+{% endif %}
+
+<section class="karte karte--export" id="export" aria-labelledby="export-titel">
+  <h2 id="export-titel">Export</h2>
+  <p>Jetzt: {{ zahl(stand.zeilen, "Zeile", "Zeilen") }}, {% if stand.aufnahmen %}{{ zahl(stand.aufnahmen, "Aufnahme", "Aufnahmen") }} ({{ groesse }}){% else %}keine Aufnahmen{% endif %}.</p>
+  <div class="export__zeile">
+    <a class="knopf" href="/verwaltung/eintraege/tabelle.csv">Tabelle herunterladen (Excel)</a>
+    <p class="gedaempft">Eine Zeile pro Antwort bzw. Tagebucheintrag, geordnet nach Woche. Öffnet sich mit Doppelklick in Excel.</p>
+  </div>
+  <div class="export__zeile">
+    <a class="knopf knopf--zweit" href="/verwaltung/eintraege/gesamtexport.zip">Gesamtexport herunterladen (ZIP)</a>
+    <p class="gedaempft">Tabelle und alle Aufnahmen als Dateien. Am besten am Computer herunterladen und vor dem Öffnen entpacken.</p>
+  </div>
+  <p class="gedaempft">Die Links in der Tabelle öffnen die Aufnahme, wenn du angemeldet bist.</p>
+  <p class="hinweis">Die Dateien enthalten alle Einträge mit Namen. Bitte nur auf deinem Gerät oder dort speichern, wo es deine Hochschule vorsieht, und nicht über private Cloud-Dienste teilen.</p>
+</section>
+
+<h2 id="eintraege">Einträge</h2>
+{% if personen %}
+<nav class="chips" aria-label="Nach Lehrperson filtern">
+  <a class="chip{% if not gewaehlt %} ist-aktiv{% endif %}" href="/verwaltung/eintraege#eintraege"{% if not gewaehlt %} aria-current="page"{% endif %}>Alle</a>
+  {% for p in personen %}
+  <a class="chip{% if gewaehlt and gewaehlt.konto_id == p.konto_id %} ist-aktiv{% endif %}" href="/verwaltung/eintraege?lehrperson={{ p.konto_id }}#eintraege"{% if gewaehlt and gewaehlt.konto_id == p.konto_id %} aria-current="page"{% endif %}>{{ p.anzeigename }}</a>
+  {% endfor %}
+</nav>
+{% endif %}
+{% if gewaehlt %}<p class="gedaempft">Einträge von {{ gewaehlt.anzeigename }}</p>{% endif %}
+
+{% if karten %}
+{% for karte in karten %}
+{% with eintrag=karte.eintrag, mit_name=not gewaehlt %}
+{% with stand=(staende.get(eintrag.konto_id, {}).get(eintrag.runde_id) if eintrag.art == "runde" else none) %}
+{% include "verwaltung/eintraege/_eintrag.html" %}
+{% endwith %}
+{% endwith %}
+{% endfor %}
+{% else %}
+<p class="gedaempft">Noch keine Einträge.</p>
+{% endif %}
+{% endblock %}

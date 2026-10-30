@@ -32,7 +32,6 @@ def test_uebersicht(client, auftraggeberin):
     assert 'href="/verwaltung/inhalte"' in antwort.text
     for name in ("Inhalte", "Einträge", "Vorschau"):
         assert name in antwort.text
-    assert "folgt" in antwort.text
 
 
 def test_liste_zeigt_nur_lehrpersonen(client, auftraggeberin, lehrperson, zweite_lehrperson):
