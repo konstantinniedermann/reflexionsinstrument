@@ -1,10 +1,36 @@
 """Benachrichtigungen per Web Push: Schlüssel (VAPID) und Versand (#37)."""
 
 import base64
+import json
+import logging
+import sqlite3
+import time
+import urllib.error
+import urllib.request
+from dataclasses import dataclass
+from urllib.parse import urlsplit
 
+import http_ece
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ec
 from py_vapid import Vapid02
+
+from app.push_abos import alle_abos, entferne_abo
+
+_log = logging.getLogger(__name__)
+
+ABSENDER = "https://reflexionsinstrument.fly.dev"
+GUELTIGKEIT_SIGNATUR = 12 * 3600
+LEBENSDAUER_NACHRICHT = 86400  # so lange hält der Push-Dienst sie für ein ausgeschaltetes Gerät
+ZEITLIMIT = 10
+UNGUELTIG = {401, 403, 404, 410}  # Abo abgelaufen oder zu einem anderen Schlüssel
+
+
+@dataclass(frozen=True)
+class Ergebnis:
+    gesendet: int
+    entfernt: int
+    nicht_erreicht: int
 
 
 def _b64(daten: bytes) -> str:
@@ -33,3 +59,63 @@ def oeffentlicher_schluessel(vapid: Vapid02) -> str:
         serialization.Encoding.X962, serialization.PublicFormat.UncompressedPoint
     )
     return _b64(punkt)
+
+
+def _unb64(wert: str) -> bytes:
+    return base64.urlsafe_b64decode(wert + "=" * (-len(wert) % 4))
+
+
+def sende(vapid: Vapid02, abo: sqlite3.Row, nutzlast: bytes, oeffne=urllib.request.urlopen):
+    """Schickt eine Nachricht an ein Gerät. Gibt den HTTP-Status zurück, None bei Netzfehler."""
+    teile = urlsplit(abo["endpunkt"])
+    koerper = http_ece.encrypt(
+        nutzlast,
+        private_key=ec.generate_private_key(ec.SECP256R1()),
+        dh=_unb64(abo["p256dh"]),
+        auth_secret=_unb64(abo["auth"]),
+        version="aes128gcm",
+    )
+    anspruch = {
+        "aud": f"{teile.scheme}://{teile.netloc}",
+        "sub": ABSENDER,
+        "exp": int(time.time()) + GUELTIGKEIT_SIGNATUR,
+    }
+    anfrage = urllib.request.Request(
+        abo["endpunkt"],
+        data=koerper,
+        method="POST",
+        headers={
+            **vapid.sign(anspruch),
+            "TTL": str(LEBENSDAUER_NACHRICHT),
+            "Urgency": "normal",
+            "Content-Encoding": "aes128gcm",
+            "Content-Type": "application/octet-stream",
+        },
+    )
+    try:
+        with oeffne(anfrage, timeout=ZEITLIMIT) as antwort:
+            status = antwort.status
+    except urllib.error.HTTPError as fehler:
+        status = fehler.code
+    except (urllib.error.URLError, OSError):
+        status = None
+    # Nur Dienst und Status: Pfad und Schlüssel identifizieren das Gerät, der Text ist Inhalt.
+    _log.info("Benachrichtigung an %s: %s", teile.hostname, status or "nicht erreicht")
+    return status
+
+
+def verschicke_an_alle(
+    db: sqlite3.Connection, vapid: Vapid02, titel: str, text: str, oeffne=urllib.request.urlopen
+) -> Ergebnis:
+    nutzlast = json.dumps({"titel": titel, "text": text}, ensure_ascii=False).encode("utf-8")
+    gesendet = entfernt = nicht_erreicht = 0
+    for abo in alle_abos(db):
+        status = sende(vapid, abo, nutzlast, oeffne)
+        if status in (200, 201, 202):
+            gesendet += 1
+        elif status in UNGUELTIG:
+            entferne_abo(db, abo["id"])
+            entfernt += 1
+        else:
+            nicht_erreicht += 1
+    return Ergebnis(gesendet, entfernt, nicht_erreicht)
