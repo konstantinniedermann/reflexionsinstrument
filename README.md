@@ -29,6 +29,8 @@ Voraussetzung: [uv](https://docs.astral.sh/uv/). Alle Befehle stehen in `make he
 
 Einstellungen über Umgebungsvariablen: `DATEN_VERZEICHNIS` (Ablage der Datenbank), `GEHEIMER_SCHLUESSEL` (Sitzungen) und `PRODUKTION`. `PRODUKTION` gilt nur beim genauen Wert `1` als eingeschaltet. Im Produktionsbetrieb startet die App ohne `GEHEIMER_SCHLUESSEL` oder mit einem Schlüssel unter 32 Zeichen nicht. Den Schlüssel auf fly.io einmalig mit `fly secrets set GEHEIMER_SCHLUESSEL=...` setzen (zufällig, z. B. `python3 -c "import secrets; print(secrets.token_urlsafe(48))"`).
 
+Benachrichtigungen (#37) sind ohne `VAPID_SCHLUESSEL` ausgeschaltet. Zum Einschalten `uv run python -m app.kommandos vapid-schluessel` ausführen und die ausgegebene Zeile `fly secrets set VAPID_SCHLUESSEL=…` laufen lassen. Ein ungültiger Wert verhindert den Start. Ein neuer Schlüssel macht alle bisherigen Abos ungültig; die Geräte melden sich beim nächsten Öffnen der Seite von selbst neu an.
+
 ### Erstes Konto der Auftraggeberin
 
 Das Konto der Auftraggeberin entsteht einmalig per Kommando, danach legt sie die Zugänge der Lehrpersonen selbst in der Verwaltung an. Das Passwort wird nie als Argument übergeben: Im Terminal fragt das Kommando zweimal danach.

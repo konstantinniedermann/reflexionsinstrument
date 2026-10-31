@@ -1,5 +1,6 @@
 # Deploy lokal mit `make deploy`.
 # Geheimer Schlüssel einmalig setzen (mindestens 32 Zeichen): fly secrets set GEHEIMER_SCHLUESSEL=...
+# Benachrichtigungen (#37) einschalten: Befehl aus `python -m app.kommandos vapid-schluessel` ausführen.
 
 app = "reflexionsinstrument"
 primary_region = "fra"

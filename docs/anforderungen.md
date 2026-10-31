@@ -18,7 +18,7 @@ Erfolg heisst: Die Lehrpersonen nutzen es ohne Hilfe auf dem Gerät, das sie ger
 | Laufzeit | 4 Wochen, Start Mo 23.11.2026, Ende Fr 18.12.2026 (vor den Weihnachtsferien) | A: «Zeitplan einhalten» |
 | Geräte | Handy, Tablet und Computer, alle müssen gehen | A |
 | Einführung | Die Auftraggeberin führt jede Lehrperson persönlich ein; im Instrument erklärt der Infoblock | A |
-| Erinnerungen | Die Auftraggeberin schickt sie selbst (zum Beispiel per WhatsApp); das System verschickt nichts | A |
+| Erinnerungen | Die Auftraggeberin schickt sie selbst: per WhatsApp oder als Benachrichtigung aus der Verwaltung (#37). Die Lehrpersonen schalten Benachrichtigungen pro Gerät freiwillig ein. | A (Wunsch nach dem Treffen: «Push-Benachrichtigungen, die ich auslöse») |
 | Testlauf | Die Auftraggeberin testet selbst mit Testkonten in allen Rollen, gern früher als geplant | A |
 | Datenschutz und Hochschule | Einwilligung, Ethik und Vorgaben der Hochschule klärt die Auftraggeberin selbst | A |
 
@@ -141,7 +141,7 @@ flowchart LR
 
 | Was | Begründung |
 |---|---|
-| Benachrichtigungen per E-Mail, SMS oder Push | Sie erinnert selbst. So braucht es keine Kontaktdaten. |
+| Benachrichtigungen per E-Mail oder SMS, automatische oder zeitgesteuerte Benachrichtigungen | Sie erinnert selbst (WhatsApp oder Benachrichtigung aus der Verwaltung, #37). So braucht es keine Kontaktdaten. |
 | Automatische Transkription der Aufnahmen | A: «muss nicht sein». C: Sprachdaten müssten an einen Drittanbieter gehen oder auf einem viel grösseren Server laufen. Nicht im Pilot. |
 | Versionsverlauf geänderter Antworten | Nicht verlangt. Gespeichert wird der aktuelle Stand mit Erstell- und Änderungsdatum. |
 | Statistik oder Auswertung in der App | Die Auswertung macht sie mit den Interviews |

@@ -18,10 +18,14 @@ Die Entscheidungen hier hat Claude getroffen (Projektregel «Fragen selbst beant
 | Entwurf eines noch nicht gespeicherten Texts | Browser-Tab (`sessionStorage`) | Schutz vor Verlust beim Neuladen | ja, bis gespeichert, verworfen, abgemeldet oder Tab geschlossen |
 | Noch nicht gespeicherte Aufnahme | Arbeitsspeicher des Browser-Tabs | Anhören vor dem Speichern | ja; weg beim Speichern, Neu aufnehmen, Neuladen oder Schliessen |
 | Zähler für Fehlversuche beim Anmelden | nur Arbeitsspeicher der App | Schutz gegen das Durchprobieren von Passwörtern | Client-IP und eingegebener Benutzername |
+| Benachrichtigungs-Abo (#37): Adresse beim Push-Dienst des Geräteherstellers, zwei öffentliche Schlüssel des Geräts, Konto, Zeitpunkt | `push_abos` | Erinnerungen der Auftraggeberin zustellen; nur wenn die Person auf dem Gerät einschaltet | ja (über das Konto); die Adresse kennzeichnet das Gerät beim Push-Dienst |
+| «Nicht jetzt» bei der Einladung zu Benachrichtigungen | Browser (`localStorage`, Wert `1`) | Einladung auf der Startseite nicht erneut zeigen | nein |
 
 **Umsetzung in #14:** Für die Begrenzung der Fehlversuche hält die App die Client-IP aus dem Header `Fly-Client-IP` und den eingegebenen Benutzernamen nur im Arbeitsspeicher (höchstens 15 Minuten pro Eintrag; veraltete Einträge räumt jeder Anmeldeversuch weg), ohne sie in die Datenbank oder in Logs zu schreiben. Sie verschwindet beim Neustart der Maschine (spätestens beim automatischen Anhalten bei Inaktivität).
 
-**Nicht gespeichert:** E-Mail-Adressen, Telefonnummern, IP-Adressen (dauerhaft), Browser- oder Gerätekennungen, Standort, Nutzungsstatistik. Es gibt keine Benachrichtigungen, deshalb braucht es keine Kontaktdaten.
+**Nicht gespeichert:** E-Mail-Adressen, Telefonnummern, IP-Adressen (dauerhaft), Browser- oder Gerätekennungen ausser dem freiwilligen Benachrichtigungs-Abo, Standort, Nutzungsstatistik. Benachrichtigungen laufen über das Abo und brauchen keine Kontaktdaten.
+
+**Benachrichtigungen (#37):** Die App schickt die Nachricht verschlüsselt (RFC 8291) an den Push-Dienst des Geräteherstellers (Apple, Google oder Mozilla, ausserhalb der Schweiz/EU). Der Dienst sieht Abo-Adresse, Zeitpunkt und Grösse, nicht den Inhalt. Der Inhalt ist allein der Text der Auftraggeberin, nie ein Eintrag. Die App schickt nur an Adressen dieser Dienste (Prüfung beim Speichern, `app/push_abos.py`). Ins Log kommen nur Dienst und Status, nie Adresse oder Text (Test `test_log_ohne_endpunkt_und_text`). Der Hinweistext `hinweis_benachrichtigung` steht auf der Info-Seite beim Ein- und Ausschalten.
 
 ## Prüfung der Datensparsamkeit
 

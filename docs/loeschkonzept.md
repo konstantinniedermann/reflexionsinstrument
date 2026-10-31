@@ -35,13 +35,15 @@ Entwurf der Frage an die Auftraggeberin: `intern/frage-loeschdatum.md` (nicht im
 
 | Ort | Inhalt | Personenbezug | Wer | Wann | Wie |
 |---|---|---|---|---|---|
-| `reflexion.db` auf dem Volume `daten` | Konten, Antworten, Tagebucheinträge, Inhalte der Auftraggeberin | ja | Betreiber | A (Forschungsdaten), B (Rest) | Stufe 1 per SQL, Stufe 2 mit dem Volume |
+| `reflexion.db` auf dem Volume `daten` | Konten, Antworten, Tagebucheinträge, Benachrichtigungs-Abos (#37), Inhalte der Auftraggeberin | ja | Betreiber | A (Forschungsdaten), B (Rest) | Stufe 1 per SQL, Stufe 2 mit dem Volume |
 | `/data/aufnahmen/` auf dem Volume | Sprachaufnahmen (Stimme) | ja, besonders | Betreiber | A | Stufe 1 |
 | Volume `daten` | beides oben | ja | Betreiber | B | `fly volumes destroy`; fly.io hält es danach noch 24 Stunden als «pending_destroy» wiederherstellbar |
 | Alte Kopie eines Volumes, das fly.io selbst auf einen anderen Server verschoben hat | Stand zum Zeitpunkt der Verschiebung | ja | niemand, ausserhalb unseres Einflusses | 1 Woche nach der Verschiebung | nur bei einer Verschiebung durch fly.io, sichtbar ist sie für uns nicht |
 | Automatische Volume-Snapshots bei fly.io | tägliche Kopie des Volumes | ja | niemand direkt, laufen ab | A + 5 Tage bzw. B + 1 Tag | Aufbewahrung verkürzen, ablaufen lassen (siehe [Snapshots](#snapshots-bei-flyio)) |
 | Maschine der App | keine Daten ausser im Arbeitsspeicher (z. B. Zähler für Fehlversuche, #14) | flüchtig | Betreiber | B | `fly machine destroy` |
 | Secret `GEHEIMER_SCHLUESSEL` | Schlüssel für Sitzungs-Cookies | nein | Betreiber | B | mit der App; lokale Kopie beim Betreiber löschen |
+| Secret `VAPID_SCHLUESSEL` | Schlüssel, mit dem die App Benachrichtigungen signiert (#37) | nein | Betreiber | B | mit der App; lokale Kopie beim Betreiber löschen |
+| Push-Dienste von Apple, Google, Mozilla | Verschlüsselte Benachrichtigungen, bis das Gerät sie abholt (höchstens 24 Stunden, `TTL`), und die Abo-Adresse | über das Gerät | niemand, ausserhalb unseres Einflusses | nach Zustellung bzw. 24 Stunden; Abo-Adresse bis zum Ausschalten | Ausschalten auf dem Gerät oder Löschen des Kontos entfernt das Abo bei uns; beim Push-Dienst verfällt es |
 | Logs bei fly.io | Start, Stopp, Fehler. Keine IP-Adressen, seit die App ohne Zugriffsprotokoll läuft ([datenschutz.md](datenschutz.md#logs)) | höchstens zufällig in Fehlermeldungen | niemand, laufen ab | 7 Tage nach Entstehung | nicht löschbar, siehe [Logs](#logs-bei-flyio) |
 | Container-Images in der Registry von fly.io, Build-Cache | nur Code aus dem öffentlichen Repo | nein | Betreiber | B | mit der App bzw. der Organisation |
 | Gast-Ansicht und Adresse `reflexionsinstrument.fly.dev` | Inhalte der Auftraggeberin, öffentlich | nein | Betreiber | B | mit der App |
@@ -59,7 +61,8 @@ Entwurf der Frage an die Auftraggeberin: `intern/frage-loeschdatum.md` (nicht im
 ## Löschen während der Laufzeit
 
 - **Einzelne Einträge und Aufnahmen**, die eine Lehrperson löscht, sind sofort weg aus der App. In `reflexion.db` überschreibt SQLite den Inhalt (`PRAGMA secure_delete = ON` in `app/db.py`, mit Test). Ältere Bereiche der Begleitdatei `reflexion.db-wal` können den Text noch enthalten, bis SQLite sie wiederverwendet. Die Datei der Aufnahme löscht die App (#17); ihre Blöcke auf dem Volume werden dabei nur freigegeben, nicht überschrieben. In den Snapshots stehen beide noch bis zu 5 Tage. Endgültig weg sind sie mit Stufe 2.
-- **Testkonten** der Auftraggeberin (#9) löscht sie vor dem Start selbst. Das Löschen eines Kontos entfernt alle seine Einträge (Kaskade in der Datenbank) und Aufnahmen.
+- **Testkonten** der Auftraggeberin (#9) löscht sie vor dem Start selbst. Das Löschen eines Kontos entfernt alle seine Einträge (Kaskade in der Datenbank), Aufnahmen und Benachrichtigungs-Abos.
+- **Benachrichtigungs-Abos** (#37) entfernt die App, sobald eine Lehrperson auf dem Gerät ausschaltet oder der Push-Dienst das Abo als ungültig meldet.
 
 ## Snapshots bei fly.io
 
@@ -119,9 +122,10 @@ Voraussetzung: Die Auftraggeberin hat den Gesamtexport heruntergeladen, geöffne
 
    conn = verbinde(Path("/data/reflexion.db"))
    conn.execute("DELETE FROM konten WHERE rolle = 'lehrperson'")
+   conn.execute("DELETE FROM push_abos")  # auch das Gerät der Auftraggeberin (#37)
    conn.execute("VACUUM")
    print(conn.execute("PRAGMA wal_checkpoint(TRUNCATE)").fetchone()[0])  # erwartet: 0
-   for t in ("konten", "antworten", "tagebucheintraege", "aufnahmen"):
+   for t in ("konten", "antworten", "tagebucheintraege", "aufnahmen", "push_abos"):
        print(t, conn.execute(f"SELECT count(*) FROM {t}").fetchone()[0])
    conn.close()
    ```
@@ -167,7 +171,7 @@ Erwartet: nur Snapshots mit Erstelldatum nach Datum A (bzw. nach Schritt 1.4). A
    fly apps list                                      # erwartet: reflexionsinstrument fehlt
    curl -sI https://reflexionsinstrument.fly.dev      # erwartet: keine Antwort der App
    ```
-4. Beim Betreiber lokal: `.daten/` und `tests/.e2e/` löschen, `GEHEIMER_SCHLUESSEL` aus einer allfälligen lokalen Ablage entfernen.
+4. Beim Betreiber lokal: `.daten/` und `tests/.e2e/` löschen, `GEHEIMER_SCHLUESSEL` und `VAPID_SCHLUESSEL` aus einer allfälligen lokalen Ablage entfernen.
 5. Nach der letzten Rechnung, freiwillig: `fly orgs delete reflexion`.
 6. Löschprotokoll in #10 abschliessen und der Auftraggeberin in einem Satz bestätigen, dass alles gelöscht ist.
 
