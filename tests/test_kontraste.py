@@ -35,12 +35,26 @@ def _variablen(block: str) -> dict[str, str]:
     return dict(re.findall(r"--([a-z-]+):\s*(#[0-9a-fA-F]{6})\s*;", block))
 
 
-def _schemata() -> dict[str, dict[str, str]]:
-    hell = _variablen(re.search(r"^:root \{(.*?)^\}", CSS, re.DOTALL | re.MULTILINE).group(1))
-    dunkel_block = re.search(
+def _bloecke() -> tuple[str, str]:
+    hell = re.search(r"^:root \{(.*?)^\}", CSS, re.DOTALL | re.MULTILINE).group(1)
+    dunkel = re.search(
         r"@media \(prefers-color-scheme: dark\) \{\s*:root \{(.*?)\}", CSS, re.DOTALL
     ).group(1)
-    return {"hell": hell, "dunkel": {**hell, **_variablen(dunkel_block)}}
+    return hell, dunkel
+
+
+def _schemata() -> dict[str, dict[str, str]]:
+    hell, dunkel = _bloecke()
+    return {"hell": _variablen(hell), "dunkel": {**_variablen(hell), **_variablen(dunkel)}}
+
+
+def test_alle_farben_lesbar():
+    """Jede Farbvariable steht als #rrggbb, sonst übersähe der Kontrasttest sie still."""
+    keine_farben = ("radius", "pille", "sans", "schatten")
+    for block in _bloecke():
+        namen = set(re.findall(r"--([a-z0-9-]+):", block))
+        farben = {n for n in namen if not n.startswith(keine_farben)}
+        assert farben == set(_variablen(block)), farben - set(_variablen(block))
 
 
 def _leuchtdichte(farbe: str) -> float:
