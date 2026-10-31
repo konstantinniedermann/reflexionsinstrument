@@ -26,7 +26,11 @@ GAST_POST = {
     "/gast/tagebuch/neu/impuls/1",
     "/gast/tagebuch/neu/leitfrage/1",
 }
-OEFFENTLICH = {"/", "/healthz"} | GAST_GET
+# Benachrichtigungen (#37): Manifest und Service Worker muss der Browser ohne Anmeldung laden,
+# sonst lässt sich das Instrument nicht auf den Startbildschirm legen. Beide enthalten nur den
+# Titel bzw. festen Code.
+PWA = {"/manifest.webmanifest", "/sw.js"}
+OEFFENTLICH = {"/", "/healthz"} | GAST_GET | PWA
 # Laeuft ohne Sitzung, aber mit CSRF-Schutz: Anmelden und die Formulare der Gast-Ansicht.
 OHNE_SITZUNG = {"/anmelden"} | GAST_POST
 

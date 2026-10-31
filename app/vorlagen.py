@@ -44,6 +44,14 @@ templates.env.globals["konto_von"] = konto_von
 templates.env.globals["csrf_feld"] = csrf_feld
 
 
+def push_schluessel(request: Request) -> str | None:
+    """Öffentlicher Schlüssel für Benachrichtigungen, None wenn nicht eingerichtet (#37)."""
+    return getattr(request.app.state, "push_schluessel", None)
+
+
+templates.env.globals["push_schluessel"] = push_schluessel
+
+
 def datum_filter(wert: date | str | None, mit_jahr: bool = True) -> str:
     if not wert:
         return ""

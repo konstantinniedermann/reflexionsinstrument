@@ -16,10 +16,12 @@ from app.config import Einstellungen, lade_einstellungen
 from app.cookies import CookieMiddleware
 from app.db import migriere, verbinde
 from app.groesse import GroessenGrenze
+from app.push import lade_vapid, oeffentlicher_schluessel
 from app.routen import (
     allgemein,
     anmeldung,
     aufnahmen,
+    benachrichtigung,
     gast,
     lehrperson,
     verwaltung,
@@ -66,6 +68,15 @@ def erstelle_app(einstellungen: Einstellungen | None = None) -> FastAPI:
     app.state.einstellungen = einstellungen
     app.state.anmeldeschutz = Anmeldeschutz()
     app.state.heute = zeit.heute
+    # Benachrichtigungen (#37): ohne Schlüssel aus; ein ungültiger Schlüssel stoppt den Start.
+    app.state.vapid = None
+    app.state.push_schluessel = None
+    if einstellungen.vapid_schluessel:
+        try:
+            app.state.vapid = lade_vapid(einstellungen.vapid_schluessel)
+        except ValueError as fehler:
+            raise RuntimeError(str(fehler)) from fehler
+        app.state.push_schluessel = oeffentlicher_schluessel(app.state.vapid)
 
     def fehlerseite(request: Request, status: int, titel: str, meldung: str):
         return templates.TemplateResponse(
@@ -105,4 +116,6 @@ def erstelle_app(einstellungen: Einstellungen | None = None) -> FastAPI:
     app.include_router(verwaltung_eintraege.router)
     app.include_router(gast.router)
     app.include_router(verwaltung_vorschau.router)
+    app.include_router(benachrichtigung.router)
+    app.include_router(benachrichtigung.verwaltung_router)
     return app

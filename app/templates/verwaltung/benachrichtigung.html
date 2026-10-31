@@ -1,0 +1,29 @@
+{% extends "verwaltung/rahmen.html" %}
+{% block titel %}Benachrichtigung – {{ instrument_titel }}{% endblock %}
+{% block inhalt %}
+<h1>Benachrichtigung</h1>
+{% if not eingerichtet %}
+<p class="hinweis">Benachrichtigungen sind nicht eingerichtet.</p>
+{% else %}
+{% if ergebnis %}
+<div class="meldung" role="status">
+  <p>Gesendet an {{ zahl(ergebnis.gesendet, "Gerät", "Geräte") }}.</p>
+  {% if ergebnis.entfernt %}<p>{{ zahl(ergebnis.entfernt, "Gerät war", "Geräte waren") }} nicht mehr erreichbar und {{ "ist" if ergebnis.entfernt == 1 else "sind" }} entfernt.</p>{% endif %}
+  {% if ergebnis.nicht %}<p>{{ zahl(ergebnis.nicht, "Gerät hat", "Geräte haben") }} nicht geantwortet.</p>{% endif %}
+</div>
+{% endif %}
+<p class="gedaempft">Die Nachricht erscheint als Benachrichtigung auf allen Geräten, auf denen sie eingeschaltet ist. Ein Tipp darauf öffnet das Instrument.</p>
+<section class="karte">
+  <form method="post" action="/verwaltung/benachrichtigung" class="formular">
+    {{ csrf_feld(request) }}
+    <div class="feld">
+      <label for="text">Nachricht</label>
+      <p class="hilfe" id="text-hilfe">Höchstens {{ laenge }} Zeichen. Bitte keine Namen.</p>
+      {% if fehler %}<p class="fehler" id="text-fehler" role="alert">{{ fehler }}</p>{% endif %}
+      <textarea id="text" name="text" rows="4" maxlength="{{ laenge }}" required aria-describedby="text-hilfe{% if fehler %} text-fehler{% endif %}"{% if fehler %} aria-invalid="true"{% endif %}>{{ text }}</textarea>
+    </div>
+    <button type="submit" class="knopf">An {{ zahl(anzahl, "Gerät", "Geräte") }} senden</button>
+  </form>
+</section>
+{% endif %}
+{% endblock %}
