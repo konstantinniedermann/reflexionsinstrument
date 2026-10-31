@@ -132,10 +132,10 @@ flowchart LR
 
 | Prio | Anforderung | Herkunft |
 |---|---|---|
-| Muss | Ruhig und professionell, keine Emojis, kein Chatbot-Look. Grundlage ist der Stil des Prototyps. | A |
+| Muss | Ruhig und professionell, keine Emojis, kein Chatbot-Look. Umsetzung siehe [Design Gestaltung](superpowers/specs/2026-10-31-gestaltung-design.md) (#20). | A |
 | Muss | Mobile-first, aber auch am Computer gut bedienbar | A |
 | Soll | Bereiche (zum Beispiel Runden, Tagebuch, Impulse, Info) mit Farben kennzeichnen, um die Navigation zu erleichtern | A |
-| Soll | Stil und Farben nach Vorgaben der Auftraggeberin anpassen | A: schickt Input |
+| Soll | Stil und Farben nach Vorgaben der Auftraggeberin anpassen | A: nennt eine Website als Vorlage, «eine Anlehnung, eine Tendenz reicht» |
 
 ## Bewusst nicht gebaut
 
