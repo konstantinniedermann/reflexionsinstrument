@@ -39,3 +39,8 @@ def test_verwaltung_senden_nicht_moeglich(leitung):
 def test_manifest_und_service_worker_trotzdem(client):
     assert client.get("/manifest.webmanifest").status_code == 200
     assert client.get("/sw.js").status_code == 200
+
+
+def test_lehrperson_ohne_schluessel_ohne_skript(lp):
+    for pfad in ("/lehrperson", "/lehrperson/info"):
+        assert "benachrichtigung.js" not in lp.get(pfad).text

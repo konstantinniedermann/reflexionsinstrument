@@ -127,7 +127,10 @@ def test_gast_kein_weg_zu_eintraegen(client, inhalte):
         antwort = client.get(pfad)
         assert antwort.status_code == 200, pfad
         for z in ZIEL.findall(antwort.text):
-            assert z == "/" or z.startswith(("/gast", "/static/")), (pfad, z)
+            assert z in ("/", "/manifest.webmanifest") or z.startswith(("/gast", "/static/")), (
+                pfad,
+                z,
+            )
             assert not any(v in z for v in VERBOTEN), (pfad, z)
             if z.startswith("/gast") and z not in besucht:
                 offen.append(z)

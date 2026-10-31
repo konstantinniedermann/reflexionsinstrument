@@ -87,6 +87,7 @@ def kontext_info(db: sqlite3.Connection, ansicht: Ansicht) -> dict:
         "bereich": "info",
         "abschnitte": inhalte.info_abschnitte(db),
         "datenschutz": lies_text(db, "hinweis_datenspeicherung"),
+        "hinweis_benachrichtigung": lies_text(db, "hinweis_benachrichtigung"),
     }
 
 

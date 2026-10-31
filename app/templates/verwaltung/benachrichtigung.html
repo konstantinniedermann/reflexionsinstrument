@@ -25,5 +25,6 @@
     <button type="submit" class="knopf">An {{ zahl(anzahl, "Gerät", "Geräte") }} senden</button>
   </form>
 </section>
+{% with ort = "verwaltung" %}{% include "_benachrichtigung.html" %}{% endwith %}
 {% endif %}
 {% endblock %}

@@ -1497,3 +1497,20 @@ input[type="checkbox"] {
 }
 
 /* Ende #20 */
+
+/* Benachrichtigungen (#37) */
+
+.karte--benachrichtigung [hidden] {
+  display: none;
+}
+
+.karte--benachrichtigung ol {
+  margin: 0 0 0.75rem;
+  padding-left: 1.25rem;
+}
+
+.karte--benachrichtigung .hinweis {
+  margin-top: 1rem;
+}
+
+/* Ende #37 */

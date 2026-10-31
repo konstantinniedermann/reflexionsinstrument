@@ -7,6 +7,7 @@
   <div class="formatiert lead">{{ begruessung | formatiert }}</div>
 </header>
 <div class="hinweis formatiert">{{ hinweis | formatiert }}</div>
+{% if ansicht.speichert and push_schluessel(request) %}{% with ort = "start" %}{% include "_benachrichtigung.html" %}{% endwith %}{% endif %}
 {% if impuls %}
 <section class="karte karte--impuls" aria-labelledby="impuls-titel">
   <p class="ueberzeile" id="impuls-titel">Impuls dieser Woche</p>

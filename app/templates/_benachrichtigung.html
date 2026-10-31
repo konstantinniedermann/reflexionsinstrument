@@ -1,0 +1,39 @@
+{# Benachrichtigungen ein- und ausschalten (#37). Parameter: ort = "start" | "info" | "verwaltung".
+   Alles bleibt verborgen, bis benachrichtigung.js den passenden Zustand zeigt; ohne JavaScript erscheint nichts. #}
+<section class="karte karte--benachrichtigung" data-benachrichtigung data-ort="{{ ort }}" data-push-schluessel="{{ push_schluessel(request) }}" aria-labelledby="benachrichtigung-titel" hidden>
+  <h2 id="benachrichtigung-titel">{% if ort == "verwaltung" %}Auf diesem Gerät empfangen{% else %}Benachrichtigungen{% endif %}</h2>
+  {{ csrf_feld(request) }}
+  <div data-zustand="aus" hidden>
+    {% if ort == "verwaltung" %}
+    <p>Schalte Benachrichtigungen auch auf deinem Gerät ein, um zu sehen, was bei den Lehrpersonen ankommt.</p>
+    {% else %}
+    <p>Die Projektleiterin kann dir kurze Erinnerungen schicken. Sie erscheinen auf dem Gerät wie eine Nachricht.</p>
+    {% endif %}
+    <div class="feld__knoepfe">
+      <button type="button" class="knopf" data-aktion="ein">Benachrichtigungen einschalten</button>
+      {% if ort == "start" %}<button type="button" class="knopf knopf--leise" data-aktion="spaeter">Nicht jetzt</button>{% endif %}
+    </div>
+  </div>
+  <div data-zustand="ios" hidden>
+    <p>Auf dem iPhone und iPad kommen Benachrichtigungen nur an, wenn das Instrument auf dem Startbildschirm liegt:</p>
+    <ol>
+      <li>In Safari auf «Teilen» tippen (bei neueren Versionen zuerst auf «…»).</li>
+      <li>«Zum Home-Bildschirm» wählen.</li>
+      <li>Das Instrument vom Startbildschirm aus öffnen, einmal anmelden und hier Benachrichtigungen einschalten.</li>
+    </ol>
+    {% if ort == "start" %}<button type="button" class="knopf knopf--leise" data-aktion="spaeter">Nicht jetzt</button>{% endif %}
+  </div>
+  <div data-zustand="an" hidden>
+    <p>Benachrichtigungen sind auf diesem Gerät eingeschaltet.</p>
+    <button type="button" class="knopf knopf--zweit" data-aktion="aus">Ausschalten</button>
+  </div>
+  <div data-zustand="abgelehnt" hidden>
+    <p>Benachrichtigungen sind auf diesem Gerät blockiert. Das lässt sich in den Einstellungen des Geräts bzw. des Browsers ändern.</p>
+  </div>
+  <div data-zustand="unmoeglich" hidden>
+    <p>Auf diesem Gerät oder in diesem Browser sind Benachrichtigungen nicht möglich.</p>
+  </div>
+  <p class="fehler" data-meldung role="alert" hidden></p>
+  {% if ort == "info" %}<div class="hinweis formatiert">{{ hinweis_benachrichtigung | formatiert }}</div>{% endif %}
+</section>
+<script src="/static/js/benachrichtigung.js" defer></script>

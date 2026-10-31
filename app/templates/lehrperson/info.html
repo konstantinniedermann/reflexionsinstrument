@@ -8,6 +8,7 @@
   <div class="aufklapp__inhalt formatiert">{{ abschnitt.inhalt | formatiert }}</div>
 </details>
 {% endfor %}
+{% if ansicht.speichert and push_schluessel(request) %}{% with ort = "info" %}{% include "_benachrichtigung.html" %}{% endwith %}{% endif %}
 <details class="karte aufklapp"{% if not abschnitte %} open{% endif %}>
   <summary>Datenschutz</summary>
   <div class="aufklapp__inhalt formatiert">{{ datenschutz | formatiert }}</div>

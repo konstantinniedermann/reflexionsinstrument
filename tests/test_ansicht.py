@@ -172,7 +172,9 @@ def test_gast_start_ohne_persoenliches(seiten_client, db, lehrperson, heute_ist)
     links = re.findall(r'href="(/[^"]*)"', text)
     assert any(link.startswith("/gast") for link in links)
     for link in links:
-        assert link in ("/", "/static/css/style.css") or link.startswith("/gast"), link
+        assert link in ("/", "/manifest.webmanifest") or link.startswith(("/gast", "/static/")), (
+            link
+        )
 
 
 def test_vorschau_rechnet_mit_stichtag(seiten_client, db):
@@ -195,6 +197,8 @@ def test_vorschau_rechnet_mit_stichtag(seiten_client, db):
     for link in links:
         assert link in (
             "/static/css/style.css",
+            "/static/bilder/symbol-180.png",
+            "/manifest.webmanifest",
             "/verwaltung/vorschau",
             praefix.rstrip("/"),
         ) or link.startswith(praefix), link

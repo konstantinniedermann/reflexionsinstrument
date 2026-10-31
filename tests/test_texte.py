@@ -14,6 +14,7 @@ def test_register_vollstaendig():
         "hinweis_gast",
         "hinweis_datenspeicherung",
         "hinweis_aufnahme",
+        "hinweis_benachrichtigung",
     ]
     for key, vorlage in REGISTER.items():
         assert vorlage.schluessel == key
