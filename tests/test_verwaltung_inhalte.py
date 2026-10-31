@@ -123,7 +123,7 @@ def test_bestaetigung_nur_aus_fester_liste(client, auftraggeberin):
 
 
 def test_verwaltung_verlinkt_inhalte(client, auftraggeberin):
-    text = als_leitung(client, auftraggeberin).get("/verwaltung").text
+    text = als_leitung(client, auftraggeberin).get("/verwaltung/zugaenge").text
     assert 'href="/verwaltung/inhalte"' in text
     nav = re.search(r"<nav.*?</nav>", text, re.DOTALL).group(0)
     assert "Inhalte" in nav

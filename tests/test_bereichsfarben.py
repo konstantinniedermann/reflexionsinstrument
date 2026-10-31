@@ -101,7 +101,6 @@ def _aktiv(text: str) -> list[str]:
 @pytest.mark.parametrize(
     "pfad,aktiv",
     [
-        ("/verwaltung", "Übersicht"),
         ("/verwaltung/inhalte", "Inhalte"),
         ("/verwaltung/inhalte/runden", "Inhalte"),
         ("/verwaltung/eintraege", "Einträge"),
@@ -117,10 +116,10 @@ def test_verwaltungsnavigation_zeigt_ort(client, auftraggeberin, pfad, aktiv):
 
 def test_verwaltungsnavigation_farbig(client, auftraggeberin):
     als_leitung(client, auftraggeberin)
-    text = client.get("/verwaltung").text
+    text = client.get("/verwaltung/inhalte").text
     nav = re.search(r'<nav class="verwaltungsnavigation".*?</nav>', text, re.DOTALL).group(0)
     links = re.findall(r"<a [^>]*>", nav)
-    assert len(links) == 6
+    assert len(links) == 5
     assert all(re.search(r'class="bereich--[a-z]+"', a) for a in links)
 
 

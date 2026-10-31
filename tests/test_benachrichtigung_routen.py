@@ -73,7 +73,7 @@ def test_abo_lehrperson(lp, db, lehrperson):
 
 
 def test_abo_auftraggeberin(leitung, db):
-    antwort = leitung.post("/benachrichtigung/abo", data=_abo_daten(leitung, "/verwaltung"))
+    antwort = leitung.post("/benachrichtigung/abo", data=_abo_daten(leitung, "/verwaltung/inhalte"))
     assert antwort.status_code == 204
     assert anzahl_abos(db) == 1
 
@@ -99,7 +99,7 @@ def test_abo_fremde_adresse(lp, db):
 
 def test_abo_loeschen(lp, db):
     lp.post("/benachrichtigung/abo", data=_abo_daten(lp, "/lehrperson"))
-    daten = {"csrf": csrf_von(lp, "/lehrperson"), "endpunkt": ENDPUNKT}
+    daten = {"csrf": csrf_von(lp, "/lehrperson/info"), "endpunkt": ENDPUNKT}
     antwort = lp.post("/benachrichtigung/abo/loeschen", data=daten)
     assert antwort.status_code == 204
     assert anzahl_abos(db) == 0

@@ -18,7 +18,7 @@ DAUER_LANG = 30 * 24 * 3600
 DAUER_KURZ = 12 * 3600
 VERLAENGERN_AB = 24 * 3600
 
-STARTSEITE = {"lehrperson": "/lehrperson", "auftraggeberin": "/verwaltung"}
+STARTSEITE = {"lehrperson": "/lehrperson", "auftraggeberin": "/verwaltung/inhalte"}
 
 COOKIE = "sitzung"
 

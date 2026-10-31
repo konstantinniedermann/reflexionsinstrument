@@ -111,7 +111,7 @@ def test_neu_zur_leitfrage(client, db, welt):
 
 def test_neu_bezug_404(client, db, welt):
     vorher = testdaten.abzug(db)
-    csrf = csrf_von(client, NEU)
+    csrf = csrf_von(client, f"{NEU}/frei")
     for pfad in (f"{NEU}/impuls/{welt['spaet']}", f"{NEU}/leitfrage/9999", f"{NEU}/impuls/abc"):
         assert client.get(pfad).status_code == 404, pfad
         assert client.post(pfad, data={"csrf": csrf, "text": "x"}).status_code == 404, pfad

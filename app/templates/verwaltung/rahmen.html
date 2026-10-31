@@ -2,11 +2,10 @@
 {% block navigation %}
 {% set pfad = request.url.path.rstrip("/") %}
 {% macro punkt(ziel, name, farbe) %}
-{% set aktiv = pfad == ziel if ziel == "/verwaltung" else pfad == ziel or pfad.startswith(ziel ~ "/") %}
+{% set aktiv = pfad == ziel or pfad.startswith(ziel ~ "/") %}
 <a class="bereich--{{ farbe }}" href="{{ ziel }}"{% if aktiv %} aria-current="page"{% endif %}>{{ name }}</a>
 {% endmacro %}
 <nav class="verwaltungsnavigation" aria-label="Verwaltung">
-  {{ punkt("/verwaltung", "Übersicht", "start") }}
   {{ punkt("/verwaltung/inhalte", "Inhalte", "inhalte") }}
   {# #18: Navigation Einträge #}
   {{ punkt("/verwaltung/eintraege", "Einträge", "eintraege") }}
@@ -16,4 +15,7 @@
   {{ punkt("/verwaltung/zugaenge", "Zugänge", "zugaenge") }}
   {{ punkt("/verwaltung/benachrichtigung", "Benachrichtigung", "impuls") }}
 </nav>
+{% endblock %}
+{% block fuss %}
+<footer class="seitenfuss">{% include "_abmelden.html" %}</footer>
 {% endblock %}

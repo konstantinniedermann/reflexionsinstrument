@@ -24,10 +24,11 @@ def anlegen(client, pfad="/verwaltung/zugaenge", **felder):
     return client.post(pfad, data=daten)
 
 
-def test_uebersicht(client, auftraggeberin):
+def test_verwaltung_startet_bei_inhalten(client, auftraggeberin):
     als_leitung(client, auftraggeberin)
-    antwort = client.get("/verwaltung")
+    antwort = client.get("/verwaltung", follow_redirects=True)
     assert antwort.status_code == 200
+    assert antwort.url.path == "/verwaltung/inhalte"
     assert 'href="/verwaltung/zugaenge"' in antwort.text
     assert 'href="/verwaltung/inhalte"' in antwort.text
     for name in ("Inhalte", "Einträge", "Vorschau"):
@@ -167,7 +168,7 @@ def test_loeschen(client, einstellungen, auftraggeberin, lehrperson, zweite_lehr
 
 def test_fremde_ids_404(client, auftraggeberin):
     als_leitung(client, auftraggeberin)
-    token = csrf_von(client, "/verwaltung")
+    token = csrf_von(client, "/verwaltung/inhalte")
     for konto_id in (auftraggeberin["id"], 999):
         for aktion in ("passwort", "loeschen"):
             pfad = f"/verwaltung/zugaenge/{konto_id}/{aktion}"

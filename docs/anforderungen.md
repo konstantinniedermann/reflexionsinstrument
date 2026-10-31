@@ -60,7 +60,7 @@ flowchart LR
 | Muss | Eine Login-Seite mit Benutzername und Passwort. Jede Person hat ihr eigenes Konto, die Rolle hängt am Konto. | A |
 | Muss | Eine Lehrperson sieht ausschliesslich ihre eigenen Einträge, auch nicht über direkte Adressen | A |
 | Muss | Die Auftraggeberin legt Konten an (Anzeigename, Benutzername, Passwort), setzt Passwörter zurück und löscht Konten samt Einträgen | C: Sie verteilt die Zugänge bei der Einführung selbst. Löschen braucht es für die Testkonten. |
-| Muss | «Angemeldet bleiben» (etwa 30 Tage) als Häkchen beim Login, standardmässig an. Abmelden ist jederzeit möglich. | C: Das Tagebuch lebt vom Moment. Das Häkchen lässt sich auf gemeinsam genutzten Schulcomputern abwählen. |
+| Muss | «Angemeldet bleiben» (etwa 30 Tage) als Häkchen beim Login, standardmässig an. Abmelden ist möglich, aber unauffällig: für Lehrpersonen ganz unten auf der Info-Seite, in der Verwaltung am Seitenende ([Design](superpowers/specs/2026-10-31-navigation-schlanker-design.md)). | C: Das Tagebuch lebt vom Moment. Das Häkchen lässt sich auf gemeinsam genutzten Schulcomputern abwählen. |
 | Muss | Schutz gegen das Durchprobieren von Passwörtern | C |
 | Muss | Passwort zurücksetzen oder Konto löschen beendet alle Sitzungen dieses Kontos, auf allen Geräten | C: für vergessene Anmeldungen auf gemeinsam genutzten Geräten |
 | — | Kein «Passwort vergessen» per E-Mail. Die Auftraggeberin setzt es zurück. | C: Es werden keine E-Mail-Adressen gespeichert |

@@ -159,17 +159,15 @@ def test_zugriff(client, lehrperson):
 
 
 def test_verwaltung_links(client, auftraggeberin):
-    text = als_leitung(client, auftraggeberin).get("/verwaltung").text
+    text = als_leitung(client, auftraggeberin).get("/verwaltung/inhalte").text
 
-    assert text.count('href="/verwaltung/eintraege"') == 2  # Karte und Navigation
+    assert text.count('href="/verwaltung/eintraege"') == 1  # Navigation
     assert "Vorschau" in text
-    assert 'class="karte karte--link" href="/verwaltung/eintraege"' in text
 
     vorlagen = Path(__file__).parent.parent / "app" / "templates" / "verwaltung"
-    for datei in ("start.html", "rahmen.html"):
-        quelltext = (vorlagen / datei).read_text(encoding="utf-8")
-        reihenfolge = [quelltext.index(m) for m in ("{# #18:", "{# Trennzeile", "{# #19:")]
-        assert reihenfolge == sorted(reihenfolge), datei
+    quelltext = (vorlagen / "rahmen.html").read_text(encoding="utf-8")
+    reihenfolge = [quelltext.index(m) for m in ("{# #18:", "{# Trennzeile", "{# #19:")]
+    assert reihenfolge == sorted(reihenfolge)
 
 
 def test_kein_inline(client, auftraggeberin, lehrperson, db, heute_ist, einstellungen):

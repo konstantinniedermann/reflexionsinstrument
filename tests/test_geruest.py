@@ -1,6 +1,5 @@
 from pathlib import Path
 
-import pytest
 from conftest import als_leitung
 from fastapi import APIRouter
 from fastapi.testclient import TestClient
@@ -27,9 +26,8 @@ def test_router_eingebunden_ohne_praefix(einstellungen, monkeypatch):
             assert c.get(f"/geruest-{name}").status_code == 200, name
 
 
-@pytest.mark.parametrize("datei", ["start.html", "rahmen.html"])
-def test_verwaltung_vorbereitete_plaetze(datei):
-    text = (APP / "templates" / "verwaltung" / datei).read_text(encoding="utf-8")
+def test_verwaltung_vorbereitete_plaetze():
+    text = (APP / "templates" / "verwaltung" / "rahmen.html").read_text(encoding="utf-8")
     trenn = "{# Trennzeile zwischen #18 und #19, nicht ändern #}"
     assert text.index("{# #18:") < text.index(trenn) < text.index("{# #19:")
     assert "{% for name in" not in text
@@ -37,7 +35,7 @@ def test_verwaltung_vorbereitete_plaetze(datei):
 
 def test_verwaltung_unveraendert(client, auftraggeberin):
     als_leitung(client, auftraggeberin)
-    seite = client.get("/verwaltung").text
+    seite = client.get("/verwaltung/inhalte").text
     assert "Einträge" in seite and "Vorschau" in seite
 
 

@@ -36,7 +36,7 @@ def test_anmelden_lehrperson(client, lehrperson):
 def test_anmelden_auftraggeberin(client, auftraggeberin):
     antwort = anmelden(client, "projektleitung", "leitung-pass-1")
     assert antwort.status_code == 303
-    assert antwort.headers["location"] == "/verwaltung"
+    assert antwort.headers["location"] == "/verwaltung/inhalte"
 
 
 @pytest.mark.parametrize(
@@ -100,7 +100,7 @@ def test_fly_client_ip_in_entwicklung_ignoriert(client):
 def test_abmelden(client, lehrperson):
     anmelden(client, "lp.anna", "anna-pass-1")
     vorher = client.cookies["csrf"]
-    antwort = client.post("/abmelden", data={"csrf": csrf_von(client, "/lehrperson")})
+    antwort = client.post("/abmelden", data={"csrf": csrf_von(client, "/lehrperson/info")})
     assert antwort.status_code == 303
     assert antwort.headers["location"] == "/"
     assert client.get("/lehrperson").headers["location"] == "/"

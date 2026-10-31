@@ -251,10 +251,9 @@ def test_cookie_mit_falschem_inhalt_ist_abgemeldet(client, app, lp):
         assert hole(client, "/t/lp", s.dumps(inhalt)).status_code == 303
 
 
-def test_kopf_zeigt_anzeigename_und_abmelden(client, lp):
+def test_kopf_zeigt_anzeigename_ohne_abmelden(client, lp):
+    """Abmelden steht nicht mehr im Kopf, sondern auf der Info-Seite bzw. am Seitenende."""
     wert = anmelden_roh(client, lp)
     html = hole(client, "/t/seite", wert).text
     assert "Anna" in html
-    assert 'action="/abmelden"' in html
-    assert 'name="csrf"' in html
-    assert 'action="/abmelden"' not in client.get("/").text
+    assert 'action="/abmelden"' not in html

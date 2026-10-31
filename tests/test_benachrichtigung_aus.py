@@ -17,7 +17,7 @@ def leitung(client, auftraggeberin):
 
 def test_abo_nicht_moeglich(lp):
     daten = {
-        "csrf": csrf_von(lp, "/lehrperson"),
+        "csrf": csrf_von(lp, "/lehrperson/info"),
         "endpunkt": "https://fcm.googleapis.com/fcm/send/abc",
         "p256dh": P256DH,
         "auth": AUTH,
