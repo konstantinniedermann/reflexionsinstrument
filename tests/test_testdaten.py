@@ -53,7 +53,7 @@ def test_abzug_alle_tabellen(db):
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
         )
     }
-    assert len(namen) == 11
+    assert len(namen) == 12
     assert set(testdaten.abzug(db)) == namen
 
 

@@ -8,7 +8,7 @@ from app.db import MIGRATIONEN, migriere, verbinde
 
 
 def test_version_spalte_indizes(db):
-    assert db.execute("PRAGMA user_version").fetchone()[0] == 3
+    assert db.execute("PRAGMA user_version").fetchone()[0] == 4
     spalten = [z[1] for z in db.execute("PRAGMA table_info(aufnahmen)")]
     assert "dauer_sekunden" in spalten
     indizes = {z[0] for z in db.execute("SELECT name FROM sqlite_master WHERE type = 'index'")}
@@ -47,7 +47,7 @@ def test_migration_erhaelt_daten(tmp_path):
             assert zeilen, tabelle
         vorher = testdaten.abzug(conn)
 
-        assert migriere(conn) == 3
+        assert migriere(conn) == 4
         nachher = testdaten.abzug(conn)
         for tabelle in vorher:
             if tabelle != "aufnahmen":
