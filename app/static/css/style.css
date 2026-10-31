@@ -10,7 +10,6 @@
   --linie: #e0e0e0;
   --akzent: #111111;
   --akzent-text: #ffffff;
-  --akzent-sanft: #e6e6e6;
   --erledigt: #1d6614;
   --erledigt-sanft: #e3f2df;
   --hinweis: #fff6c4;
@@ -47,7 +46,6 @@
     --linie: #333333;
     --akzent: #f1f1f1;
     --akzent-text: #111111;
-    --akzent-sanft: #2c2c2c;
     --erledigt: #9cd68f;
     --erledigt-sanft: #1f2e1c;
     --hinweis: #2b2610;
@@ -238,6 +236,16 @@ a {
   background: #000000;
   border-color: #000000;
   color: #ffffff;
+}
+
+/* Auf der grünen Fläche wäre der helle Fokus-Rahmen des dunklen Schemas kaum sichtbar. */
+.karte--impuls :focus-visible {
+  outline-color: #000000;
+}
+
+/* Leitfrage als Bezug eines Tagebucheintrags */
+.karte--bezug {
+  border-left: 6px solid var(--farbe-tagebuch);
 }
 
 .impuls__text {
@@ -944,7 +952,8 @@ textarea:focus {
 .karte--ruhend {
   display: flex;
   justify-content: space-between;
-  opacity: 0.7;
+  border-style: dashed;
+  background: transparent;
 }
 
 .aktionen {
@@ -1091,11 +1100,14 @@ input[type="checkbox"] {
 
 .tabs a[aria-current="page"] {
   color: var(--tinte);
+  font-weight: 700;
 }
 
 .tabs a[aria-current="page"] svg {
   background: var(--bereich);
   color: var(--auf-bereich);
+  /* Ring in Schriftfarbe: hebt die Pille auch bei hellen Bereichsfarben von der Leiste ab. */
+  box-shadow: 0 0 0 1.5px var(--tinte);
 }
 
 .hinweis--entwurf {

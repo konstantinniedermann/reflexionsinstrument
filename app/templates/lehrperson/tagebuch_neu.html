@@ -6,7 +6,7 @@
   <h1>{{ titel }}</h1>
 </header>
 {% if bezug %}
-<section class="karte karte--impuls">
+<section class="karte {% if bezug_art == 'impuls' %}karte--impuls{% else %}karte--bezug{% endif %}">
   <p class="impuls__text">{{ bezug.text }}</p>
 </section>
 {% endif %}

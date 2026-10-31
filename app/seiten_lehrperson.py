@@ -183,6 +183,7 @@ def kontext_tagebuch_neu(
         "meldung": meldung or (MELDUNG_FEHLER if fehler else None),
         "titel": ARTEN_NEU[art],
         "bezug": bezug,
+        "bezug_art": art,
         "aktion": ansicht.url(
             "/tagebuch/neu/frei" if bezug is None else f"/tagebuch/neu/{art}/{bezug['id']}"
         ),
@@ -237,6 +238,7 @@ def kontext_tagebuch_eintrag(
         "eintrag": eintrag,
         "art_text": ARTEN_EINTRAG[eintrag["art"]],
         "bezug_text": eintrag["impuls_text"] or eintrag["leitfrage_text"],
+        "bezug_art": eintrag["art"],
         "aufnahme": aufnahme,
         "text": (eintrag["text"] or "") if text is None else text,
         "fehler": fehler.get("text"),
