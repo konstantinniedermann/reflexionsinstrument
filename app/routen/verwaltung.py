@@ -52,8 +52,9 @@ def _zugaenge_seite(request: Request, db: sqlite3.Connection, status=200, **kont
 
 
 @router.get("")
-def start(request: Request):
-    return templates.TemplateResponse(request, "verwaltung/start.html")
+def start():
+    """Keine eigene Übersicht: Die Navigation führt zu allem, Start ist «Inhalte»."""
+    return RedirectResponse("/verwaltung/inhalte", status_code=303)
 
 
 @router.get("/zugaenge")

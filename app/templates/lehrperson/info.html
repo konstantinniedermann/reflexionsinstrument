@@ -13,4 +13,10 @@
   <summary>Datenschutz</summary>
   <div class="aufklapp__inhalt formatiert">{{ datenschutz | formatiert }}</div>
 </details>
+{% if ansicht.speichert %}
+<section class="abmelden">
+  <p class="hilfe">Abmelden ist nur nötig auf einem geteilten Gerät, zum Beispiel einem Schulcomputer.</p>
+  {% include "_abmelden.html" %}
+</section>
+{% endif %}
 {% endblock %}

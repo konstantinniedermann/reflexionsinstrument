@@ -59,7 +59,7 @@ def test_nicht_freigeschaltet_404(client, lehrperson, db, heute_ist):
     heute_ist(date(2026, 11, 29))
     als_lehrperson(client, lehrperson)
     vorher = testdaten.abzug(db)
-    csrf = csrf_von(client, "/lehrperson")
+    csrf = csrf_von(client, "/lehrperson/info")
     seite = f"/lehrperson/runden/{rid}"
     antworten = [
         client.get(seite),
@@ -84,7 +84,7 @@ def test_ungueltige_ids(client, lehrperson, wert):
 
 def test_post_unbekannte_runde(client, lehrperson):
     als_lehrperson(client, lehrperson)
-    csrf = csrf_von(client, "/lehrperson")
+    csrf = csrf_von(client, "/lehrperson/info")
     assert client.post("/lehrperson/runden/999", data={"csrf": csrf}).status_code == 404
 
 

@@ -208,6 +208,15 @@ async function sende(sel) {
 }
 
 const pfad = () => js("location.pathname");
+
+/** Abmelden steht nur auf der Info-Seite der Lehrpersonen und am Ende der Verwaltungsseiten. */
+async function abmelden(ziel) {
+  const sel = "form[action='/abmelden'] button";
+  if (!(await js(`!!document.querySelector(${JSON.stringify(sel)})`))) {
+    await oeffne(ziel ?? ((await pfad()).startsWith("/verwaltung") ? "/verwaltung/inhalte" : "/lehrperson/info"));
+  }
+  await sende(sel);
+}
 const ueberschrift = () => js("document.querySelector('h1')?.innerText");
 
 async function keinUeberlauf(name) {
@@ -270,7 +279,6 @@ async function ablaufLehrperson() {
   const titelRunde1 = platzhalter.runden[0].titel;
   const titelRunde2 = platzhalter.runden[1].titel;
   const impuls1 = platzhalter.impulse[0].text;
-  const abmelden = ".seitenkopf form[action='/abmelden'] button";
   const dialoge = () => ereignisse.filter((e) => e === "Page.javascriptDialogOpening").length;
   const dialogeVorher = dialoge();
   const SPEICHERN = "form.formular button[type=submit]";
@@ -291,7 +299,7 @@ async function ablaufLehrperson() {
   muss((await js("document.querySelector('#projektstart').value")) === heute, "Lehrperson-Ablauf: erster Tag auf heute gesetzt");
   const pwEins = await legeZugangAn("Erika Eins", "lp.e2e.eins");
   const pwZwei = await legeZugangAn("Zora Zwei", "lp.e2e.zwei");
-  await sende(abmelden);
+  await abmelden();
 
   // 1. Anmelden, Startseite
   let stand = merke();
@@ -481,7 +489,7 @@ async function ablaufLehrperson() {
   await oeffne(rundenPfad);
   await tippe(`#${erstesFeld}`, entwurfText);
   pruefe((await entwurfSchluessel()) === 1, "Entwurf: vor dem Abmelden liegt ein Entwurf im Tab");
-  await sende(abmelden);
+  await abmelden();
   pruefe((await entwurfSchluessel()) === 0, "Entwurf: nach «Abmelden» kein Entwurf im Tab");
   await meldeAn("lp.e2e.eins", pwEins);
   keineFehlerSeit(stand, "Entwurfsschutz");
@@ -509,7 +517,7 @@ async function ablaufLehrperson() {
 
   // 7. Zweite Lehrperson öffnet den Eintrag der ersten
   stand = merke();
-  await sende(abmelden);
+  await abmelden();
   await meldeAn("lp.e2e.zwei", pwZwei);
   muss((await ueberschrift()) === "Hallo, Zora Zwei", "Zweite Lehrperson angemeldet");
   await oeffne(freiPfad);
@@ -524,7 +532,7 @@ async function ablaufLehrperson() {
 
   // 8. Auftraggeberin kann eine beantwortete Frage nicht löschen
   stand = merke();
-  await sende(abmelden);
+  await abmelden();
   await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
   await oeffne("/verwaltung/inhalte/runden/1");
   await sende("article[id^=frage-] a[href$='/loeschen']");
@@ -535,11 +543,10 @@ async function ablaufLehrperson() {
   await screenshot("29a-lp-loeschen-gesperrt");
   keineFehlerSeit(stand, "Beantwortete Frage löschen");
   pruefe(dialoge() === dialogeVorher, "Lehrperson-Ablauf: kein JavaScript-Dialog");
-  await sende(abmelden);
+  await abmelden();
 }
 
 async function ablaufAufnahmen() {
-  const abmelden = ".seitenkopf form[action='/abmelden'] button";
   const SEITE = "/lehrperson/tagebuch/neu/aufnahme";
   const meldung = async () => (await js("document.querySelector('.meldung')?.innerText")) ?? "";
   const knoepfeOk = (sel) =>
@@ -568,7 +575,7 @@ async function ablaufAufnahmen() {
   await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
   const pwAda = await legeZugangAn("Ada Aufnahme", "lp.e2e.aufnahme1");
   const pwBen = await legeZugangAn("Ben Beispiel", "lp.e2e.aufnahme2");
-  await sende(abmelden);
+  await abmelden();
   await meldeAn("lp.e2e.aufnahme1", pwAda);
   muss((await ueberschrift()) === "Hallo, Ada Aufnahme", "Aufnahmen: erste Lehrperson angemeldet");
 
@@ -808,7 +815,7 @@ async function ablaufAufnahmen() {
   await keinUeberlauf("Tagebuch-Wahl 390 px");
   await screenshot("47-aufnahme-wahl");
   keineFehlerSeit(stand, "Eintrag 1280 px und Wahl");
-  await sende(abmelden);
+  await abmelden();
 
   // 7. Zweite Lehrperson: fremde Aufnahme über die direkte Adresse 404 (Akzeptanzkriterium)
   stand = merke();
@@ -817,7 +824,7 @@ async function ablaufAufnahmen() {
   const fremd = await js(`Promise.all([{}, { Range: "bytes=0-1" }].map((headers) => fetch(${JSON.stringify(src)}, { headers }).then((r) => ({ status: r.status, typ: r.headers.get("content-type") ?? "" }))))`);
   pruefe(fremd.every((r) => r.status === 404 && !r.typ.startsWith("audio/")), `Fremde Aufnahme: 404 ohne Audio, auch mit Range (${fremd.map((r) => r.status).join(", ")})`);
   keineFehlerSeit(stand, "Fremde Aufnahme", ["status of 404"]);
-  await sende(abmelden);
+  await abmelden();
 
   // 8. Auftraggeberin hört die Aufnahme
   stand = merke();
@@ -826,7 +833,7 @@ async function ablaufAufnahmen() {
   const leitung = await js(`fetch("/verwaltung/aufnahmen/${aufnahmeId}").then((r) => ({ status: r.status, typ: r.headers.get("content-type") ?? "" }))`);
   pruefe(leitung.status === 200 && leitung.typ.startsWith("audio/"), `Auftraggeberin: Aufnahme 200 mit Audio-Typ (${leitung.status}, ${leitung.typ})`);
   keineFehlerSeit(stand, "Auftraggeberin hört die Aufnahme");
-  await sende(abmelden);
+  await abmelden();
 
   // 9. Erste Lehrperson löscht den gesprochenen Eintrag: Adresse 404, Datei weg
   stand = merke();
@@ -840,7 +847,7 @@ async function ablaufAufnahmen() {
   pruefe(geloescht === 404, `Eintrag gelöscht: Adresse der Aufnahme 404 (${geloescht})`);
   pruefe(!dateien().includes(neu[0]), "Eintrag gelöscht: Datei nicht mehr im Ordner");
   keineFehlerSeit(stand, "Gesprochenen Eintrag löschen", ["status of 404"]);
-  await sende(abmelden);
+  await abmelden();
 
   // 10. Eine Aufnahme bleibt stehen, damit der Ablauf «Einträge» (#18) den Player der Verwaltung prüft
   stand = merke();
@@ -852,11 +859,10 @@ async function ablaufAufnahmen() {
   keineFehlerSeit(stand, "Aufnahme für die Auswertung");
   await handy();
   await farbschema("light");
-  await sende(abmelden);
+  await abmelden();
 }
 
 async function ablaufEintraege() {
-  const abmelden = ".seitenkopf form[action='/abmelden'] button";
   const NAME = "Ida Überlangernachnamebeispielperson";
   await handy();
   await farbschema("light");
@@ -866,28 +872,27 @@ async function ablaufEintraege() {
   await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
   muss((await text()).includes("Abmelden"), "Einträge: Auftraggeberin angemeldet");
   const pwIda = await legeZugangAn(NAME, "lp.e2e.export");
-  await sende(abmelden);
+  await abmelden();
   await meldeAn("lp.e2e.export", pwIda);
   await oeffne("/lehrperson/tagebuch/neu/frei");
   await tippe("#text", "Erste Zeile\nZweite Zeile");
   await sende("form.formular button[type=submit]");
   muss(/^\/lehrperson\/tagebuch\/\d+$/.test(await pfad()), "Einträge: freier Eintrag der Testperson gespeichert");
   keineFehlerSeit(stand, "Vorbereitung Einträge");
-  await sende(abmelden);
+  await abmelden();
   await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
 
   // 2. Verwaltung: Karte und Navigation
   stand = merke();
   await oeffne("/verwaltung");
-  pruefe(await js("!!document.querySelector('a.karte[href=\"/verwaltung/eintraege\"]')"), "Einträge: Karte «Einträge» auf der Verwaltung ist ein Link");
   pruefe(await js("[...document.querySelectorAll('.verwaltungsnavigation a')].some((a) => a.innerText.trim() === 'Einträge')"), "Einträge: Navigation enthält «Einträge»");
   await keinUeberlauf("Verwaltung mit Navigation 390 px");
   keineFehlerSeit(stand, "Verwaltung mit Einträgen");
 
   // 3. Seite Einträge, Filter
   stand = merke();
-  await sende("a.karte[href='/verwaltung/eintraege']");
-  muss((await pfad()) === "/verwaltung/eintraege", "Einträge: Karte führt auf die Seite Einträge");
+  await sende(".verwaltungsnavigation a[href='/verwaltung/eintraege']");
+  muss((await pfad()) === "/verwaltung/eintraege", "Einträge: Navigationspunkt führt auf die Seite Einträge");
   const idaKarte = `[...document.querySelectorAll('a.karte--person')].find((a) => a.innerText.includes('Ida'))`;
   pruefe(await js(`!!(${idaKarte})?.innerText.includes('1 Tagebucheintrag')`), "Einträge: Karte von Ida zeigt «1 Tagebucheintrag»");
   await keinUeberlauf("Einträge 390 px");
@@ -958,14 +963,13 @@ async function ablaufEintraege() {
   await screenshot("42-eintraege-desktop");
   keineFehlerSeit(stand, "Einträge dunkel und Desktop");
   await handy();
-  await sende(abmelden);
+  await abmelden();
 }
 
 async function ablaufGast() {
   const inhalt = JSON.parse(readFileSync(new URL("./platzhalter/inhalte.json", import.meta.url), "utf8"));
   const titel = inhalt.runden.map((r) => r.titel);
   const frageText = (runde, nr) => inhalt.runden[runde - 1].fragen[nr].text;
-  const abmelden = ".seitenkopf form[action='/abmelden'] button";
   const dialoge = () => ereignisse.filter((e) => e === "Page.javascriptDialogOpening").length;
   const dialogeVorher = dialoge();
   const tag = (basisTag, plus) => {
@@ -988,7 +992,7 @@ async function ablaufGast() {
   await tippe("#projektstart", heute);
   await sende("form.formular button[type=submit]");
   muss((await js("document.querySelector('#projektstart').value")) === heute, "Gast-Ablauf: erster Tag auf heute gesetzt");
-  await sende(abmelden);
+  await abmelden();
   await cdp("Network.clearBrowserCookies");
   keineFehlerSeit(stand, "Gast-Vorbereitung");
 
@@ -1067,8 +1071,10 @@ async function ablaufGast() {
   await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
   await oeffne("/verwaltung");
   await keinUeberlauf("Verwaltung-Start 390 px");
-  await sende("a.karte--link[href='/verwaltung/vorschau']");
-  muss((await pfad()) === "/verwaltung/vorschau", "Vorschau: Karte «Vorschau» öffnet die Auswahlseite");
+  await klick(".verwaltungsnavigation a[href='/verwaltung/vorschau']");
+  await warteBis(async () => (await pfad()) === "/verwaltung/vorschau", "Vorschau lädt nicht");
+  await warte(150);
+  muss((await pfad()) === "/verwaltung/vorschau", "Vorschau: Navigationspunkt «Vorschau» öffnet die Auswahlseite");
   pruefe(await js("!!document.querySelector('.verwaltungsnavigation')"), "Vorschau: Verwaltungsnavigation sichtbar");
   await keinUeberlauf("Vorschau-Auswahl 390 px");
   await screenshot("76-vorschau-auswahl");
@@ -1087,7 +1093,7 @@ async function ablaufGast() {
   await screenshot("78-vorschau-kuenftige-runde");
   await sende("a.knopf--kopf");
   pruefe((await pfad()) === "/verwaltung/vorschau", "Vorschau: «Vorschau beenden» führt zur Auswahl");
-  await sende(abmelden);
+  await abmelden();
   keineFehlerSeit(stand, "Vorschau");
 
   // 8. Dunkel und Desktop
@@ -1108,7 +1114,7 @@ async function ablaufGast() {
   await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
   await oeffne("/verwaltung/vorschau");
   await keinUeberlauf("Vorschau-Auswahl 1280 px");
-  await sende(abmelden);
+  await abmelden();
   await handy();
   keineFehlerSeit(stand, "Gast: Dunkel und Desktop");
   pruefe(dialoge() === dialogeVorher, "Gast-Ablauf: kein JavaScript-Dialog");
@@ -1162,12 +1168,15 @@ async function ablaeufe() {
   await tippe("#benutzername", "projektleitung");
   await tippe("#passwort", PW_AUFTRAGGEBERIN);
   await sende("form[action='/anmelden'] button[type=submit]");
-  muss((await text()).includes("Projektleitung") && (await text()).includes("Abmelden"), "Auftraggeberin ist angemeldet (Name und Abmelden im Kopf)");
+  muss((await text()).includes("Projektleitung") && (await pfad()) === "/verwaltung/inhalte", "Auftraggeberin ist angemeldet und landet bei den Inhalten");
+  pruefe(!(await js("!!document.querySelector('.seitenkopf form[action=\"/abmelden\"]')")), "Kopf ohne «Abmelden»");
+  pruefe(await js("!!document.querySelector('footer.seitenfuss form[action=\"/abmelden\"]')"), "«Abmelden» am Seitenende");
   keineFehlerSeit(stand, "Anmeldung Auftraggeberin");
 
   stand = merke();
   await oeffne("/verwaltung");
-  muss((await ueberschrift()) === "Verwaltung", "Auftraggeberin sieht die Verwaltung");
+  muss((await ueberschrift()) === "Inhalte", "Auftraggeberin: /verwaltung führt zu den Inhalten");
+  pruefe(!(await js("[...document.querySelectorAll('.verwaltungsnavigation a')].some((a) => a.innerText.trim() === 'Übersicht')")), "Navigation ohne «Übersicht»");
   await keinUeberlauf("Verwaltung 390 px");
   await oeffne("/verwaltung/zugaenge");
   muss((await ueberschrift()) === "Zugänge", "Auftraggeberin sieht die Zugänge");
@@ -1186,7 +1195,7 @@ async function ablaeufe() {
   pruefe((await text()).includes("Anna Muster"), "Zugänge: neuer Zugang steht in der Liste");
   keineFehlerSeit(stand, "Verwaltung");
 
-  await sende(".seitenkopf form[action='/abmelden'] button");
+  await abmelden();
   pruefe((await ueberschrift()) === "Anmelden", "Abmelden führt zur Login-Seite");
   await oeffne("/verwaltung");
   pruefe((await ueberschrift()) === "Anmelden", "Nach dem Abmelden: Verwaltung nicht mehr zugänglich");
@@ -1205,7 +1214,7 @@ async function ablaeufe() {
   await keinUeberlauf("Kein Zugriff 390 px");
   await screenshot("08-kein-zugriff");
   keineFehlerSeit(stand, "Lehrperson", ["status of 403"]); // 403 ist die Antwort auf /verwaltung
-  await sende(".seitenkopf form[action='/abmelden'] button");
+  await abmelden("/lehrperson/info");
   pruefe((await ueberschrift()) === "Anmelden", "Lehrperson: Abmelden führt zur Login-Seite");
 
   // ------------------------------------------------------------ Eingabemaske für Inhalte (#15)
@@ -1405,7 +1414,7 @@ async function ablaeufe() {
 
   // 11. Lehrperson hat keinen Zugriff auf die Inhalte
   stand = merke();
-  await sende(".seitenkopf form[action='/abmelden'] button");
+  await abmelden();
   await oeffne("/");
   await tippe("#benutzername", "lp.anna");
   await tippe("#passwort", pwLehrperson);
@@ -1423,7 +1432,6 @@ async function ablaufBenachrichtigungen() {
   const box = "[data-benachrichtigung]";
   const sichtbar = (sel) => js(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); return !!e && !e.closest("[hidden]") && e.offsetHeight > 0; })()`);
   const zustand = () => js(`[...document.querySelectorAll("${box} [data-zustand]")].find((e) => !e.hidden)?.dataset.zustand ?? null`);
-  const abmelden = ".seitenkopf form[action='/abmelden'] button";
   let stand;
 
   await handy();
@@ -1438,7 +1446,7 @@ async function ablaufBenachrichtigungen() {
   // 1. Zugang für den Ablauf
   await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
   const passwort = await legeZugangAn("Nora Nachricht", "lp.nora");
-  await sende(abmelden);
+  await abmelden();
   await meldeAn("lp.nora", passwort);
   muss((await pfad()) === "/lehrperson", "Benachrichtigung: Lehrperson angemeldet");
 
@@ -1492,7 +1500,7 @@ async function ablaufBenachrichtigungen() {
   await cdp("Page.removeScriptToEvaluateOnNewDocument", { identifier: ios.result.identifier });
   await cdp("Emulation.setUserAgentOverride", { userAgent: "" });
   keineFehlerSeit(stand, "Benachrichtigung: iPhone");
-  await sende(abmelden);
+  await abmelden();
 
   // 6. Verwaltung: Senden
   stand = merke();
@@ -1524,14 +1532,14 @@ async function ablaufBenachrichtigungen() {
 
   // 7. Ausschalten auf dem Gerät der Lehrperson entfernt das Abo auch auf dem Server
   if (eingeschaltet) {
-    await sende(abmelden);
+    await abmelden();
     await meldeAn("lp.nora", passwort);
     await oeffne("/lehrperson/info");
     await warteBis(async () => (await zustand()) === "an", "Info zeigt «eingeschaltet» nicht");
     await klick(`${box} [data-aktion='aus']`);
     await warteBis(async () => (await zustand()) === "aus", "Ausschalten wirkt nicht");
     pruefe(true, "Benachrichtigung: Ausschalten");
-    await sende(abmelden);
+    await abmelden();
     await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
     await oeffne("/verwaltung/benachrichtigung");
     pruefe((await text()).includes("An 0 Geräte senden"), "Benachrichtigung: nach dem Ausschalten kein Gerät mehr");

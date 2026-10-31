@@ -285,7 +285,7 @@ def test_auswahlseite(leitung, db):
     )
     assert 'href="/gast"' in text
     assert "Diese Ansicht ist öffentlich" in text
-    assert re.search(r'href="/verwaltung"[^>]*>\s*‹ Verwaltung', text)
+    assert "‹ Verwaltung" not in text
 
 
 def test_auswahl_weiterleitungen(leitung, db):
@@ -308,8 +308,7 @@ def test_auswahl_weiterleitungen(leitung, db):
 def test_links_in_verwaltung(leitung, db):
     rid, _ = testdaten.lege_runde_an(db, "Runde Eins", "2026-12-07")
     db.commit()
-    start = leitung.get("/verwaltung").text
-    assert re.search(r'<a class="karte karte--link" href="/verwaltung/vorschau"', start)
+    start = leitung.get("/verwaltung/inhalte").text
     assert re.search(
         r'<nav class="verwaltungsnavigation".*href="/verwaltung/vorschau".*</nav>', start, re.DOTALL
     )
@@ -327,7 +326,6 @@ def test_links_in_verwaltung(leitung, db):
 
 
 def test_kommentarzeilen_bleiben(leitung):
-    for datei in ("start.html", "rahmen.html"):
-        text = (Path("app/templates/verwaltung") / datei).read_text(encoding="utf-8")
-        assert "{# #19:" in text
-        assert "{# Trennzeile zwischen #18 und #19, nicht ändern #}" in text
+    text = (Path("app/templates/verwaltung") / "rahmen.html").read_text(encoding="utf-8")
+    assert "{# #19:" in text
+    assert "{# Trennzeile zwischen #18 und #19, nicht ändern #}" in text

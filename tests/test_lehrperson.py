@@ -176,7 +176,7 @@ def test_skript_nur_auf_lehrpersonen_seiten(client, lehrperson, auftraggeberin):
     assert 'src="/static/js/entwurf.js"' in client.get("/lehrperson/tagebuch/neu/frei").text
     client.cookies.clear()
     als_leitung(client, auftraggeberin)
-    text = client.get("/verwaltung").text
+    text = client.get("/verwaltung/inhalte").text
     assert "entwurf.js" not in text
     assert "data-entwurf" not in text
 

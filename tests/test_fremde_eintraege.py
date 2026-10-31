@@ -45,7 +45,7 @@ def _ordner(einstellungen):
 def test_fremde_eintraege_404(als_zweite, daten_der_ersten, db, einstellungen):
     vorher = testdaten.abzug(db)
     dateien = _ordner(einstellungen)
-    csrf = csrf_von(als_zweite, "/lehrperson")
+    csrf = csrf_von(als_zweite, "/lehrperson/info")
     for eid in daten_der_ersten["eintraege"]:
         seite = f"/lehrperson/tagebuch/{eid}"
         assert als_zweite.get(seite).status_code == 404
@@ -69,7 +69,7 @@ def test_alle_routen_mit_eintrag_id(als_zweite, daten_der_ersten, db, einstellun
     ]
     assert routen
     vorher = testdaten.abzug(db)
-    csrf = csrf_von(als_zweite, "/lehrperson")
+    csrf = csrf_von(als_zweite, "/lehrperson/info")
     eid = daten_der_ersten["eintraege"][0]
     for pfad, methode in routen:
         ziel = pfad.replace("{eintrag_id}", str(eid))

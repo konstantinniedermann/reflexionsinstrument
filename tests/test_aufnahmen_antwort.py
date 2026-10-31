@@ -187,7 +187,7 @@ def adresse(rid, fid, ende="aufnahme"):
 
 
 def hochladen(client, pfad, **felder):
-    daten = {"csrf": csrf_von(client, "/lehrperson"), **felder}
+    daten = {"csrf": csrf_von(client, "/lehrperson/info"), **felder}
     return client.post(
         pfad,
         files={"aufnahme": ("a.webm", WEBM, "audio/webm")},
@@ -228,7 +228,7 @@ def test_antwort_hochladen(client, runde, db, lehrperson):
 def test_antwort_ueber_einer_mib(client, runde, db, einstellungen, verzeichnis):
     rid, f1, _ = runde
     gross = testdaten.WEBM_ANFANG + bytes(int(2.5 * 1024 * 1024))
-    csrf = csrf_von(client, "/lehrperson")
+    csrf = csrf_von(client, "/lehrperson/info")
     r = client.post(
         adresse(rid, f1),
         files={"aufnahme": ("a.webm", gross, "audio/webm")},
@@ -266,7 +266,7 @@ def test_antwort_ungueltig_400(client, runde, einstellungen, db):
     r = client.post(
         adresse(rid, f1),
         files={"aufnahme": ("a.webm", b"kein Ton", "audio/webm")},
-        data={"csrf": csrf_von(client, "/lehrperson")},
+        data={"csrf": csrf_von(client, "/lehrperson/info")},
     )
     assert r.status_code == 400
     assert testdaten.abzug(db) == vorher
@@ -294,7 +294,7 @@ def test_antwort_404(client, runde, db, einstellungen, fall):
     assert client.get(adresse(*ziel)).status_code == 404
     assert hochladen(client, adresse(*ziel)).status_code == 404
     assert client.get(adresse(*ziel, "aufnahme/loeschen")).status_code == 404
-    daten = {"csrf": csrf_von(client, "/lehrperson")}
+    daten = {"csrf": csrf_von(client, "/lehrperson/info")}
     assert client.post(adresse(*ziel, "aufnahme/loeschen"), data=daten).status_code == 404
     assert testdaten.abzug(db) == vorher
     assert sorted(einstellungen.aufnahmen_verzeichnis.iterdir()) == ordner
@@ -334,7 +334,7 @@ def test_aufnahme_loeschen_fremd_404(client, runde, db, lehrperson, zweite_lehrp
     vorher = testdaten.abzug(db)
     pfad = adresse(rid, f1, "aufnahme/loeschen")
     assert client.get(pfad).status_code == 404
-    assert client.post(pfad, data={"csrf": csrf_von(client, "/lehrperson")}).status_code == 404
+    assert client.post(pfad, data={"csrf": csrf_von(client, "/lehrperson/info")}).status_code == 404
     assert testdaten.abzug(db) == vorher
     assert (verzeichnis / datei.name).exists()
 
@@ -396,7 +396,7 @@ def test_loeschen_falsche_runde_404(client, runde, db, lehrperson, verzeichnis):
     for runde_id, frage_id in ((fremde_runde, f1), (rid, fremd)):
         pfad = adresse(runde_id, frage_id, "aufnahme/loeschen")
         assert client.get(pfad).status_code == 404
-        daten = {"csrf": csrf_von(client, "/lehrperson")}
+        daten = {"csrf": csrf_von(client, "/lehrperson/info")}
         assert client.post(pfad, data=daten).status_code == 404
     assert testdaten.abzug(db) == vorher
     assert (verzeichnis / datei.name).exists()

@@ -78,7 +78,7 @@ def test_lehrperson_kann_keine_inhalte_aendern(
         antwort = client.get(pfad)
         assert antwort.status_code == 403, pfad
         assert "Kein Zugriff" in antwort.text, pfad
-    token = csrf_von(client, "/lehrperson")
+    token = csrf_von(client, "/lehrperson/info")
     for pfad in routen(einstellungen, "POST"):
         antwort = client.post(pfad, data={"csrf": token, **FORMULAR})
         assert antwort.status_code == 403, pfad
