@@ -1470,17 +1470,22 @@ input[type="checkbox"] {
 /* Bereichsfarben als Navigationshilfe, siehe
    docs/superpowers/specs/2026-10-31-bereichsfarben-design.md */
 
-/* Vollflächig in der Bereichsfarbe. Innen gelten Schrift-, Akzent- und Kartenfarbe
-   der Fläche, damit Text, Pfeile, Fokus-Rahmen und Knöpfe in beiden Schemata lesbar bleiben. */
+/* Vollflächig in der Bereichsfarbe. Innen gelten Schrift- und Akzentfarbe der Fläche,
+   damit Text, Pfeile, Fokus-Rahmen und Knöpfe in beiden Schemata lesbar bleiben. */
 .flaeche {
   --tinte: var(--auf-bereich);
   --gedaempft: var(--auf-bereich);
   --akzent: var(--auf-bereich);
   --akzent-text: var(--bereich);
-  --karte: #ffffff;
   background: var(--bereich);
   border-color: transparent;
   color: var(--auf-bereich);
+}
+
+/* Der Fokus-Rahmen hat die Schriftfarbe der Fläche; aussen läge er im dunklen Schema
+   schwarz auf fast Schwarz, darum innen auf der Fläche. */
+.flaeche:focus-visible {
+  outline-offset: -6px;
 }
 
 .flaeche .ueberzeile,

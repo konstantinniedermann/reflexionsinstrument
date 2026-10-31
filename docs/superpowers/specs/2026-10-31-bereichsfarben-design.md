@@ -44,7 +44,7 @@ Farben der Verwaltungsnavigation: Übersicht Schwarz, Inhalte Orange `#d35d31`, 
 ## Umsetzung
 
 - Neue Hilfsklasse `flaeche`: Hintergrund `--bereich`, Schrift `--auf-bereich`. Innerhalb der Fläche werden Schrift-, gedämpfte und Akzentfarbe auf `--auf-bereich` umgestellt, damit Text, Pfeile, Fokus-Rahmen und Knöpfe darauf lesbar bleiben (Knopf: Schrift in der Bereichsfarbe auf Schwarz bzw. Weiss). Marken in der Fläche werden weiss.
-- Die Farbe kommt wie bisher aus der Klasse `bereich--<name>`; neu dazu `bereich--impuls` und für die Verwaltung `bereich--inhalte`, `bereich--vorschau`, `bereich--zugaenge`.
+- Die Farbe kommt wie bisher aus der Klasse `bereich--<name>`; neu dazu `bereich--impuls` und für die Verwaltung `bereich--inhalte` und `bereich--zugaenge` (Vorschau nutzt `bereich--info`, Benachrichtigung `bereich--impuls`).
 - Bereichsnamen der Pille in einer Zuordnung im Rahmen der Lehrpersonen-Seiten, nicht im CSS (Text gehört nicht ins Stylesheet).
 - Aktiver Punkt der Verwaltungsnavigation aus dem Pfad der Anfrage, ohne Änderung an den Routen.
 - Kein JavaScript, keine neue Dependency.
