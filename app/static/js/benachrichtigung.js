@@ -67,9 +67,22 @@
     return !k || base64url(new Uint8Array(k)) === schluessel;
   }
 
+  // Ist der Push-Dienst nicht erreichbar, kann das Abo ohne Antwort hängen bleiben.
+  const ZEITLIMIT = 20000;
+
+  function mitZeitlimit(versprechen) {
+    let uhr;
+    const ablauf = new Promise((_, ablehnen) => {
+      uhr = setTimeout(() => ablehnen(new Error("Zeitüberschreitung")), ZEITLIMIT);
+    });
+    return Promise.race([versprechen, ablauf]).finally(() => clearTimeout(uhr));
+  }
+
   async function abschliessen(registrierung) {
     await navigator.serviceWorker.ready;
-    return registrierung.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytesAus(schluessel) });
+    return mitZeitlimit(
+      registrierung.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: bytesAus(schluessel) }),
+    );
   }
 
   async function einschalten() {

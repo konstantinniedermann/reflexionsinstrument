@@ -21,6 +21,8 @@ const CHROME = process.env.CHROME_PFAD || "/Applications/Google Chrome.app/Conte
 
 // ---------------------------------------------------------------- Gerüst
 
+let vapidSchluessel = ""; // Benachrichtigungen (#37): eigener Schlüssel pro Lauf, siehe unten
+
 let app;
 let chrome;
 let ws;
@@ -60,7 +62,7 @@ async function starteApp() {
   const port = await freierPort();
   app = spawn("uv", ["run", "uvicorn", "--factory", "app.main:erstelle_app", "--port", String(port)], {
     cwd: PROJEKT,
-    env: { ...process.env, DATEN_VERZEICHNIS: DATEN },
+    env: { ...process.env, DATEN_VERZEICHNIS: DATEN, VAPID_SCHLUESSEL: vapidSchluessel },
     stdio: "ignore",
     detached: true, // eigene Prozessgruppe, damit auch uvicorn (Kindprozess von uv) beendet wird
   });
@@ -274,7 +276,7 @@ async function ablaufLehrperson() {
   const SPEICHERN = "form.formular button[type=submit]";
   const meldung = async () => (await js("document.querySelector('.meldung')?.innerText")) ?? "";
   const knoepfeOk = (sel) =>
-    js(`[...document.querySelectorAll(${JSON.stringify(sel)})].every((e) => { const r = e.getBoundingClientRect(); return r.height >= 43.5 && r.left >= 0 && r.right <= ${sollBreite}; })`);
+    js(`[...document.querySelectorAll(${JSON.stringify(sel)})].filter((e) => e.getClientRects().length).every((e) => { const r = e.getBoundingClientRect(); return r.height >= 43.5 && r.left >= 0 && r.right <= ${sollBreite}; })`);
   await handy();
   await farbschema("light");
 
@@ -541,7 +543,7 @@ async function ablaufAufnahmen() {
   const SEITE = "/lehrperson/tagebuch/neu/aufnahme";
   const meldung = async () => (await js("document.querySelector('.meldung')?.innerText")) ?? "";
   const knoepfeOk = (sel) =>
-    js(`[...document.querySelectorAll(${JSON.stringify(sel)})].every((e) => { const r = e.getBoundingClientRect(); return r.height >= 43.5 && r.left >= 0 && r.right <= ${sollBreite}; })`);
+    js(`[...document.querySelectorAll(${JSON.stringify(sel)})].filter((e) => e.getClientRects().length).every((e) => { const r = e.getBoundingClientRect(); return r.height >= 43.5 && r.left >= 0 && r.right <= ${sollBreite}; })`);
   // Sichtbar heisst: nicht versteckt und mit Fläche (prüft auch die CSS-Regeln für [hidden]).
   const sichtbar = (sel) => js(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); return !!e && e.getClientRects().length > 0; })()`);
   const zeitText = () => js("document.querySelector('[data-zeit]').innerText.trim()");
@@ -1221,7 +1223,7 @@ async function ablaeufe() {
   const kartenTexte = (sel) => js(`[...document.querySelectorAll(${JSON.stringify(sel)})].map((e) => e.innerText.trim())`);
   /** Tippflächen und Knöpfe liegen ganz im Bild und sind mindestens 44 px hoch. */
   const knoepfeOk = (sel) =>
-    js(`[...document.querySelectorAll(${JSON.stringify(sel)})].every((e) => { const r = e.getBoundingClientRect(); return r.height >= 43.5 && r.left >= 0 && r.right <= ${sollBreite}; })`);
+    js(`[...document.querySelectorAll(${JSON.stringify(sel)})].filter((e) => e.getClientRects().length).every((e) => { const r = e.getBoundingClientRect(); return r.height >= 43.5 && r.left >= 0 && r.right <= ${sollBreite}; })`);
 
   // Auftraggeberin wieder anmelden (am Ende von Ablauf 4 abgemeldet).
   await handy();
@@ -1237,7 +1239,7 @@ async function ablaeufe() {
   await oeffne(INH);
   muss((await ueberschrift()) === "Inhalte", "Inhalte-Übersicht: Titel «Inhalte»");
   pruefe((await js("document.querySelectorAll('a.karte--link').length")) === 6, "Inhalte-Übersicht: sechs Bereiche");
-  pruefe((await text()).includes("0 von 5 Hinweisen bestätigt"), "Inhalte-Übersicht: «0 von 5 Hinweisen bestätigt»");
+  pruefe((await text()).includes("0 von 6 Hinweisen bestätigt"), "Inhalte-Übersicht: «0 von 6 Hinweisen bestätigt»");
   pruefe((await text()).includes("Noch offen"), "Inhalte-Übersicht: Marke «Noch offen» sichtbar");
   pruefe(await knoepfeOk("a.karte--link"), "Inhalte-Übersicht: Karten ganz im Bild und tippbar hoch");
   await keinUeberlauf("Inhalte-Übersicht 390 px");
@@ -1390,7 +1392,7 @@ async function ablaeufe() {
   // 10. Hinweise: Vorschlag unverändert speichern
   stand = merke();
   await oeffne(INH + "/hinweise");
-  muss((await js("document.querySelectorAll('article[id^=hinweis-]').length")) === 5, "Hinweise: fünf Texte");
+  muss((await js("document.querySelectorAll('article[id^=hinweis-]').length")) === 6, "Hinweise: sechs Texte");
   await sende("#hinweis-hinweis_datenspeicherung a[href$='/hinweis_datenspeicherung']");
   pruefe((await text()).includes("Bestätigen und speichern"), "Hinweis: Knopf «Bestätigen und speichern» bei Vorschlag");
   await sende(SPEICHERN);
@@ -1398,7 +1400,7 @@ async function ablaeufe() {
   await keinUeberlauf("Hinweise 390 px");
   await screenshot("15-hinweise");
   await oeffne(INH);
-  pruefe((await text()).includes("1 von 5 Hinweisen bestätigt"), "Inhalte-Übersicht: «1 von 5 Hinweisen bestätigt»");
+  pruefe((await text()).includes("1 von 6 Hinweisen bestätigt"), "Inhalte-Übersicht: «1 von 6 Hinweisen bestätigt»");
   keineFehlerSeit(stand, "Hinweise");
 
   // 11. Lehrperson hat keinen Zugriff auf die Inhalte
@@ -1414,6 +1416,126 @@ async function ablaeufe() {
   pruefe((await ueberschrift()) === "Kein Zugriff", "Inhalte: Lehrperson kann keinen Abschnitt anlegen");
   keineFehlerSeit(stand, "Lehrperson und Inhalte", ["status of 403"]);
   pruefe(dialoge() === dialogeVorher, "Inhalte: kein JavaScript-Dialog im ganzen Ablauf");
+}
+
+/** Benachrichtigungen (#37): Einladung auf Start, Ein/Aus auf Info, iPhone-Anleitung, Senden in der Verwaltung. */
+async function ablaufBenachrichtigungen() {
+  const box = "[data-benachrichtigung]";
+  const sichtbar = (sel) => js(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); return !!e && !e.closest("[hidden]") && e.offsetHeight > 0; })()`);
+  const zustand = () => js(`[...document.querySelectorAll("${box} [data-zustand]")].find((e) => !e.hidden)?.dataset.zustand ?? null`);
+  const abmelden = ".seitenkopf form[action='/abmelden'] button";
+  let stand;
+
+  await handy();
+  await farbschema("light");
+  stand = merke();
+
+  // 0. Manifest und Service Worker
+  const manifest = await js(`fetch("/manifest.webmanifest").then(async (r) => [r.status, r.headers.get("content-type"), (await r.json()).display])`);
+  pruefe(manifest[0] === 200 && manifest[1].startsWith("application/manifest+json") && manifest[2] === "standalone", "Benachrichtigung: Manifest lädt");
+  pruefe((await js(`fetch("/sw.js").then((r) => r.status)`)) === 200, "Benachrichtigung: Service Worker lädt ohne Anmeldung");
+
+  // 1. Zugang für den Ablauf
+  await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
+  const passwort = await legeZugangAn("Nora Nachricht", "lp.nora");
+  await sende(abmelden);
+  await meldeAn("lp.nora", passwort);
+  muss((await pfad()) === "/lehrperson", "Benachrichtigung: Lehrperson angemeldet");
+
+  // 2. Startseite: Einladung, «Nicht jetzt» bleibt gemerkt
+  await warteBis(() => sichtbar(box), "Einladung auf der Startseite erscheint nicht");
+  pruefe((await zustand()) === "aus", "Benachrichtigung: Start zeigt die Einladung");
+  pruefe(await sichtbar(`${box} [data-aktion='ein']`), "Benachrichtigung: Knopf «einschalten» sichtbar");
+  pruefe(await js("navigator.serviceWorker.getRegistration('/').then((r) => !!r)"), "Benachrichtigung: Service Worker registriert");
+  await keinUeberlauf("Benachrichtigung: Start 390 px");
+  await screenshot("80-benachrichtigung-start");
+  await klick(`${box} [data-aktion='spaeter']`);
+  pruefe(!(await sichtbar(box)), "Benachrichtigung: «Nicht jetzt» blendet aus");
+  await oeffne("/lehrperson");
+  await warte(400);
+  pruefe(!(await sichtbar(box)), "Benachrichtigung: «Nicht jetzt» gilt auch nach Neuladen");
+
+  // 3. Info-Seite: Ein/Aus und Hinweistext, auch nach «Nicht jetzt»
+  await oeffne("/lehrperson/info");
+  await warteBis(() => sichtbar(box), "Benachrichtigungen auf der Info-Seite erscheinen nicht");
+  pruefe((await zustand()) === "aus", "Benachrichtigung: Info zeigt «einschalten»");
+  pruefe((await text()).includes("Benachrichtigungen sind freiwillig"), "Benachrichtigung: Info zeigt den Hinweistext");
+  await keinUeberlauf("Benachrichtigung: Info 390 px");
+  await screenshot("81-benachrichtigung-info");
+  await farbschema("dark");
+  await keinUeberlauf("Benachrichtigung: Info 390 px dunkel");
+  await screenshot("82-benachrichtigung-info-dunkel");
+  await farbschema("light");
+
+  // 4. Einschalten mit erteilter Erlaubnis. Headless-Chrome hat keinen Zugang zum Push-Dienst;
+  //    gelingt das Abo nicht, muss eine verständliche Meldung erscheinen.
+  await cdp("Browser.grantPermissions", { permissions: ["notifications"], origin: basis });
+  await klick(`${box} [data-aktion='ein']`);
+  await warteBis(async () => (await zustand()) === "an" || (await sichtbar(`${box} [data-meldung]`)), "Einschalten endet weder eingeschaltet noch mit Meldung", 160);
+  const eingeschaltet = (await zustand()) === "an";
+  console.log(`info   Benachrichtigung: Abo im Headless-Chrome ${eingeschaltet ? "abgeschlossen" : "nicht möglich (Meldung gezeigt)"}`);
+  pruefe(eingeschaltet || (await text()).includes("Das hat nicht geklappt"), "Benachrichtigung: Einschalten endet eingeschaltet oder mit Meldung");
+  await screenshot("83-benachrichtigung-eingeschaltet");
+  keineFehlerSeit(stand, "Benachrichtigung: Lehrperson", ["push service", "AbortError", "Registration failed"]);
+
+  // 5. iPhone ohne Installation: Anleitung statt Knopf
+  stand = merke();
+  const ios = await cdp("Page.addScriptToEvaluateOnNewDocument", { source: "delete window.PushManager;" });
+  await cdp("Emulation.setUserAgentOverride", { userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1" });
+  await js(`localStorage.removeItem("benachrichtigung-spaeter")`);
+  await oeffne("/lehrperson");
+  await warteBis(() => sichtbar(box), "iPhone-Anleitung erscheint nicht");
+  pruefe((await zustand()) === "ios", "Benachrichtigung: iPhone ohne Installation zeigt die Anleitung");
+  pruefe((await text()).includes("Zum Home-Bildschirm"), "Benachrichtigung: Anleitung nennt «Zum Home-Bildschirm»");
+  await keinUeberlauf("Benachrichtigung: iPhone-Anleitung 390 px");
+  await screenshot("84-benachrichtigung-iphone");
+  await cdp("Page.removeScriptToEvaluateOnNewDocument", { identifier: ios.result.identifier });
+  await cdp("Emulation.setUserAgentOverride", { userAgent: "" });
+  keineFehlerSeit(stand, "Benachrichtigung: iPhone");
+  await sende(abmelden);
+
+  // 6. Verwaltung: Senden
+  stand = merke();
+  await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
+  await oeffne("/verwaltung/benachrichtigung");
+  pruefe(await sichtbar("textarea#text"), "Benachrichtigung: Verwaltung zeigt das Textfeld");
+  await keinUeberlauf("Benachrichtigung: Verwaltung 390 px");
+  await screenshot("85-benachrichtigung-verwaltung");
+  const nachricht = "Kurze Erinnerung: Die neue Runde ist offen.";
+  await tippe("#text", nachricht);
+  await sende("form[action='/verwaltung/benachrichtigung'] button[type=submit]");
+  pruefe((await text()).includes("Gesendet an"), "Benachrichtigung: Ergebnis nach dem Senden");
+  await screenshot("86-benachrichtigung-gesendet");
+  if (eingeschaltet) {
+    // Echte Zustellung über den Push-Dienst: der Service Worker zeigt die Nachricht an.
+    pruefe((await text()).includes("Gesendet an 1 Gerät."), "Benachrichtigung: Push-Dienst nimmt die Nachricht an");
+    const angezeigt = await warteBis(
+      () => js(`navigator.serviceWorker.getRegistration("/").then((r) => r.getNotifications()).then((n) => n.map((x) => x.body).join("|"))`),
+      "Benachrichtigung kommt nicht an",
+      100,
+    ).catch(() => "");
+    pruefe(angezeigt.includes(nachricht), "Benachrichtigung: kommt im Browser an und wird angezeigt");
+  }
+  await desktop();
+  await keinUeberlauf("Benachrichtigung: Verwaltung 1280 px");
+  await screenshot("87-benachrichtigung-verwaltung-desktop");
+  await handy();
+  keineFehlerSeit(stand, "Benachrichtigung: Verwaltung", ["push service", "AbortError", "Registration failed"]);
+
+  // 7. Ausschalten auf dem Gerät der Lehrperson entfernt das Abo auch auf dem Server
+  if (eingeschaltet) {
+    await sende(abmelden);
+    await meldeAn("lp.nora", passwort);
+    await oeffne("/lehrperson/info");
+    await warteBis(async () => (await zustand()) === "an", "Info zeigt «eingeschaltet» nicht");
+    await klick(`${box} [data-aktion='aus']`);
+    await warteBis(async () => (await zustand()) === "aus", "Ausschalten wirkt nicht");
+    pruefe(true, "Benachrichtigung: Ausschalten");
+    await sende(abmelden);
+    await meldeAn("projektleitung", PW_AUFTRAGGEBERIN);
+    await oeffne("/verwaltung/benachrichtigung");
+    pruefe((await text()).includes("An 0 Geräte senden"), "Benachrichtigung: nach dem Ausschalten kein Gerät mehr");
+  }
 }
 
 // ---------------------------------------------------------------- Ablauf des Skripts
@@ -1439,6 +1561,10 @@ try {
     encoding: "utf8",
   });
   if (platzhalter.status !== 0) throw new Error(`Platzhalter nicht geladen (Exit ${platzhalter.status}): ${platzhalter.stdout}${platzhalter.stderr}`);
+  // Benachrichtigungen (#37) eingeschaltet, wie in Produktion per Kommando erzeugt.
+  const vapid = spawnSync("uv", ["run", "python", "-m", "app.kommandos", "vapid-schluessel"], { cwd: PROJEKT, encoding: "utf8" });
+  vapidSchluessel = (vapid.stdout.match(/VAPID_SCHLUESSEL=(\S+)/) || [])[1] || "";
+  if (!vapidSchluessel) throw new Error(`VAPID-Schlüssel nicht erzeugt: ${vapid.stdout}${vapid.stderr}`);
   await starteApp();
   await starteChrome();
   await ablaeufe();
@@ -1446,6 +1572,7 @@ try {
   await ablaufAufnahmen();
   await ablaufEintraege();
   await ablaufGast();
+  await ablaufBenachrichtigungen();
 } catch (e) {
   abbruch = true;
   console.log(`FEHLER ${e.stack || e}`);
