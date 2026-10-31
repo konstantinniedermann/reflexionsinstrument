@@ -1,14 +1,14 @@
-{% macro eintrag(ziel, name, aktiv, symbol) %}
-<a href="{{ ziel }}"{% if aktiv %} aria-current="page"{% endif %}>
+{% macro eintrag(ziel, name, aktiv, symbol, farbe) %}
+<a class="bereich--{{ farbe }}" href="{{ ziel }}"{% if aktiv %} aria-current="page"{% endif %}>
   <svg viewBox="0 0 24 24" aria-hidden="true"><path d="{{ symbol }}" /></svg>
   <span>{{ name }}</span>
 </a>
 {% endmacro %}
 <nav class="tabs" aria-label="Hauptnavigation">
-  {{ eintrag(ansicht.url(), "Start", bereich in ("start", "runden"), "M3 11.5 12 4l9 7.5M5.5 9.5V20h13V9.5") }}
-  {{ eintrag(ansicht.url("/tagebuch/neu"), "Tagebuch", bereich == "tagebuch", "M4 20h4L19 9l-4-4L4 16v4ZM13.5 6.5l4 4") }}
+  {{ eintrag(ansicht.url(), "Start", bereich in ("start", "runden"), "M3 11.5 12 4l9 7.5M5.5 9.5V20h13V9.5", "start") }}
+  {{ eintrag(ansicht.url("/tagebuch/neu"), "Tagebuch", bereich == "tagebuch", "M4 20h4L19 9l-4-4L4 16v4ZM13.5 6.5l4 4", "tagebuch") }}
   {% if ansicht.zeigt_eintraege %}
-  {{ eintrag(ansicht.url("/eintraege"), "Einträge", bereich == "eintraege", "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01") }}
+  {{ eintrag(ansicht.url("/eintraege"), "Einträge", bereich == "eintraege", "M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01", "eintraege") }}
   {% endif %}
-  {{ eintrag(ansicht.url("/info"), "Info", bereich == "info", "M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5Zm0 0v13") }}
+  {{ eintrag(ansicht.url("/info"), "Info", bereich == "info", "M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5Zm0 0v13", "info") }}
 </nav>

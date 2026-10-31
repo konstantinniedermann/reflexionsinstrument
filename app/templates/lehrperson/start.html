@@ -15,7 +15,7 @@
 </section>
 {% endif %}
 <section class="karte" aria-labelledby="runden-titel">
-  <h2 id="runden-titel">Runden</h2>
+  <h2 id="runden-titel" class="etikett etikett--runden">Runden</h2>
   {% if runden %}
   <ul class="runden">
     {% for eintrag in runden %}
@@ -38,13 +38,13 @@
   {% endif %}
 </section>
 <section class="karte" aria-labelledby="tagebuch-titel">
-  <h2 id="tagebuch-titel">Tagebuch</h2>
+  <h2 id="tagebuch-titel" class="etikett etikett--tagebuch">Tagebuch</h2>
   <p>
     {% if anzahl_eintraege is not none %}{{ zahl(anzahl_eintraege, "Eintrag", "Einträge") }} · {% endif %}Halte fest, was dir auffällt.
   </p>
   <a class="knopf knopf--zweit" href="{{ ansicht.url('/tagebuch/neu') }}">Neuer Tagebucheintrag</a>
 </section>
-<a class="karte karte--link" href="{{ ansicht.url('/info') }}">
+<a class="karte karte--link karte--info" href="{{ ansicht.url('/info') }}">
   <span>Worum es geht</span>
   <span class="pfeil" aria-hidden="true">›</span>
 </a>

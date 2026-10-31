@@ -1,44 +1,87 @@
 /* Reflexionsinstrument – Pilot. Mobile-first, Karten, CSS Grid. */
 
+/* Gestaltung (#20): Anlehnung an eine Vorlage der Auftraggeberin, siehe
+   docs/superpowers/specs/2026-10-31-gestaltung-design.md */
 :root {
-  --papier: #f6f4ef;
-  --karte: #fffdf9;
-  --tinte: #1f2a2e;
-  --gedaempft: #5b686d;
-  --linie: #e3ddd2;
-  --akzent: #1f5f5b;
+  --papier: #f1f1f1;
+  --karte: #ffffff;
+  --tinte: #111111;
+  --gedaempft: #555555;
+  --linie: #e0e0e0;
+  --akzent: #111111;
   --akzent-text: #ffffff;
-  --akzent-sanft: #e4efed;
-  --erledigt: #3d6b3a;
-  --erledigt-sanft: #e7f0e3;
-  --hinweis: #fbf3df;
-  --hinweis-linie: #c99a2e;
-  --fehler: #a33a2a;
-  --schatten: 0 1px 2px rgb(31 42 46 / 0.06), 0 2px 8px rgb(31 42 46 / 0.04);
-  --radius: 14px;
-  --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
-  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --akzent-sanft: #e6e6e6;
+  --erledigt: #1d6614;
+  --erledigt-sanft: #e3f2df;
+  --hinweis: #fff6c4;
+  --hinweis-linie: #6b5a00;
+  --fehler: #b3261e;
+  --schatten: none;
+  --radius: 22px;
+  --radius-klein: 14px;
+  --pille: 999px;
+  --sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  /* Bereichsfarben, Schrift darauf jeweils --auf-<bereich> */
+  --farbe-start: #000000;
+  --auf-start: #ffffff;
+  --farbe-runden: #ffe100;
+  --auf-runden: #000000;
+  --farbe-tagebuch: #e77cb0;
+  --auf-tagebuch: #000000;
+  --farbe-impuls: #7bc96f;
+  --auf-impuls: #000000;
+  --farbe-eintraege: #5949f4;
+  --auf-eintraege: #ffffff;
+  --farbe-info: #d9d9d9;
+  --auf-info: #000000;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --papier: #151a1b;
-    --karte: #1e2526;
-    --tinte: #e8e5df;
-    --gedaempft: #a2adaf;
-    --linie: #313a3b;
-    --akzent: #79b9b0;
-    --akzent-text: #0f1a19;
-    --akzent-sanft: #1f3331;
-    --erledigt: #9cc895;
-    --erledigt-sanft: #223122;
-    --hinweis: #2a2416;
-    --hinweis-linie: #b38a35;
-    --fehler: #f08e7c;
-    --schatten: none;
+    --papier: #111111;
+    --karte: #1e1e1e;
+    --tinte: #f1f1f1;
+    --gedaempft: #b0b0b0;
+    --linie: #333333;
+    --akzent: #f1f1f1;
+    --akzent-text: #111111;
+    --akzent-sanft: #2c2c2c;
+    --erledigt: #9cd68f;
+    --erledigt-sanft: #1f2e1c;
+    --hinweis: #2b2610;
+    --hinweis-linie: #e6cf5c;
+    --fehler: #ff8a80;
+    --farbe-start: #f1f1f1;
+    --auf-start: #000000;
     color-scheme: dark;
   }
+}
+
+.bereich--start {
+  --bereich: var(--farbe-start);
+  --auf-bereich: var(--auf-start);
+}
+
+.bereich--runden {
+  --bereich: var(--farbe-runden);
+  --auf-bereich: var(--auf-runden);
+}
+
+.bereich--tagebuch {
+  --bereich: var(--farbe-tagebuch);
+  --auf-bereich: var(--auf-tagebuch);
+}
+
+.bereich--eintraege {
+  --bereich: var(--farbe-eintraege);
+  --auf-bereich: var(--auf-eintraege);
+}
+
+.bereich--info {
+  --bereich: var(--farbe-info);
+  --auf-bereich: var(--auf-info);
 }
 
 *,
@@ -62,10 +105,10 @@ body {
 
 h1,
 h2 {
-  font-family: var(--serif);
-  font-weight: 600;
-  line-height: 1.25;
-  letter-spacing: -0.01em;
+  font-family: var(--sans);
+  font-weight: 700;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
 }
 
 h1 {
@@ -182,14 +225,27 @@ a {
 }
 
 .karte--impuls {
-  background: var(--akzent-sanft);
+  background: var(--farbe-impuls);
   border-color: transparent;
+  color: var(--auf-impuls);
+}
+
+.karte--impuls .ueberzeile {
+  color: inherit;
+}
+
+.karte--impuls .knopf {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
 }
 
 .impuls__text {
-  font-family: var(--serif);
-  font-size: 1.2rem;
-  line-height: 1.4;
+  font-family: var(--sans);
+  font-size: 1.25rem;
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.35;
   margin: 0.4rem 0 1rem;
 }
 
@@ -222,7 +278,7 @@ a {
   align-items: center;
   gap: 0.2rem 0.75rem;
   padding: 0.75rem 0.9rem;
-  border-radius: 10px;
+  border-radius: var(--radius-klein);
   border: 1px solid var(--linie);
   color: inherit;
   text-decoration: none;
@@ -243,8 +299,19 @@ a {
 }
 
 .runde--offen {
-  border-color: var(--akzent);
-  background: var(--akzent-sanft);
+  border-color: var(--farbe-runden);
+  background: var(--farbe-runden);
+  color: var(--auf-runden);
+}
+
+.runde--offen .pfeil {
+  color: inherit;
+}
+
+.runde--offen .marke--offen {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
 }
 
 .runde--gesperrt {
@@ -279,9 +346,9 @@ a {
 }
 
 .marke--runde {
-  background: var(--akzent-sanft);
+  background: var(--farbe-runden);
   border-color: transparent;
-  color: var(--akzent);
+  color: var(--auf-runden);
 }
 
 .chips {
@@ -318,8 +385,8 @@ a {
   align-items: center;
   justify-content: center;
   min-height: 48px;
-  padding: 0.6rem 1.2rem;
-  border-radius: 10px;
+  padding: 0.6rem 1.4rem;
+  border-radius: var(--pille);
   border: 1px solid var(--akzent);
   background: var(--akzent);
   color: var(--akzent-text);
@@ -356,14 +423,14 @@ a {
 
 .fall {
   background: var(--karte);
-  border-left: 4px solid var(--akzent);
-  border-radius: 4px var(--radius) var(--radius) 4px;
+  border-left: 6px solid var(--bereich, var(--akzent));
+  border-radius: 6px var(--radius) var(--radius) 6px;
   padding: 1rem 1.1rem 0.4rem;
   box-shadow: var(--schatten);
 }
 
 .fall p:not(.ueberzeile) {
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 1.1rem;
 }
 
@@ -400,7 +467,7 @@ textarea {
   min-height: 6rem;
   padding: 0.75rem 0.85rem;
   border: 1px solid var(--linie);
-  border-radius: 10px;
+  border-radius: var(--radius-klein);
   background: var(--karte);
   color: var(--tinte);
   font: inherit;
@@ -437,7 +504,7 @@ textarea:focus {
   justify-content: center;
   min-height: 48px;
   border: 1px solid var(--linie);
-  border-radius: 10px;
+  border-radius: var(--radius-klein);
   background: var(--karte);
   font-weight: 600;
   cursor: pointer;
@@ -464,7 +531,7 @@ textarea:focus {
 .hinweis {
   margin: 0;
   padding: 0.7rem 0.9rem;
-  border-radius: 10px;
+  border-radius: var(--radius-klein);
   background: var(--karte);
   border: 1px solid var(--linie);
   font-size: 0.95rem;
@@ -481,7 +548,7 @@ textarea:focus {
 
 .aufklapp summary {
   cursor: pointer;
-  font-family: var(--serif);
+  font-family: var(--sans);
   font-size: 1.15rem;
   font-weight: 600;
   list-style: none;
@@ -840,8 +907,9 @@ textarea:focus {
 }
 
 .seitenkopf__titel {
-  font-family: var(--serif);
-  font-weight: 600;
+  font-family: var(--sans);
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .seitenkopf__rechts,
@@ -918,7 +986,7 @@ input[type="date"] {
   min-height: 2.75rem;
   padding: 0.5rem 0.85rem;
   border: 1px solid var(--linie);
-  border-radius: 10px;
+  border-radius: var(--radius-klein);
   background: var(--karte);
   color: var(--tinte);
   font: inherit;
@@ -1022,7 +1090,12 @@ input[type="checkbox"] {
 }
 
 .tabs a[aria-current="page"] {
-  color: var(--akzent);
+  color: var(--tinte);
+}
+
+.tabs a[aria-current="page"] svg {
+  background: var(--bereich);
+  color: var(--auf-bereich);
 }
 
 .hinweis--entwurf {
@@ -1045,7 +1118,7 @@ input[type="checkbox"] {
 .meldung {
   margin: 0;
   padding: 0.7rem 0.9rem;
-  border-radius: 10px;
+  border-radius: var(--radius-klein);
   background: var(--erledigt-sanft);
   color: var(--erledigt);
   font-weight: 600;
@@ -1348,3 +1421,67 @@ input[type="checkbox"] {
 }
 
 /* Ende #19 */
+
+/* Gestaltung (#20) */
+
+.tabs svg {
+  box-sizing: content-box;
+  padding: 2px 14px;
+  border-radius: var(--pille);
+}
+
+.etikett {
+  display: inline-block;
+  padding: 0.15rem 0.85rem;
+  border-radius: var(--pille);
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+.etikett--runden {
+  background: var(--farbe-runden);
+  color: var(--auf-runden);
+}
+
+.etikett--tagebuch {
+  background: var(--farbe-tagebuch);
+  color: var(--auf-tagebuch);
+}
+
+.karte--info {
+  background: var(--farbe-info);
+  border-color: transparent;
+  color: var(--auf-info);
+  font-weight: 600;
+}
+
+.karte--info .pfeil {
+  color: inherit;
+}
+
+.marke--tagebuch,
+.marke--impuls {
+  border-color: transparent;
+}
+
+.marke--tagebuch {
+  background: var(--farbe-tagebuch);
+  color: var(--auf-tagebuch);
+}
+
+.marke--impuls {
+  background: var(--farbe-impuls);
+  color: var(--auf-impuls);
+}
+
+/* Kurzer Balken in der Bereichsfarbe über dem Inhalt der Unterseiten */
+.inhalt[class*="bereich--"]:not(.bereich--start)::before {
+  content: "";
+  display: block;
+  width: 3rem;
+  height: 0.45rem;
+  border-radius: var(--pille);
+  background: var(--bereich);
+}
+
+/* Ende #20 */
