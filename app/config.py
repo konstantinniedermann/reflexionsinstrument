@@ -13,6 +13,7 @@ class Einstellungen:
     daten_verzeichnis: Path
     geheimer_schluessel: str
     produktion: bool
+    vapid_schluessel: str | None = None  # privater Schlüssel für Benachrichtigungen (#37)
 
     @property
     def db_pfad(self) -> Path:
@@ -46,4 +47,5 @@ def lade_einstellungen(umgebung: Mapping[str, str] | None = None) -> Einstellung
         daten_verzeichnis=Path(umgebung.get("DATEN_VERZEICHNIS", ".daten")),
         geheimer_schluessel=schluessel,
         produktion=produktion,
+        vapid_schluessel=umgebung.get("VAPID_SCHLUESSEL") or None,
     )
