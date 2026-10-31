@@ -32,7 +32,7 @@ Aus den [Anforderungen](../anforderungen.md) ergeben sich Punkte, die der statis
 - Export als **CSV** im Excel-Format (Semikolon, UTF-8 mit BOM), mit Schutz vor Formel-Injection wie im Prototyp
 - Gestaltung (CSS) aus dem Prototyp übernehmen. Der Prototyp selbst bleibt als Referenz bestehen, bis die Pilot-Version läuft.
 
-Dependencies (von Koschi freigegeben): `fastapi`, `uvicorn`, `jinja2`, `python-multipart`, `itsdangerous`, `bcrypt`; für die Entwicklung `pytest`, `httpx`, `ruff`.
+Dependencies (von Koschi freigegeben): `fastapi`, `uvicorn`, `jinja2`, `python-multipart`, `itsdangerous`, `bcrypt`; für die Entwicklung `pytest`, `httpx`, `ruff`. Für Benachrichtigungen (#37) zusätzlich `http-ece` (Verschlüsselung nach RFC 8291) und `py-vapid` (Signatur nach RFC 8292) sowie `cryptography`, das beide mitbringen und der Code direkt nutzt; Begründung im [Design Benachrichtigungen](../superpowers/specs/2026-10-31-push-benachrichtigungen-design.md).
 
 ## Begründung
 

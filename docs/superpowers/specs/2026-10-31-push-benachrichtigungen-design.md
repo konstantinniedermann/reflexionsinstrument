@@ -58,7 +58,7 @@ Meldet ein Gerät sein Abo ein zweites Mal an (gleicher Endpunkt), wird die Zeil
 
 ### Schlüssel (VAPID)
 
-- Ein Schlüsselpaar P-256 für die ganze App. Der private Schlüssel kommt als Secret `VAPID_SCHLUESSEL` (PEM in base64url, eine Zeile) in die Umgebung; der öffentliche wird daraus abgeleitet.
+- Ein Schlüsselpaar P-256 für die ganze App. Der private Schlüssel kommt als Secret `VAPID_SCHLUESSEL` (die rohen 32 Byte in base64url, eine Zeile; `py_vapid.Vapid02.from_raw`) in die Umgebung; der öffentliche wird daraus abgeleitet.
 - Kommando `python -m app.kommandos vapid-schluessel` erzeugt ein Paar und gibt den Wert für `fly secrets set` aus.
 - Ohne Secret ist die Funktion aus: Die Seiten zeigen keinen Hinweis, die Verwaltung erklärt «Benachrichtigungen sind nicht eingerichtet». Die App startet trotzdem, auch in Produktion.
 - Absenderangabe (`sub` der VAPID-Signatur): die Adresse der App (`https://reflexionsinstrument.fly.dev`), keine E-Mail-Adresse. Die Spezifikation erlaubt eine https-Adresse. `aud` ist pro Versand Schema und Host des Push-Dienstes, `exp` 12 Stunden.
@@ -90,13 +90,13 @@ Sonst Status 400, nichts gespeichert.
 
 - Modul `app/push.py`: `sende(abo, nutzlast) -> Ergebnis`. Verschlüsselung mit `http_ece.encrypt(..., version="aes128gcm")`, Signatur mit `py_vapid`, Versand mit `urllib.request` (Zeitlimit 10 s), Header `TTL: 86400`, `Urgency: normal`, `Content-Encoding: aes128gcm`.
 - Nutzlast JSON: `{"titel": <Titel des Instruments>, "text": <Nachricht>}`.
-- Antwort 201/202: zugestellt. 404 oder 410: Abo ist ungültig und wird gelöscht. 401/403: Schlüssel passt nicht (z. B. nach neuem `VAPID_SCHLUESSEL`), Abo wird gelöscht; das Gerät meldet sich beim nächsten Öffnen neu an (siehe Seiten-Skript). Alles andere und Netzfehler: «nicht erreicht», Abo bleibt. Ins Log kommen Status und Host des Push-Dienstes, nie Endpunkt-Pfad, Schlüssel oder Text.
+- Antwort 201/202: zugestellt. 404 oder 410: Abo ist ungültig und wird gelöscht. Alles andere (auch 401/403, Weiterleitungen, Netz- und Protokollfehler): «nicht erreicht», Abo bleibt. 401/403 löscht nicht, weil es auch ein Fehler unserer Signatur sein kann; einen neuen `VAPID_SCHLUESSEL` erkennt das Seiten-Skript und schliesst neu ab. Der Versand folgt keiner Weiterleitung. Die Abo-Adresse darf nur sichtbares ASCII enthalten. Ins Log kommen Status und Host des Push-Dienstes, nie Endpunkt-Pfad, Schlüssel oder Text.
 - Gesendet wird nacheinander in der Anfrage der Auftraggeberin (synchrone Route, läuft im Threadpool). Bei vier bis zehn Geräten dauert das wenige Sekunden. Der Knopf zeigt «Wird gesendet …» nicht; ein Doppelklick schickt doppelt. In Kauf genommen: Der Fall ist harmlos und eine Sperre bräuchte Zustand.
 - Ergebnisseite: «Gesendet an 3 Geräte.» und falls nötig «1 Gerät war nicht erreichbar und ist entfernt.» bzw. «1 Gerät hat nicht geantwortet.»
 
 ### Service Worker (`app/static/js/sw.js`, ausgeliefert unter `/sw.js`)
 
-- `push`: Nutzlast lesen, `showNotification(titel, {body: text, icon, badge, lang: "de"})`.
+- `push`: Nutzlast lesen, `showNotification(titel, {body: text, icon, lang: "de"})`.
 - `notificationclick`: Benachrichtigung schliessen, ein offenes Fenster der App fokussieren, sonst `/` öffnen.
 - Kein `fetch`-Handler, kein Zwischenspeicher.
 
@@ -136,7 +136,7 @@ Vorschlag: «Benachrichtigungen sind freiwillig und lassen sich hier jederzeit a
 - `docs/datenschutz.md`: neue Zeile «Benachrichtigungs-Abo (Adresse beim Push-Dienst und Schlüssel des Geräts)», Zweck, Personenbezug ja (über das Konto). Satz «Es gibt keine Benachrichtigungen» ersetzen. Push-Dienste von Apple/Google/Mozilla als Empfänger der verschlüsselten Nachricht nennen.
 - `docs/loeschkonzept.md`: Abos gehören zu Stufe 1 (mit den Konten). Ausschalten oder Konto löschen entfernt sie sofort. Secret `VAPID_SCHLUESSEL` wie `GEHEIMER_SCHLUESSEL` in Stufe 2.
 - `docs/anforderungen.md`: Zeile «Erinnerungen» und «Bewusst nicht gebaut» anpassen, Herkunft A (Wunsch vom 31.10.).
-- Die Push-Dienste von Apple, Google und Mozilla stehen ausserhalb der Schweiz/EU. Sie erhalten nur die verschlüsselte Nachricht und die Abo-Adresse, keine Inhalte aus Einträgen. Das steht in `datenschutz.md` und im Hinweistext.
+- Die Push-Dienste von Apple, Google, Mozilla und Microsoft stehen ausserhalb der Schweiz/EU. Sie erhalten nur die verschlüsselte Nachricht und die Abo-Adresse, keine Inhalte aus Einträgen. Das steht in `datenschutz.md` und im Hinweistext.
 
 ## Entscheidungen nach der Prüfung
 
@@ -146,7 +146,7 @@ Vorschlag: «Benachrichtigungen sind freiwillig und lassen sich hier jederzeit a
 | Prod-Nachweis | Claude setzt `VAPID_SCHLUESSEL` und schickt eine Testnachricht, solange der Pilot nicht läuft (Start 23.11.). Die Nachricht geht nur an Geräte, die eingeschaltet haben. |
 | `cryptography` (und `cffi`) | Kommen als Abhängigkeiten der freigegebenen Pakete mit; im Bericht genannt. |
 | Anmeldung in der installierten App | Hingenommen; «Angemeldet bleiben» ist Standard. Die iPhone-Anleitung sagt «danach einmal anmelden». |
-| Neuer Schlüssel | 401/403 löscht das Abo, das Skript schliesst bei abweichendem Schlüssel neu ab. |
+| Neuer Schlüssel | Das Skript schliesst bei abweichendem Schlüssel neu ab. 401/403 löscht nach dem Review nicht mehr (Schutz vor Massenlöschung bei eigenem Fehler). |
 | Länge | 500 Zeichen wie Impulse. |
 | iPad, iOS 26 | Erkennung und Anleitung angepasst. |
 

@@ -19,7 +19,7 @@
 - Höchstens 10 Abos pro Konto, beim elften fällt das älteste weg.
 - Nachricht: höchstens `LAENGE_KURZ` (500) Zeichen, Pflicht. Nutzlast JSON `{"titel": ..., "text": ...}`.
 - VAPID: `sub` = `https://reflexionsinstrument.fly.dev`, `aud` = Schema+Host des Endpunkts, `exp` = jetzt + 12 h. Header `TTL: 86400`, `Urgency: normal`, `Content-Encoding: aes128gcm`, Zeitlimit 10 s.
-- Status 201/202 zugestellt; 404/410/401/403 Abo löschen; sonst und Netzfehler «nicht erreicht».
+- Status 201/202 zugestellt; 404/410 Abo löschen; sonst (auch 401/403) und Netzfehler «nicht erreicht».
 - Logs: nur Status und Host, nie Endpunkt-Pfad, Schlüssel, Text.
 - Oberfläche ohne «Push», «Abo», «Token»; keine Emojis; kein Inline-Skript/-Stil (CSP `script-src 'self'`).
 - Keine Benachrichtigungs-Teile in Gast und Vorschau.
@@ -44,7 +44,7 @@
 - Test: `tests/test_push_schluessel.py`, `tests/test_config.py`
 
 **Interfaces:**
-- Produces: `erzeuge_vapid_schluessel() -> str` (PEM des privaten Schlüssels, base64url, eine Zeile); `lade_vapid(wert: str) -> py_vapid.Vapid02`; `oeffentlicher_schluessel(vapid) -> str` (65-Byte-Punkt, base64url ohne `=`); `Einstellungen.vapid_schluessel`.
+- Produces: `erzeuge_vapid_schluessel() -> str` (rohe 32 Byte des privaten Schlüssels, base64url, eine Zeile); `lade_vapid(wert: str) -> py_vapid.Vapid02`; `oeffentlicher_schluessel(vapid) -> str` (65-Byte-Punkt, base64url ohne `=`); `Einstellungen.vapid_schluessel`.
 
 - [ ] Tests: `test_schluessel_rundreise` (erzeugen → laden → öffentlicher Schlüssel dekodiert zu 65 Byte, beginnt mit `0x04`); `test_kaputter_schluessel` (`lade_vapid("abc")` wirft `ValueError`); `test_config_vapid` (ohne Variable `None`, mit Wert gesetzt, `PRODUKTION=1` ohne Wert startet); `test_kommando_vapid` (Ausgabe enthält `fly secrets set VAPID_SCHLUESSEL=` und einen ladbaren Wert).
 - [ ] Laufen lassen, Fehlschlag sehen; Pakete hinzufügen; implementieren; `uv run pytest tests/test_push_schluessel.py tests/test_config.py -q` grün.
