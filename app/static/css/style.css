@@ -913,8 +913,7 @@ textarea:focus {
   letter-spacing: -0.02em;
 }
 
-.seitenkopf__rechts,
-.seitenkopf__rechts form {
+.seitenkopf__rechts {
   display: flex;
   align-items: center;
   gap: 0.75rem;

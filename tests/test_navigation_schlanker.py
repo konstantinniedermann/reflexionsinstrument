@@ -92,3 +92,14 @@ def test_abmelden_wirkt_weiterhin(client, lehrperson):
     antwort = client.post("/abmelden", data={"csrf": csrf}, follow_redirects=False)
     assert antwort.status_code == 303
     assert client.get("/lehrperson", follow_redirects=False).status_code == 303
+
+
+def test_kein_abmelden_in_vorschau_und_gast(client, auftraggeberin, db):
+    """Vorschau und Gast speichern nichts; Abmelden würde dort die Auftraggeberin abmelden."""
+    db.execute("INSERT INTO einstellungen (schluessel, wert) VALUES ('projektstart', '2026-11-23')")
+    db.commit()
+    als_leitung(client, auftraggeberin)
+    vorschau = client.get("/verwaltung/vorschau/2026-11-23/info")
+    assert vorschau.status_code == 200
+    assert 'action="/abmelden"' not in vorschau.text
+    assert 'action="/abmelden"' not in client.get("/gast/info").text
