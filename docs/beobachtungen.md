@@ -236,6 +236,18 @@ Letzte Auswertung: 30.10.2026 (15 Einträge, alle abgeschlossen)
 
 **Einschätzung:** Heute ohne Folgen; bei der nächsten Arbeit an den Dateien mitnehmen.
 
+### 2026-10-31 — E2E: Abo für Benachrichtigungen im Headless-Chrome nur gelegentlich
+
+**Thema:** Tests
+
+**Fundort:** `tests/e2e-pilot.mjs`, Ablauf «Benachrichtigungen» (Schritt 4).
+
+**Beobachtung:** Das Einschalten gelang im Headless-Chrome in 1 von 5 Läufen; sonst lief das Abo beim Push-Dienst ins Zeitlimit, und der Test akzeptiert dann die Fehlermeldung. Damit prüft der E2E die echte Zustellung nur zufällig. Beim Nachweis auf fly.io (#37) zeigte sich: Eine per CDP erteilte Erlaubnis (`Browser.grantPermissions`) gilt nur, solange die Verbindung offen ist, die sie erteilt hat; schliesst sie, setzt Chrome die Erlaubnis zurück und kündigt das Abo (Push-Dienst antwortet 410). Mit offener Browser-Verbindung (`/json/version`) lief die Zustellung im sichtbaren Chrome sofort durch.
+
+**Ursprung:** #37, E2E und Nachweis auf fly.io.
+
+**Einschätzung:** Im E2E die Erlaubnis über die Browser-Verbindung statt über die Seite erteilen und prüfen, ob das Abo dann verlässlich gelingt; falls ja, die Zustellung fest prüfen statt «eingeschaltet oder Meldung». Braucht Netz zum Push-Dienst; offline bliebe die Meldung der richtige Ausgang.
+
 ## Ausgewertet am 30.10.2026
 
 Alle 15 Einträge gegen `main` (Stand nach #29) geprüft, Laufzeit-Aussagen gegen GitHub Actions, fly.io und eine lokal gestartete App gemessen. Bilanz: 1 mitgemacht, 2 an bestehende Issues gehängt, 2 erledigt, 9 abgehakt mit Trigger, 1 verworfen.
