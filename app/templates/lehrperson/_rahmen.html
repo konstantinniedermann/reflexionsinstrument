@@ -13,6 +13,10 @@
 {% endblock %}
 {% block main_klasse %} bereich--{{ bereich }}{% endblock %}
 {% block inhalt %}
+{% block seitenetikett %}
+{% set namen = {"runden": "Runden", "tagebuch": "Tagebuch", "eintraege": "Meine Einträge", "info": "Info"} %}
+{% if bereich in namen %}<p class="seitenetikett">{{ namen[bereich] }}</p>{% endif %}
+{% endblock %}
 {% if ansicht.band %}
 <div class="hinweis" role="note">{{ ansicht.band | formatiert }}</div>
 {% endif %}

@@ -1,16 +1,18 @@
 {% extends "lehrperson/_rahmen.html" %}
 {% block titel %}Tagebuch – {{ instrument_titel }}{% endblock %}
+{# Die Überschrift trägt den Bereichsnamen selbst. #}
+{% block seitenetikett %}{% endblock %}
 {% block seite %}
 <header>
-  <h1>Tagebuch</h1>
+  <h1 class="seitenetikett">Tagebuch</h1>
   <p class="gedaempft">Was möchtest du festhalten?</p>
 </header>
-<a class="karte karte--link" href="{{ ansicht.url('/tagebuch/neu/frei') }}">
+<a class="karte karte--link flaeche bereich--tagebuch" href="{{ ansicht.url('/tagebuch/neu/frei') }}">
   <span>Frei schreiben</span>
   <span class="pfeil" aria-hidden="true">›</span>
 </a>
 {% if ansicht.speichert %}
-<a class="karte karte--link" href="{{ ansicht.url('/tagebuch/neu/aufnahme') }}">
+<a class="karte karte--link flaeche bereich--tagebuch" href="{{ ansicht.url('/tagebuch/neu/aufnahme') }}">
   <span>
     <span class="wahl__titel">Frei sprechen</span>
     <span class="wahl__text gedaempft">Eintrag einsprechen, zum Beispiel direkt nach dem Unterricht.</span>
@@ -26,7 +28,7 @@
 </div>
 {% endif %}
 {% if impuls %}
-<a class="karte karte--link" href="{{ ansicht.url('/tagebuch/neu/impuls/' ~ impuls.id) }}">
+<a class="karte karte--link flaeche bereich--impuls" href="{{ ansicht.url('/tagebuch/neu/impuls/' ~ impuls.id) }}">
   <span>
     <span class="wahl__titel">Zum Impuls dieser Woche</span>
     <span class="wahl__text gedaempft">{{ impuls.text }}</span>
@@ -37,7 +39,7 @@
 {% if leitfragen %}
 <h2>Zu einer Leitfrage schreiben</h2>
 {% for leitfrage in leitfragen %}
-<a class="karte karte--link" href="{{ ansicht.url('/tagebuch/neu/leitfrage/' ~ leitfrage.id) }}">
+<a class="karte karte--link flaeche bereich--tagebuch" href="{{ ansicht.url('/tagebuch/neu/leitfrage/' ~ leitfrage.id) }}">
   <span>{{ leitfrage.text }}</span>
   <span class="pfeil" aria-hidden="true">›</span>
 </a>

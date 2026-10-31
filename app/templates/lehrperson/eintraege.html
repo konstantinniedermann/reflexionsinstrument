@@ -1,12 +1,14 @@
 {% extends "lehrperson/_rahmen.html" %}
 {% block titel %}Meine Einträge – {{ instrument_titel }}{% endblock %}
+{# Die Überschrift trägt den Bereichsnamen selbst. #}
+{% block seitenetikett %}{% endblock %}
 {% block seite %}
 <header>
-  <h1>Meine Einträge</h1>
+  <h1 class="seitenetikett">Meine Einträge</h1>
   <p class="gedaempft">Nur du und die Projektleiterin sehen sie.</p>
 </header>
 {% for k in karten %}
-<a class="karte karte--eintrag" href="{{ ansicht.url(k.pfad) }}">
+<a class="karte karte--eintrag flaeche bereich--{% if k.marke == 'Runde' %}runden{% elif k.marke == 'Impuls' %}impuls{% else %}tagebuch{% endif %}" href="{{ ansicht.url(k.pfad) }}">
   <div class="eintrag__kopf">
     <span class="marke {% if k.marke == 'Runde' %}marke--runde{% elif k.marke == 'Impuls' %}marke--impuls{% else %}marke--tagebuch{% endif %}">{{ k.marke }}</span>
     <span class="gedaempft">{{ k.erstellt | zeitpunkt }}{% if k.geaendert != k.erstellt %} · geändert {{ k.geaendert | zeitpunkt }}{% endif %}</span>

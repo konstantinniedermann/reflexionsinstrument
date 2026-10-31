@@ -7,7 +7,7 @@
   <p class="gedaempft">seit {{ runde.freischaltdatum | datum(false) }}{% if zuletzt %} · Zuletzt gespeichert: {{ zuletzt | zeitpunkt }}{% endif %}</p>
 </header>
 {% if runde.fallbeispiel %}
-<section class="fall formatiert" aria-label="Fallbeispiel">{{ runde.fallbeispiel | formatiert }}</section>
+<section class="fall formatiert flaeche bereich--runden" aria-label="Fallbeispiel">{{ runde.fallbeispiel | formatiert }}</section>
 {% endif %}
 {% if zeilen %}
 <div class="hinweis formatiert">{{ hinweis | formatiert }}</div>
