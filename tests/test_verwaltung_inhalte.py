@@ -36,7 +36,7 @@ def test_uebersicht_zeigt_bereiche(client, auftraggeberin):
     assert antwort.status_code == 200
     for name in BEREICHE:
         assert f'href="/verwaltung/inhalte/{name}"' in antwort.text
-    assert "0 von 5 Hinweisen bestätigt" in antwort.text
+    assert "0 von 6 Hinweisen bestätigt" in antwort.text
     assert "Erster Tag noch nicht festgelegt" in antwort.text
     for name in ("allgemein", "runden", "hinweise"):
         assert "Noch offen" in bereich(antwort.text, name), name
@@ -858,8 +858,8 @@ def test_hinweise_liste(client, auftraggeberin):
             assert f"{HINWEISE}/{schluessel}" in text
         else:
             assert f'id="hinweis-{schluessel}"' not in text
-    assert text.count("Erscheint:") == 5
-    assert text.count("Vorschlag, noch nicht von dir bestätigt") == 5
+    assert text.count("Erscheint:") == 6
+    assert text.count("Vorschlag, noch nicht von dir bestätigt") == 6
 
 
 def test_hinweis_unveraendert_bestaetigen(client, auftraggeberin, db):
@@ -877,8 +877,8 @@ def test_hinweis_unveraendert_bestaetigen(client, auftraggeberin, db):
     liste = client.get(HINWEISE).text
     karte = re.search(rf'id="hinweis-{schluessel}".*?</article>', liste, re.DOTALL).group(0)
     assert "Bestätigt" in karte and "noch nicht von dir bestätigt" not in karte
-    assert liste.count("Vorschlag, noch nicht von dir bestätigt") == 4
-    assert "1 von 5 Hinweisen bestätigt" in client.get("/verwaltung/inhalte").text
+    assert liste.count("Vorschlag, noch nicht von dir bestätigt") == 5
+    assert "1 von 6 Hinweisen bestätigt" in client.get("/verwaltung/inhalte").text
     assert "Bestätigen heisst speichern" not in client.get(pfad).text
 
 

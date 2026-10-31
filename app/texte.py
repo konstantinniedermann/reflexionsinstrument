@@ -77,6 +77,16 @@ _VORLAGEN = [
         "Die Aufnahme wird gespeichert, und die Projektleiterin hört sie an. Bitte auch "
         "beim Sprechen keine Namen nennen.",
     ),
+    Textvorlage(
+        "hinweis_benachrichtigung",
+        "Hinweis zu Benachrichtigungen",
+        "Auf der Info-Seite, bei den Benachrichtigungen.",
+        "hinweise",
+        "Benachrichtigungen sind freiwillig und lassen sich hier jederzeit ausschalten. Sie "
+        "enthalten nur kurze Erinnerungen der Projektleiterin, nie Einträge. Zugestellt werden "
+        "sie verschlüsselt über den Dienst des Geräteherstellers (zum Beispiel Apple oder "
+        "Google). Dieser sieht, wann eine Nachricht an das Gerät geht, aber nicht ihren Inhalt.",
+    ),
 ]
 
 REGISTER: dict[str, Textvorlage] = {v.schluessel: v for v in _VORLAGEN}

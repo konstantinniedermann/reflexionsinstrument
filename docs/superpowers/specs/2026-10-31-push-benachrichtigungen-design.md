@@ -1,6 +1,6 @@
 # Design: Push-Benachrichtigungen von der Auftraggeberin an die Lehrpersonen (#37)
 
-Grundlage: Wunsch der Auftraggeberin vom 31.10.2026: «Wenn die Lehrpersonen die Seite auf dem Handy auf dem Startbildschirm speichern, können wir dann mit Push-Benachrichtigungen arbeiten, die ich auslöse und die anderen empfangen?» Der Betreiber will es ausprobieren und hat die Pakete `http-ece` und `py-vapid` freigegeben. [Anforderungen](../../anforderungen.md) (bisher «Bewusst nicht gebaut: Benachrichtigungen»), [datenschutz.md](../../datenschutz.md), [loeschkonzept.md](../../loeschkonzept.md), [Design Anmeldung](2026-10-30-anmeldung-design.md) (CSRF, Rollen, Routen-Inventar). Die Entscheidungen hier hat Claude getroffen (Projektregel «Fragen selbst beantworten»).
+Grundlage: Wunsch der Auftraggeberin vom 31.10.2026: «Wenn die Lehrpersonen die Seite auf dem Handy auf dem Startbildschirm speichern, können wir dann mit Push-Benachrichtigungen arbeiten, die ich auslöse und die anderen empfangen?» Der Betreiber will es ausprobieren und hat die Pakete `http-ece` und `py-vapid` freigegeben. [Anforderungen](../../anforderungen.md) (bisher «Bewusst nicht gebaut: Benachrichtigungen»), [datenschutz.md](../../datenschutz.md), [loeschkonzept.md](../../loeschkonzept.md), [Design Anmeldung](2026-10-30-anmeldung-design.md) (CSRF, Rollen, Routen-Inventar). Die Entscheidungen hier hat Claude getroffen (Projektregel «Fragen selbst beantworten»). Ein Prüf-Agent hat das Design gegen Code und Bibliotheken gelesen; seine Punkte sind eingearbeitet (Abschnitt «Entscheidungen nach der Prüfung»).
 
 ## Zweck
 
@@ -12,13 +12,13 @@ WhatsApp bleibt als Weg möglich. Benachrichtigungen sind freiwillig: Wer sie ni
 
 - Eine Webseite kann Benachrichtigungen empfangen, wenn sie einen **Service Worker** (kleines Skript, das der Browser im Hintergrund behält) registriert und die Person zustimmt. Der Browser liefert dann ein **Abo**: eine Adresse beim Push-Dienst des Herstellers (Apple, Google, Mozilla) plus zwei Schlüssel.
 - Der Server schickt die Nachricht verschlüsselt (RFC 8291, `aes128gcm`) an diese Adresse und weist sich mit einer Signatur aus (VAPID, RFC 8292). Der Push-Dienst stellt sie dem Gerät zu. Der Inhalt bleibt für den Push-Dienst unlesbar; er sieht nur, wann eine Nachricht an welches Abo geht.
-- **iPhone/iPad:** nur ab iOS 16.4 und nur, wenn die Seite über «Teilen → Zum Home-Bildschirm» als App installiert und von dort geöffnet wurde. Dafür braucht es ein **Web-App-Manifest** (Name, Symbol, Startadresse). Die installierte App hat ihren eigenen Speicher: Man meldet sich dort einmal neu an.
+- **iPhone/iPad:** nur ab iOS 16.4 und nur, wenn die Seite über «Teilen → Zum Home-Bildschirm» als App installiert und von dort geöffnet wurde (ab Safari 26 liegt «Teilen» teils hinter «…»). Dafür braucht es ein **Web-App-Manifest** (Name, Symbol, Startadresse). Die installierte App hat ihren eigenen Speicher: Man meldet sich dort einmal neu an, mit «Angemeldet bleiben» (Standard), sonst endet die Anmeldung beim Schliessen der App.
 - **Android (Chrome, Firefox) und Computer:** geht direkt im Browser, Installation nicht nötig.
 - **Kosten:** keine. Die Push-Dienste sind kostenlos.
 
 ## Ziele
 
-- Die Auftraggeberin schreibt in der Verwaltung unter «Benachrichtigung» einen kurzen Text (höchstens 200 Zeichen) und schickt ihn mit einem Tipp an alle Geräte, auf denen Benachrichtigungen eingeschaltet sind. Danach sieht sie, an wie viele Geräte es ging.
+- Die Auftraggeberin schreibt in der Verwaltung unter «Benachrichtigung» einen kurzen Text (höchstens 500 Zeichen wie ein Impuls; das Gerät kürzt lange Texte in der Anzeige) und schickt ihn mit einem Tipp an alle Geräte, auf denen Benachrichtigungen eingeschaltet sind. Danach sieht sie, an wie viele Geräte es ging.
 - Das Textfeld ist mit dem aktuellen Impuls vorbelegt, wenn es einen gibt.
 - Eine Lehrperson schaltet Benachrichtigungen auf ihrem Gerät mit einem Tipp ein und auf der Info-Seite wieder aus. Die Startseite zeigt einen Hinweis, solange sie auf diesem Gerät nicht eingeschaltet sind, mit «Nicht jetzt».
 - Auf einem iPhone ohne Installation erklärt der Hinweis in zwei Sätzen, wie man die Seite auf den Startbildschirm legt.
@@ -58,10 +58,10 @@ Meldet ein Gerät sein Abo ein zweites Mal an (gleicher Endpunkt), wird die Zeil
 
 ### Schlüssel (VAPID)
 
-- Ein Schlüsselpaar P-256 für die ganze App. Der private Schlüssel kommt als Secret `VAPID_SCHLUESSEL` (PEM in base64url, eine Zeile) in die Umgebung; der öffentliche wird daraus abgeleitet.
+- Ein Schlüsselpaar P-256 für die ganze App. Der private Schlüssel kommt als Secret `VAPID_SCHLUESSEL` (die rohen 32 Byte in base64url, eine Zeile; `py_vapid.Vapid02.from_raw`) in die Umgebung; der öffentliche wird daraus abgeleitet.
 - Kommando `python -m app.kommandos vapid-schluessel` erzeugt ein Paar und gibt den Wert für `fly secrets set` aus.
 - Ohne Secret ist die Funktion aus: Die Seiten zeigen keinen Hinweis, die Verwaltung erklärt «Benachrichtigungen sind nicht eingerichtet». Die App startet trotzdem, auch in Produktion.
-- Absenderangabe (`sub` der VAPID-Signatur): die Adresse der App (`https://reflexionsinstrument.fly.dev`), keine E-Mail-Adresse. Die Spezifikation erlaubt eine https-Adresse.
+- Absenderangabe (`sub` der VAPID-Signatur): die Adresse der App (`https://reflexionsinstrument.fly.dev`), keine E-Mail-Adresse. Die Spezifikation erlaubt eine https-Adresse. `aud` ist pro Versand Schema und Host des Push-Dienstes, `exp` 12 Stunden.
 
 ### Endpunkte
 
@@ -90,13 +90,13 @@ Sonst Status 400, nichts gespeichert.
 
 - Modul `app/push.py`: `sende(abo, nutzlast) -> Ergebnis`. Verschlüsselung mit `http_ece.encrypt(..., version="aes128gcm")`, Signatur mit `py_vapid`, Versand mit `urllib.request` (Zeitlimit 10 s), Header `TTL: 86400`, `Urgency: normal`, `Content-Encoding: aes128gcm`.
 - Nutzlast JSON: `{"titel": <Titel des Instruments>, "text": <Nachricht>}`.
-- Antwort 201/202: zugestellt. 404 oder 410: Abo ist ungültig und wird gelöscht. Alles andere: zählt als «nicht erreicht», Abo bleibt. Ins Log kommen Status und Host des Push-Dienstes, nie Endpunkt-Pfad, Schlüssel oder Text.
+- Antwort 201/202: zugestellt. 404 oder 410: Abo ist ungültig und wird gelöscht. Alles andere (auch 401/403, Weiterleitungen, Netz- und Protokollfehler): «nicht erreicht», Abo bleibt. 401/403 löscht nicht, weil es auch ein Fehler unserer Signatur sein kann; einen neuen `VAPID_SCHLUESSEL` erkennt das Seiten-Skript und schliesst neu ab. Der Versand folgt keiner Weiterleitung. Die Abo-Adresse darf nur sichtbares ASCII enthalten. Ins Log kommen Status und Host des Push-Dienstes, nie Endpunkt-Pfad, Schlüssel oder Text.
 - Gesendet wird nacheinander in der Anfrage der Auftraggeberin (synchrone Route, läuft im Threadpool). Bei vier bis zehn Geräten dauert das wenige Sekunden. Der Knopf zeigt «Wird gesendet …» nicht; ein Doppelklick schickt doppelt. In Kauf genommen: Der Fall ist harmlos und eine Sperre bräuchte Zustand.
 - Ergebnisseite: «Gesendet an 3 Geräte.» und falls nötig «1 Gerät war nicht erreichbar und ist entfernt.» bzw. «1 Gerät hat nicht geantwortet.»
 
 ### Service Worker (`app/static/js/sw.js`, ausgeliefert unter `/sw.js`)
 
-- `push`: Nutzlast lesen, `showNotification(titel, {body: text, icon, badge, lang: "de"})`.
+- `push`: Nutzlast lesen, `showNotification(titel, {body: text, icon, lang: "de"})`.
 - `notificationclick`: Benachrichtigung schliessen, ein offenes Fenster der App fokussieren, sonst `/` öffnen.
 - Kein `fetch`-Handler, kein Zwischenspeicher.
 
@@ -114,7 +114,9 @@ Zustände (das Skript zeigt den passenden Teil, alle anderen bleiben `hidden`):
 | aus | kein Abo | Knopf «Benachrichtigungen einschalten»; auf Start mit «Nicht jetzt» |
 | an | Abo vorhanden | auf Info «Eingeschaltet» und Knopf «Ausschalten»; auf Start nichts |
 
-«Nicht jetzt» merkt sich das Gerät in `localStorage` (ein Wert ohne Personenbezug). Einschalten: `Notification.requestPermission()` im Klick (iOS verlangt eine Nutzeraktion), dann `pushManager.subscribe({userVisibleOnly: true, applicationServerKey})`, dann POST an den Server. Ist das Abo im Browser vorhanden, aber nicht auf dem Server (z. B. nach Kontowechsel), meldet das Skript es beim Laden der Seite erneut an.
+«Nicht jetzt» merkt sich das Gerät in `localStorage` (ein Wert ohne Personenbezug). Einschalten: `Notification.requestPermission()` im Klick (iOS verlangt eine Nutzeraktion), dann `pushManager.subscribe({userVisibleOnly: true, applicationServerKey})`, dann POST an den Server. Ist ein Abo im Browser vorhanden, meldet das Skript es beim Laden der Seite erneut an (idempotent; deckt Kontowechsel und gelöschte Abos ab). Passt sein `applicationServerKey` nicht zum aktuellen öffentlichen Schlüssel, wird es im Browser gekündigt und neu abgeschlossen; die Erlaubnis bleibt, es braucht keinen Klick.
+
+iOS-Erkennung: `/iPhone|iPad|iPod/` im User-Agent oder `Macintosh` mit `navigator.maxTouchPoints > 1` (iPad meldet sich als Mac). Nur im Browser, nichts davon geht an den Server.
 
 ### Manifest und Symbole
 
@@ -123,14 +125,30 @@ Zustände (das Skript zeigt den passenden Teil, alle anderen bleiben `hidden`):
 
 ## Texte
 
-Feste Texte im Template, kurz und ohne Fachbegriffe («Benachrichtigungen», «Startbildschirm», kein «Push», kein «Abo»). Die Info-Seite erklärt in einem Satz, dass die Nachricht über den Dienst des Handy-Herstellers läuft und nur den Text der Projektleiterin enthält.
+Bedienungstexte (Knöpfe, Zustände, Anleitung) fest im Template, kurz und ohne Fachbegriffe («Benachrichtigungen», «Startbildschirm», kein «Push», kein «Abo»).
+
+Der Datenschutz-Hinweis ist ein neuer Hinweistext `hinweis_benachrichtigung` im bestehenden Register (`app/texte.py`, Bereich «hinweise»): Er steht auf der Info-Seite beim Ein/Aus und erscheint in der Eingabemaske unter «Hinweise» als Vorschlag, den die Auftraggeberin bestätigt oder ändert. So läuft er durch denselben Ablauf wie die übrigen Hinweise; vor dem Pilotstart prüft sie im Testlauf (#9), dass alle Hinweise bestätigt sind. Eine zusätzliche Sperre im Code gibt es nicht (Entscheidung Claude: Der Betreiber schaltet die Funktion über das Secret ein, und vor dem Start sind keine Lehrpersonen aktiv).
+
+Vorschlag: «Benachrichtigungen sind freiwillig und lassen sich hier jederzeit ausschalten. Sie enthalten nur kurze Erinnerungen der Projektleiterin, nie Einträge. Zugestellt werden sie verschlüsselt über den Dienst des Geräteherstellers (zum Beispiel Apple oder Google). Dieser sieht, wann eine Nachricht an das Gerät geht, aber nicht ihren Inhalt.»
 
 ## Datenschutz
 
 - `docs/datenschutz.md`: neue Zeile «Benachrichtigungs-Abo (Adresse beim Push-Dienst und Schlüssel des Geräts)», Zweck, Personenbezug ja (über das Konto). Satz «Es gibt keine Benachrichtigungen» ersetzen. Push-Dienste von Apple/Google/Mozilla als Empfänger der verschlüsselten Nachricht nennen.
 - `docs/loeschkonzept.md`: Abos gehören zu Stufe 1 (mit den Konten). Ausschalten oder Konto löschen entfernt sie sofort. Secret `VAPID_SCHLUESSEL` wie `GEHEIMER_SCHLUESSEL` in Stufe 2.
 - `docs/anforderungen.md`: Zeile «Erinnerungen» und «Bewusst nicht gebaut» anpassen, Herkunft A (Wunsch vom 31.10.).
-- Hinweis an den Betreiber: Der Datenschutz-Hinweistext, den die Auftraggeberin bestätigt, sollte die Benachrichtigungen erwähnen. Ein Vorschlag kommt in den Bericht, der Text bleibt ihre Entscheidung.
+- Die Push-Dienste von Apple, Google, Mozilla und Microsoft stehen ausserhalb der Schweiz/EU. Sie erhalten nur die verschlüsselte Nachricht und die Abo-Adresse, keine Inhalte aus Einträgen. Das steht in `datenschutz.md` und im Hinweistext.
+
+## Entscheidungen nach der Prüfung
+
+| Punkt | Entscheidung |
+|---|---|
+| Freischaltung vor bestätigtem Datenschutztext | Keine Sperre im Code; Hinweistext im bestehenden Bestätigungsablauf (siehe «Texte»). |
+| Prod-Nachweis | Claude setzt `VAPID_SCHLUESSEL` und schickt eine Testnachricht, solange der Pilot nicht läuft (Start 23.11.). Die Nachricht geht nur an Geräte, die eingeschaltet haben. |
+| `cryptography` (und `cffi`) | Kommen als Abhängigkeiten der freigegebenen Pakete mit; im Bericht genannt. |
+| Anmeldung in der installierten App | Hingenommen; «Angemeldet bleiben» ist Standard. Die iPhone-Anleitung sagt «danach einmal anmelden». |
+| Neuer Schlüssel | Das Skript schliesst bei abweichendem Schlüssel neu ab. 401/403 löscht nach dem Review nicht mehr (Schutz vor Massenlöschung bei eigenem Fehler). |
+| Länge | 500 Zeichen wie Impulse. |
+| iPad, iOS 26 | Erkennung und Anleitung angepasst. |
 
 ## Prüfung
 

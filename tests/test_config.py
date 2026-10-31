@@ -54,3 +54,15 @@ def test_produktion_mit_schluessel():
 def test_produktion_nur_bei_eins():
     e = lade_einstellungen({"PRODUKTION": "true", "GEHEIMER_SCHLUESSEL": "x"})
     assert e.produktion is False
+
+
+def test_vapid_ohne_wert_aus():
+    with pytest.warns(UserWarning):
+        assert lade_einstellungen({}).vapid_schluessel is None
+    e = lade_einstellungen({"PRODUKTION": "1", "GEHEIMER_SCHLUESSEL": GUELTIGER_SCHLUESSEL})
+    assert e.vapid_schluessel is None
+
+
+def test_vapid_gesetzt():
+    e = lade_einstellungen({"GEHEIMER_SCHLUESSEL": GUELTIGER_SCHLUESSEL, "VAPID_SCHLUESSEL": "abc"})
+    assert e.vapid_schluessel == "abc"

@@ -113,7 +113,12 @@ def test_vorschau_links_tragen_tag(leitung, db):
         ziele = re.findall(r'(?:href|action)="([^"]*)"', text)
         assert ziele
         for z in ziele:
-            assert z in (V, "/abmelden") or z.startswith(("/static/", tag)), (seite, z)
+            assert z in (V, "/abmelden", "/manifest.webmanifest") or z.startswith(
+                ("/static/", tag)
+            ), (
+                seite,
+                z,
+            )
             assert not z.startswith(("/lehrperson", "/gast")), (seite, z)
     assert f'action="{tag}/runden/{rid}"' in leitung.get(f"{tag}/runden/{rid}").text
 

@@ -25,6 +25,7 @@ from app.inhalte import (
     zaehle_inhalte,
 )
 from app.konten import EingabeFehler, finde_hash, lege_konto_an, setze_passwort
+from app.push import erzeuge_vapid_schluessel
 
 PLATZHALTER_DATEI = (
     Path(__file__).resolve().parent.parent / "tests" / "platzhalter" / "inhalte.json"
@@ -52,6 +53,7 @@ def _parser() -> argparse.ArgumentParser:
     platzhalter = unterbefehle.add_parser("platzhalter-laden")
     platzhalter.add_argument("--projektstart", default=None)
     platzhalter.add_argument("--ersetzen", action="store_true")
+    unterbefehle.add_parser("vapid-schluessel")
     return parser
 
 
@@ -138,6 +140,9 @@ def _platzhalter_laden(daten_verzeichnis: Path, argumente: argparse.Namespace) -
 
 def main(argv: list[str] | None = None, eingabe: TextIO | None = None) -> int:
     argumente = _parser().parse_args(argv)
+    if argumente.befehl == "vapid-schluessel":
+        print(f"fly secrets set VAPID_SCHLUESSEL={erzeuge_vapid_schluessel()}")
+        return 0
     daten_verzeichnis = Path(os.environ.get("DATEN_VERZEICHNIS", ".daten"))
     if argumente.befehl == "platzhalter-laden":
         return _platzhalter_laden(daten_verzeichnis, argumente)
