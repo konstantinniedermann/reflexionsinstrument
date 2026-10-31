@@ -9,14 +9,14 @@
 <div class="hinweis formatiert">{{ hinweis | formatiert }}</div>
 {% if ansicht.speichert and push_schluessel(request) %}{% with ort = "start" %}{% include "_benachrichtigung.html" %}{% endwith %}{% endif %}
 {% if impuls %}
-<section class="karte karte--impuls" aria-labelledby="impuls-titel">
+<section class="karte karte--impuls flaeche bereich--impuls" aria-labelledby="impuls-titel">
   <p class="ueberzeile" id="impuls-titel">Impuls dieser Woche</p>
   <p class="impuls__text">{{ impuls.text }}</p>
   <a class="knopf" href="{{ ansicht.url('/tagebuch/neu/impuls/' ~ impuls.id) }}">Dazu schreiben</a>
 </section>
 {% endif %}
-<section class="karte" aria-labelledby="runden-titel">
-  <h2 id="runden-titel" class="etikett etikett--runden">Runden</h2>
+<section class="karte flaeche bereich--runden" aria-labelledby="runden-titel">
+  <h2 id="runden-titel">Runden</h2>
   {% if runden %}
   <ul class="runden">
     {% for eintrag in runden %}
@@ -38,14 +38,14 @@
   <p>Noch keine Runde.</p>
   {% endif %}
 </section>
-<section class="karte" aria-labelledby="tagebuch-titel">
-  <h2 id="tagebuch-titel" class="etikett etikett--tagebuch">Tagebuch</h2>
+<section class="karte flaeche bereich--tagebuch" aria-labelledby="tagebuch-titel">
+  <h2 id="tagebuch-titel">Tagebuch</h2>
   <p>
     {% if anzahl_eintraege is not none %}{{ zahl(anzahl_eintraege, "Eintrag", "Einträge") }} · {% endif %}Halte fest, was dir auffällt.
   </p>
-  <a class="knopf knopf--zweit" href="{{ ansicht.url('/tagebuch/neu') }}">Neuer Tagebucheintrag</a>
+  <a class="knopf" href="{{ ansicht.url('/tagebuch/neu') }}">Neuer Tagebucheintrag</a>
 </section>
-<a class="karte karte--link karte--info" href="{{ ansicht.url('/info') }}">
+<a class="karte karte--link flaeche bereich--info" href="{{ ansicht.url('/info') }}">
   <span>Worum es geht</span>
   <span class="pfeil" aria-hidden="true">›</span>
 </a>

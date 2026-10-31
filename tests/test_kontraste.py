@@ -28,6 +28,8 @@ PAARE = [
     ("auf-eintraege", "farbe-eintraege"),
     ("auf-info", "farbe-info"),
     ("auf-start", "farbe-start"),
+    ("auf-inhalte", "farbe-inhalte"),
+    ("auf-zugaenge", "farbe-zugaenge"),
 ]
 
 

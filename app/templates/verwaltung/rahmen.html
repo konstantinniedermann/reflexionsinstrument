@@ -1,14 +1,19 @@
 {% extends "basis.html" %}
 {% block navigation %}
+{% set pfad = request.url.path.rstrip("/") %}
+{% macro punkt(ziel, name, farbe) %}
+{% set aktiv = pfad == ziel if ziel == "/verwaltung" else pfad == ziel or pfad.startswith(ziel ~ "/") %}
+<a class="bereich--{{ farbe }}" href="{{ ziel }}"{% if aktiv %} aria-current="page"{% endif %}>{{ name }}</a>
+{% endmacro %}
 <nav class="verwaltungsnavigation" aria-label="Verwaltung">
-  <a href="/verwaltung">Übersicht</a>
-  <a href="/verwaltung/inhalte">Inhalte</a>
+  {{ punkt("/verwaltung", "Übersicht", "start") }}
+  {{ punkt("/verwaltung/inhalte", "Inhalte", "inhalte") }}
   {# #18: Navigation Einträge #}
-  <a href="/verwaltung/eintraege">Einträge</a>
+  {{ punkt("/verwaltung/eintraege", "Einträge", "eintraege") }}
   {# Trennzeile zwischen #18 und #19, nicht ändern #}
   {# #19: Navigation Vorschau #}
-  <a href="/verwaltung/vorschau">Vorschau</a>
-  <a href="/verwaltung/zugaenge">Zugänge</a>
-  <a href="/verwaltung/benachrichtigung">Benachrichtigung</a>
+  {{ punkt("/verwaltung/vorschau", "Vorschau", "info") }}
+  {{ punkt("/verwaltung/zugaenge", "Zugänge", "zugaenge") }}
+  {{ punkt("/verwaltung/benachrichtigung", "Benachrichtigung", "impuls") }}
 </nav>
 {% endblock %}

@@ -34,6 +34,11 @@
   --auf-eintraege: #ffffff;
   --farbe-info: #d9d9d9;
   --auf-info: #000000;
+  /* nur Verwaltung */
+  --farbe-inhalte: #d35d31;
+  --auf-inhalte: #000000;
+  --farbe-zugaenge: #1536a2;
+  --auf-zugaenge: #ffffff;
   color-scheme: light;
 }
 
@@ -75,6 +80,21 @@
 .bereich--eintraege {
   --bereich: var(--farbe-eintraege);
   --auf-bereich: var(--auf-eintraege);
+}
+
+.bereich--impuls {
+  --bereich: var(--farbe-impuls);
+  --auf-bereich: var(--auf-impuls);
+}
+
+.bereich--inhalte {
+  --bereich: var(--farbe-inhalte);
+  --auf-bereich: var(--auf-inhalte);
+}
+
+.bereich--zugaenge {
+  --bereich: var(--farbe-zugaenge);
+  --auf-bereich: var(--auf-zugaenge);
 }
 
 .bereich--info {
@@ -220,32 +240,6 @@ a {
 .karte--eintrag:hover,
 .karte--person:hover {
   border-color: var(--akzent);
-}
-
-.karte--impuls {
-  background: var(--farbe-impuls);
-  border-color: transparent;
-  color: var(--auf-impuls);
-}
-
-.karte--impuls .ueberzeile {
-  color: inherit;
-}
-
-.karte--impuls .knopf {
-  background: #000000;
-  border-color: #000000;
-  color: #ffffff;
-}
-
-/* Auf der grünen Fläche wäre der helle Fokus-Rahmen des dunklen Schemas kaum sichtbar. */
-.karte--impuls :focus-visible {
-  outline-color: #000000;
-}
-
-/* Leitfrage als Bezug eines Tagebucheintrags */
-.karte--bezug {
-  border-left: 6px solid var(--farbe-tagebuch);
 }
 
 .impuls__text {
@@ -431,8 +425,7 @@ a {
 
 .fall {
   background: var(--karte);
-  border-left: 6px solid var(--bereich, var(--akzent));
-  border-radius: 6px var(--radius) var(--radius) 6px;
+  border-radius: var(--radius);
   padding: 1rem 1.1rem 0.4rem;
   box-shadow: var(--schatten);
 }
@@ -1103,13 +1096,6 @@ input[type="checkbox"] {
   font-weight: 700;
 }
 
-.tabs a[aria-current="page"] svg {
-  background: var(--bereich);
-  color: var(--auf-bereich);
-  /* Ring in Schriftfarbe: hebt die Pille auch bei hellen Bereichsfarben von der Leiste ab. */
-  box-shadow: 0 0 0 1.5px var(--tinte);
-}
-
 .hinweis--entwurf {
   display: flex;
   flex-wrap: wrap;
@@ -1442,35 +1428,6 @@ input[type="checkbox"] {
   border-radius: var(--pille);
 }
 
-.etikett {
-  display: inline-block;
-  padding: 0.15rem 0.85rem;
-  border-radius: var(--pille);
-  font-size: 1.05rem;
-  letter-spacing: -0.01em;
-}
-
-.etikett--runden {
-  background: var(--farbe-runden);
-  color: var(--auf-runden);
-}
-
-.etikett--tagebuch {
-  background: var(--farbe-tagebuch);
-  color: var(--auf-tagebuch);
-}
-
-.karte--info {
-  background: var(--farbe-info);
-  border-color: transparent;
-  color: var(--auf-info);
-  font-weight: 600;
-}
-
-.karte--info .pfeil {
-  color: inherit;
-}
-
 .marke--tagebuch,
 .marke--impuls {
   border-color: transparent;
@@ -1484,16 +1441,6 @@ input[type="checkbox"] {
 .marke--impuls {
   background: var(--farbe-impuls);
   color: var(--auf-impuls);
-}
-
-/* Kurzer Balken in der Bereichsfarbe über dem Inhalt der Unterseiten */
-.inhalt[class*="bereich--"]:not(.bereich--start)::before {
-  content: "";
-  display: block;
-  width: 3rem;
-  height: 0.45rem;
-  border-radius: var(--pille);
-  background: var(--bereich);
 }
 
 /* Ende #20 */
@@ -1519,3 +1466,124 @@ input[type="checkbox"] {
 }
 
 /* Ende #37 */
+
+/* Bereichsfarben als Navigationshilfe, siehe
+   docs/superpowers/specs/2026-10-31-bereichsfarben-design.md */
+
+/* Vollflächig in der Bereichsfarbe. Innen gelten Schrift- und Akzentfarbe der Fläche,
+   damit Text, Pfeile, Fokus-Rahmen und Knöpfe in beiden Schemata lesbar bleiben. */
+.flaeche {
+  --tinte: var(--auf-bereich);
+  --gedaempft: var(--auf-bereich);
+  --akzent: var(--auf-bereich);
+  --akzent-text: var(--bereich);
+  background: var(--bereich);
+  border-color: transparent;
+  color: var(--auf-bereich);
+}
+
+/* Der Fokus-Rahmen hat die Schriftfarbe der Fläche; aussen läge er im dunklen Schema
+   schwarz auf fast Schwarz, darum innen auf der Fläche. */
+.flaeche:focus-visible {
+  outline-offset: -6px;
+}
+
+.flaeche .ueberzeile,
+.flaeche .pfeil {
+  color: inherit;
+}
+
+.flaeche .marke {
+  background: #ffffff;
+  border-color: transparent;
+  color: #000000;
+}
+
+.karte--link.flaeche {
+  font-weight: 600;
+}
+
+.karte--link.flaeche .wahl__text,
+.karte--link.flaeche .gedaempft {
+  font-weight: 400;
+}
+
+/* Runden auf der gelben Karte der Startseite: weisse Zeilen, die offene mit Rahmen */
+.flaeche .runde {
+  background: #ffffff;
+  border-color: transparent;
+  color: #000000;
+}
+
+.flaeche .runde--offen {
+  border: 2px solid #000000;
+}
+
+.flaeche .runde--offen .marke--offen {
+  background: #000000;
+  color: #ffffff;
+}
+
+.flaeche .runde--gesperrt {
+  background: transparent;
+  border-color: currentColor;
+  color: inherit;
+}
+
+.fall.flaeche {
+  padding-top: 1.1rem;
+}
+
+/* Name des Bereichs als Pille über dem Inhalt der Unterseiten */
+.seitenetikett {
+  display: inline-block;
+  justify-self: start;
+  margin: 0;
+  padding: 0.3rem 1.3rem 0.25rem;
+  border-radius: var(--pille);
+  background: var(--bereich);
+  color: var(--auf-bereich);
+  font-size: 1.15rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  line-height: 1.3;
+}
+
+h1.seitenetikett {
+  font-size: 1.6rem;
+  font-weight: 700;
+  padding: 0.35rem 1.4rem 0.3rem;
+  margin: 0.25rem 0 0.75rem;
+}
+
+/* Untere Navigation: jedes Symbol dauerhaft in seiner Farbe, der aktive Punkt mit Ring */
+.tabs a svg {
+  background: var(--bereich);
+  color: var(--auf-bereich);
+}
+
+.tabs a[aria-current="page"] svg {
+  box-shadow: 0 0 0 2px var(--papier), 0 0 0 4px var(--tinte);
+}
+
+/* Verwaltung: Navigation als farbige Pillen */
+.verwaltungsnavigation {
+  gap: 0.5rem;
+  padding-top: 0.75rem;
+}
+
+.verwaltungsnavigation a {
+  padding: 0 0.85rem;
+  font-size: 0.95rem;
+  border-radius: var(--pille);
+  background: var(--bereich);
+  color: var(--auf-bereich);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.verwaltungsnavigation a[aria-current="page"] {
+  box-shadow: 0 0 0 2px var(--papier), 0 0 0 4px var(--tinte);
+}
+
+/* Ende Bereichsfarben */

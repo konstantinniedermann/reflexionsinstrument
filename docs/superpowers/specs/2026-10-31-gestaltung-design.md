@@ -1,5 +1,7 @@
 # Design: Gestaltung in Anlehnung an eine Vorlage der Auftraggeberin (#20)
 
+Weiterentwickelt in [Bereichsfarben als Navigationshilfe](2026-10-31-bereichsfarben-design.md): Farbe vollflächig statt punktuell, Balken und Etiketten entfallen.
+
 Grundlage: [Anforderungen](../../anforderungen.md) (Abschnitt «Gestaltung»: Bereiche mit Farben kennzeichnen), Issue #20. Die Auftraggeberin hat eine Website genannt, die ihr gefällt, und wünscht «eine Anlehnung, eine Tendenz, nichts Aufwendiges». Zur Tonalität der festen Texte gab es keinen Input; sie bleiben, wie sie sind. Die Entscheidungen hier hat Claude getroffen (Projektregel «Fragen selbst beantworten»).
 
 ## Was die Vorlage ausmacht
