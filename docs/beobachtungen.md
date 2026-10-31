@@ -7,246 +7,43 @@ Hier landen Befunde, die beim Arbeiten auffallen, aber nicht zum aktuellen Issue
 - **Ein Issue** entsteht daraus nur mit ausdrücklicher Zustimmung (Regeln in `../CLAUDE.md`).
 - Das Repo ist öffentlich: keine vertraulichen Inhalte in Einträgen.
 
-Letzte Auswertung: 30.10.2026 (15 Einträge, alle abgeschlossen)
+Letzte Auswertung: 31.10.2026 (19 Einträge, alle abgeschlossen)
 
 ## Offen
 
-### 2026-10-30 — Nachweis auf fly.io endet an der Anmeldung
-
-**Thema:** Betrieb
-
-**Fundort:** Deploy-Nachweis nach #18 (`/verwaltung/eintraege` auf `reflexionsinstrument.fly.dev`).
-
-**Beobachtung:** Claude kennt kein Passwort eines Kontos auf fly.io. Der Nachweis nach dem Deploy reicht deshalb nur bis `healthz`, 303 für geschützte Adressen und gleichen Tree wie lokal geprüft; die Seite «Einträge» in 390 px, der Gesamtexport und der Link aus der Tabelle auf fly.io (Plan #18, «Nach dem Merge») sind nicht geprüft. Ein Passwort zu setzen oder ein Konto anzulegen hätte Zugangsdaten in der Produktion verändert.
-
-**Ursprung:** #18, Deploy-Nachweis.
-
-**Einschätzung:** Entweder prüft Koschi die angemeldeten Seiten auf fly.io selbst, oder es gibt ein eigenes Prüfkonto, dessen Passwort Claude lokal (gitignored) lesen darf und das vor dem Testlauf mit Lehrpersonen gelöscht wird.
-
-### 2026-10-30 — Eingabemaske: Doppelklick legt doppelt an (Verwaltung)
-
-**Thema:** Eingabemaske
-
-**Fundort:** `app/inhalte.py` (`lege_runde_an` und die übrigen Anlege-Funktionen), `app/routen/verwaltung_inhalte.py`
-
-**Beobachtung:** Für die Lehrperson ist doppeltes Absenden im Tagebuch abgefangen (#16). In der Verwaltung legen zwei gleiche POSTs weiterhin zwei Runden (bzw. Fragen, Impulse) an.
-
-**Ursprung:** Review zu #16 (Restteil des ausgewerteten Eintrags vom 30.10.)
-
-**Einschätzung:** Folgenlos, solange nur die Auftraggeberin erfasst und ein Doppel sieht und löscht. Gleiches Muster wie im Tagebuch möglich (gleicher Inhalt innert 10 Sekunden).
-
-### 2026-10-30 — Entwurfsschutz: Entwürfe bleiben im Tab liegen
-
-**Thema:** Datenschutz
-
-**Fundort:** `app/static/js/entwurf.js`
-
-**Beobachtung:** (1) Meldet sich nach Ablauf der Sitzung im selben Tab eine andere Person an, bleibt der Entwurf der ersten im `sessionStorage` (nicht angezeigt, aber über die Entwicklerwerkzeuge lesbar). (2) Ein nicht gespeicherter Entwurf zu `tagebuch-{id}` bleibt nach dem Löschen des Eintrags liegen; ohne `AUTOINCREMENT` kann dieselbe `id` für einen neuen Eintrag derselben Person wieder vergeben werden, dann erscheint der alte Text als «wiederhergestellt». (3) Abmelden auf Seiten ohne `entwurf.js` (z. B. Fehlerseite) löscht Entwürfe nicht; die Konto-ID im Schlüssel verhindert die Anzeige für andere.
-
-**Ursprung:** #16 (Task 10, Gesamt-Review M3)
-
-**Einschätzung:** Geteilte Handys im Pilot unwahrscheinlich, Schliessen des Tabs räumt alles. Möglicher Weg: beim Laden alle `entwurf:`-Schlüssel mit fremdem Konto-Präfix löschen; beim Löschen eines Eintrags `data-entwurf-verwerfen` für `tagebuch-{id}` auf «Meine Einträge» rendern.
-
-### 2026-10-30 — Lehrpersonen-Ansicht: Abfragen und Event-Loop
-
-**Thema:** Leistung
-
-**Fundort:** `app/seiten_lehrperson.py:263,307`, Context-Processor für den Titel (#15), `app/routen/lehrperson.py` (`runde_speichern`)
-
-**Beobachtung:** «Meine Einträge» fragt pro Karte `sichtbare_runde` und `inhalte.fragen` einzeln ab. Der Context-Processor öffnet pro Seite eine zweite Verbindung für den Titel (Spec-Nachtrag «Titel über die Anfrage-Verbindung», kein Muss, nicht umgesetzt). `runde_speichern` ist eine `async`-Route mit synchronem SQLite; wartet eine Schreibsperre bis zu `busy_timeout` 5 s, blockiert das den Event-Loop für alle Anfragen.
-
-**Ursprung:** Gesamt-Review zu #16 (M4) und Fix-Welle
-
-**Einschätzung:** Bei fünf Lehrpersonen bedeutungslos. Trigger: spürbar langsame Seiten oder mehr Nutzende; dann Formular in einer synchronen Dependency lesen oder SQLite-Teil per `run_in_threadpool` auslagern.
-
-### 2026-10-30 — Lehrpersonen-Ansicht: Struktur und Benennung im Code
-
-**Thema:** Code-Struktur
-
-**Fundort:** `app/sichtbar.py`, `app/eintraege.py` (`entferne_aufnahmen`, `gruppiere`), `app/seiten_lehrperson.py:230` (SQL auf `aufnahmen`), `app/routen/lehrperson.py`
-
-**Beobachtung:** `sichtbar.py`: Walrus in einer Comprehension, `date.fromisoformat` plus `ist_erreicht` fünfmal wiederholt (Helfer `_erreicht`). `entferne_aufnahmen` und das SQL auf `aufnahmen` in `seiten_lehrperson.py` gehören inhaltlich nach `aufnahmen.py`. Lösch-Kontext zweimal gebaut, Schlüssel `VORLAGEN["runde_loeschen"]` dient auch dem Tagebuch. Konstanten mitten in der Datei, fehlende Typen, `hole_bezug` doppelt, `_weiter` ohne Rückgabetyp, Sortierschlüssel `runde_id or eintrag_id` in `gruppiere` nur implizit.
-
-**Ursprung:** #16 (Tasks 3, 4, 5, 6, 8)
-
-**Einschätzung:** Lesbarkeit, kein falsches Verhalten. Verschieben nach `aufnahmen.py` jetzt kollidiert mit #17; dort bei #17 mit erledigen, den Rest bei der nächsten Arbeit an der Datei. Nicht in #17 erledigt, siehe Eintrag ‹Doppelte Logik um Aufnahmen›.
-
-### 2026-10-30 — Lehrpersonen-Ansicht: Kleinigkeiten an der Oberfläche
-
-**Thema:** Oberfläche
-
-**Fundort:** `app/templates/lehrperson/tagebuch_eintrag.html`, `start.html` (Band), `runde.html`, Info-Seite
-
-**Beobachtung:** `tagebuch_eintrag.html` hat als einzige Seite kein `h1` (nur die Überzeile; schwächt die Navigation per Screenreader, Fix: `art_text` als `h1` mit Klasse `ueberzeile`). Band-`div` ohne Klasse `formatiert`. «seit …» gedämpft statt als Marke. Info-Seite: `h1` «Worum es geht» und erste Karte gleich betitelt (hängt am Platzhalter-Inhalt).
-
-**Ursprung:** #16 (Tasks 6, 7, 8, 9)
-
-**Einschätzung:** Gestaltung gehört zu #20; das `h1` beim nächsten Anfassen der Seite mitnehmen.
-
-### 2026-10-30 — Tests der Lehrpersonen-Ansicht: Lücken
-
-**Thema:** Tests
-
-**Fundort:** `tests/test_groesse.py`, `tests/test_runde.py`, `tests/test_tagebuch_routen.py`, `tests/test_eintraege.py`, `tests/test_tagebuch.py`, `tests/test_ansicht.py`, `tests/e2e-pilot.mjs`
-
-**Beobachtung:** Von der Spec verlangt, aber nicht als Test vorhanden: `POST /lehrperson/runden/{id}` knapp unter 1 MiB (nur `/anmelden` mit 60 KiB), Grenzfall genau `GRENZE`, der Pfad über `pruefe_csrf` ohne dauerhaften Test, ungültige IDs auf POST nur mit `abc` an einer Tagebuch-Route. Weiter: kein Rollback-Test, der eine Datei stehen lässt; `test_loeschen_in_laufender_transaktion` prüft nicht, dass nichts gelöscht wurde; `test_aendern` prüft `geaendert` nur auf `> ALT`; «seit …», Ziel von «Dazu schreiben», Karte «Zur Leitfrage» und der `value` des zweiten kleinen Knopfs ungetestet; `test_neu_400_behaelt_text` prüft das Feld nicht; `leitfrage/1` hart kodiert. E2E: Neuanmeldung dupliziert `meldeAn()`, Skript-Text nur im Textfeld statt auf der Karte geprüft, `heute` aus der JS-Lokalzeit, Dunkel-Lauf prüft nur den Überlauf. In Task 7 kein RED-Lauf protokolliert.
-
-**Ursprung:** #16 (Tasks 2, 4, 5, 6, 7, 8, 9; Gesamt-Review M2)
-
-**Einschätzung:** Verhalten jeweils per Probe oder anderem Test belegt, keine Fehler gefunden. Trigger: bei der nächsten Arbeit an der jeweiligen Testdatei nachziehen.
-
-### 2026-10-30 — Tests der Lehrpersonen-Ansicht: Lesbarkeit
-
-**Thema:** Tests
-
-**Fundort:** `tests/test_testdaten.py`, `tests/testdaten.py` (`abzug`), `tests/test_migration_003.py`, `tests/test_groesse.py`, `tests/test_tagebuch.py`, `tests/test_ansicht.py`
-
-**Beobachtung:** Assertion in `test_testdaten.py` verdreht formatiert; `testdaten.abzug` sortiert mit `sorted()` ohne `key` (bei `None` im Vergleich ein `TypeError`, heute unerreichbar, weil die erste Spalte eindeutig ist); ungenutzte Fixture `einstellungen` in `test_migration_003`, ungenutzte Fixture `heute_ist` in `test_gast_start_ohne_persoenliches`; Testname `test_knapp_unter_grenze` irreführend; Tupelvergleiche mit `fmt: skip` schwer lesbar. Der Helfer `_gewaehlt` in `tests/test_runde.py` findet ein Skala-Feld mit `aria-invalid` nicht mehr (heute nur auf fehlerfreien Feldern benutzt). Im Code: `_pruefe_art` (`app/eintraege.py`) ohne Rückgabetyp; `app/groesse.py` lehnt eine `Content-Length` aus mehr als 19 Nullen mit 413 ab, obwohl der Wert 0 ist (ohne praktische Folgen).
-
-**Ursprung:** #16 (Tasks 1, 2, 5, 6; Re-Review der Fix-Welle)
-
-**Einschätzung:** Kosmetik. Trigger: wie oben.
-
-### 2026-10-30 — Tests von Gast und Vorschau: Lücken
-
-**Thema:** Tests
-
-**Fundort:** `tests/test_vorschau.py`, `tests/test_gast.py`, `tests/test_ohne_speichern.py`, `tests/e2e-pilot.mjs` (`ablaufGast`)
-
-**Beobachtung:** (1) `test_post_runde_nicht_sichtbar_404` schickt keine ungültige Eingabe (Skala `7`) an eine noch nicht sichtbare Runde; genau der Fall «404, nie 400» ist nur durch die Reihenfolge im Code gesichert. (2) `test_gast_speichern_verworfen` prüft bei Skala `7` nur den Status 400, nicht den Fehlertext am Feld (`test_vorschau` prüft ihn). (3) Nach der Freischaltung prüft `test_gast_nicht_freigeschaltet` nur GET, keinen POST auf dieselbe Runde. (4) `test_seiten_nutzen_lesende_verbindung` prüft, dass `hole_db_lesend` im Abhängigkeitsbaum steht, nicht dass es vor einer schreibenden Abhängigkeit aufgelöst wird. (5) Im E2E wird das Label «Diese Runde ansehen» nicht geprüft (Auswahl per `href`), es gibt keinen Dunkel-Screenshot der Gast-Startseite, und die Tage rechnet Node aus der eigenen Uhr: Ein Lauf über Mitternacht würde an «Woche 3» scheitern.
-
-**Ursprung:** Task-Reviews und Gesamt-Review zu #19
-
-**Einschätzung:** Verhalten heute korrekt, nur Absicherung gegen Rückschritte. (1) bis (3) je eine Zeile.
-
-### 2026-10-30 — Tests von Gast und Vorschau: Lesbarkeit
-
-**Thema:** Tests
-
-**Fundort:** `app/routen/ohne_speichern.py`, `tests/test_vorschau.py`, `tests/test_gast.py`, `tests/test_sicherheit.py`
-
-**Beobachtung:** Lokale Variable `ANSICHT` in Grossbuchstaben und untypisiertes `db` in den Helfern `neu`/`neu_pruefen`; in `test_vorschau.py` dieselbe Adresse zweimal abgefragt, `Path("app/templates/verwaltung")` relativ (scheitert, wenn pytest nicht im Repo-Wurzelverzeichnis läuft), schwer lesbare Regex in `test_auswahlseite`, `isinstance`-Absicherung beim Rückgabewert von `testdaten.lege_runde_an`; Regex `ZIEL` in `test_gast.py` doppelt zu `test_vorschau.py`; `test_robots_header` als Schleife statt `parametrize`; `test_datenschutz_nennt_gast_ansicht` prüft den Testnamen nur als Text.
-
-**Ursprung:** Task-Reviews und Gesamt-Review zu #19
-
-**Einschätzung:** Kosmetik, beim nächsten Anfassen der Dateien mitnehmen.
-
-### 2026-10-30 — Gast und Vorschau: Randfälle im Betrieb
-
-**Thema:** Betrieb
-
-**Fundort:** `app/routen/ohne_speichern.py` (`hole_db_lesend`), `app/templates/verwaltung/inhalte/runde.html`, Plan #19 «Nach dem Merge»
-
-**Beobachtung:** (1) Alle Routen antworten auf `HEAD` mit 405 (FastAPI, schon vor #19); `curl -I` für den Nachweis nach dem Deploy zeigt darum 405, die Header kommen trotzdem. Besser `curl -s -D - -o /dev/null`. (2) `PRAGMA query_only` bleibt an der Verbindung; heute folgenlos, weil `hole_db` pro Anfrage eine eigene Verbindung öffnet und schliesst. Ein späterer Verbindungspool müsste das zurücksetzen. (3) Der Link «Diese Runde ansehen» nimmt das rohe `freischaltdatum`; läge es ausserhalb 2020–2099, endete er in 404. Die Eingabemaske prüft das beim Speichern schon.
-
-**Ursprung:** Gesamt-Review und cas-reviewer zu #19
-
-**Einschätzung:** Keine Folge im Pilot. (2) als Kommentar festhalten, falls je ein Pool kommt.
-
-### 2026-10-30 — #18 Minors aus den Reviews
-
-**Thema:** Oberfläche
-
-**Fundort:** `app/static/css/style.css` (Abschnitt #18), `app/export_zip.py`, `tests/` zu #18, Ansicht «Einträge»
-
-**Beobachtung:**
-- `.karte--eintrag strong, .karte--eintrag .eintrag__kopf { overflow-wrap: anywhere }` wirkt auch auf «Meine Einträge» (#16); harmlos.
-- Der Satz «Die Links in der Tabelle öffnen die Aufnahme, wenn du angemeldet bist.» verspricht einen Klick, Excel macht aus der Adresse aber keinen Link.
-- Ein Hinweis zum Löschen des Exports nach Projektende (Löschkonzept) steht nicht in der Oberfläche.
-- Filter-Chips am Desktop: waagrechtes Scrollen mit der Maus ist nicht sichtbar, spätere Chips sind abgeschnitten; alle Personen sind über die Karten erreichbar.
-- Personen-Karten unter etwa 360 px Breite nur einspaltig (`minmax(10rem, 1fr)`); bei Bedarf `minmax(min(10rem, 100%), 1fr)`.
-- `eintraege.csv` im ZIP trägt das Datum 01.01.1980.
-- Der Strom liefert gelegentlich leere Byte-Stücke (harmlos).
-- Testlücken: Lesefehler mitten im Kopieren nicht getestet; `test_zip_dateien` vergleicht Instant statt Zürcher Wandzeit; `test_exportzeilen_zeitzone` prüft die Stunde nur über die CSV; Personen-Asserts in `test_uebersicht_personen` nicht an die Karte gebunden; «ohne Woche» über CSS-Klasse geprüft; lose Substring-Prüfungen in `test_verwaltung_eintraege_liste.py`; kein Listen-Test für «1 von 2»; ZIP-Tabelle nicht zeilenweise mit `tabelle.csv` verglichen; der Screenshot-Clip im E2E dupliziert die Dateinamenlogik.
-- Excel: Die Datumsspalte zeigt «#####», bis die Spalte verbreitert wird (CSV kann keine Breiten setzen); Satz für die Testanleitung (#9).
-
-**Ursprung:** Reviews zu #18
-
-**Einschätzung:** Alles klein. Satz zu den Links beim Feedback der Auftraggeberin prüfen (Spec-Entscheid), Löschhinweis in der Oberfläche ergänzen oder bei der Übergabe mitgeben, Rest bei Gelegenheit.
-
-### 2026-10-30 — Doppelte Logik um Aufnahmen
-
-**Thema:** Code-Struktur
-
-**Fundort:** `app/aufnahmen.py` (`_loesche_zeile`, ca. :289), `app/eintraege.py:113` (`entferne_aufnahmen`, Regel ca. :100), `app/seiten_lehrperson.py:230`
-
-**Beobachtung:** `aufnahmen._loesche_zeile` und `eintraege.entferne_aufnahmen` löschen Aufnahmezeilen auf zwei Wegen. Die Regel «Antwortzeile existiert genau dann, wenn Inhalt (Text oder Aufnahme)» steht zweimal (`eintraege.py` ca. :100, `aufnahmen.py` ca. :289). `eigene_aufnahme` wiederholt die Abfrage aus `seiten_lehrperson.py` ca. :230. Zwischen `aufnahmen` und `eintraege` gibt es einen verzögerten Import.
-
-**Ursprung:** #17 (Review)
-
-**Einschätzung:** Lesbarkeit, kein falsches Verhalten. Bei der nächsten Arbeit an diesen Dateien in `aufnahmen.py` zusammenführen (der Plan zu #17 verbot Änderungen an `eintraege.py`).
-
-### 2026-10-30 — Doppelter gesprochener Eintrag bei verlorener Antwort
-
-**Thema:** Betrieb
-
-**Fundort:** `app/routen/aufnahmen.py` (`tagebuch_aufnahme_speichern`), `app/static/js/aufnahme.js`
-
-**Beobachtung:** Speichert der Server, aber die Antwort geht verloren (WLAN-Abbruch, App-Wechsel), sieht die Lehrperson einen Fehler. «Nochmals Speichern» legt dann einen zweiten Tagebucheintrag an. Bei Antworten auf Fragen wird dagegen nur ersetzt.
-
-**Ursprung:** #17 (Review)
-
-**Einschätzung:** Selten; die Lehrperson kann den Eintrag löschen. Abhilfe bei Bedarf: Einmal-Token im Formular.
-
-### 2026-10-30 — Rückfall ohne Aufnahmefähigkeit: Formate
-
-**Thema:** Oberfläche
-
-**Fundort:** Text im Rückfall der Aufnahme-Seiten (Satz «… eine Aufnahme aus einer anderen App hochladen»), `app/aufnahmen.py` (`erkenne_format`)
-
-**Beobachtung:** Der Server nimmt nur MP4/M4A, WebM und Ogg. MP3 oder WAV (manche Android-Rekorder) werden mit «Bitte neu aufnehmen» abgewiesen. In seltenen Browsern ohne Aufnahmefunktion ist das eine Sackgasse.
-
-**Ursprung:** #17 (Review)
-
-**Einschätzung:** Text anpassen oder Formate erweitern (Inhaltsentscheid); ADR-001 «keine Umwandlung» bleibt. Dazu: Die Meldung «Dieser Browser kann hier nicht aufnehmen …» erklärt das daneben sichtbare Dateifeld nicht, und die Fehlermeldung «Bitte neu aufnehmen.» passt nicht, wenn jemand eine Datei hochgeladen hat.
-
-### 2026-10-30 — Aufnahme-Seiten: kleine Bedienpunkte
-
-**Thema:** Oberfläche
-
-**Fundort:** `app/static/js/aufnahme.js`, `app/templates/lehrperson/_aufnehmen.html`, `app/routen/aufnahmen.py`
-
-**Beobachtung:** Die gemessene Dauer liegt etwa eine Sekunde über der Aufnahme (2 s werden als «3 Sek.» gespeichert; Messung vor dem `start`-Ereignis, aufgerundet). Im Zustand «Bereit» fehlt mit JavaScript der Link «Stattdessen schreiben» (nur «‹ Tagebuch»). Ohne JavaScript geht der getippte Zusatztext nach einer 400-Meldung verloren.
-
-**Ursprung:** #17 (Task-Reviews 3 und 4)
-
-**Einschätzung:** Kosmetik bzw. seltener Rückfallweg; bei der Gestaltung (#20) oder nach dem Gerätetest mitnehmen.
-
-### 2026-10-30 — Aufnahmen: Testlücken ohne bekannten Fehler
-
-**Thema:** Tests
-
-**Fundort:** `tests/test_aufnahmen.py`, `tests/test_aufnahmen_routen.py`, `tests/test_aufnahme_hochladen.py`, `tests/test_aufnahmen_antwort.py`
-
-**Beobachtung:** Nicht eigens geprüft: Reihenfolge 413 vor 503 vor 400 in `schreibe_datei`; dass die 404-Antworten (fremd, unbekannt, Datei fehlt) gleich aussehen; Range auf `/verwaltung/aufnahmen/…`; Multipart ohne Dateiteil; beide Hinweistexte vollständig formatiert; `sqlite3.Error` im Aufräumen; Datenbankfehler nach dem `UPDATE` in `haenge_an_antwort`; Schreibfehler (503) auf Ebene der Route. Zwei Tests haben unbenutzte Fixture-Parameter.
-
-**Ursprung:** #17 (Task-Reviews und Gesamtreview, als «kann bleiben» eingestuft)
-
-**Einschätzung:** Abdeckung, kein falsches Verhalten bekannt.
-
-### 2026-10-30 — Aufnahmen: kleine Robustheitspunkte
-
-**Thema:** Code-Struktur
-
-**Fundort:** `app/static/js/aufnahme.js` (`bildschirmAn`, `beendet`), `app/aufnahmen.py` (`schreibe_datei`), `app/routen/aufnahmen.py` (`_ausliefern`, `_speichere_upload`)
-
-**Beobachtung:** `bildschirmAn` wird nicht abgewartet; bei sehr schnellem Stopp und Neustart könnte eine Bildschirmsperre bis zum Verlassen der Seite bestehen bleiben. `beendet()` prüft `recorder` nicht auf `null`. Kein `fsync` vor `os.replace`. `_ausliefern` prüft mit `is_file()`, das symbolischen Links folgt (nur die App schreibt in den Ordner). Das Aufräumen von Waisen läuft auch nach einer 400-Antwort.
-
-**Ursprung:** #17 (Task-Reviews 4 und 6, Gesamtreview)
-
-**Einschätzung:** Heute ohne Folgen; bei der nächsten Arbeit an den Dateien mitnehmen.
-
-### 2026-10-31 — E2E: Abo für Benachrichtigungen im Headless-Chrome nur gelegentlich
-
-**Thema:** Tests
-
-**Fundort:** `tests/e2e-pilot.mjs`, Ablauf «Benachrichtigungen» (Schritt 4).
-
-**Beobachtung:** Das Einschalten gelang im Headless-Chrome in 1 von 5 Läufen; sonst lief das Abo beim Push-Dienst ins Zeitlimit, und der Test akzeptiert dann die Fehlermeldung. Damit prüft der E2E die echte Zustellung nur zufällig. Beim Nachweis auf fly.io (#37) zeigte sich: Eine per CDP erteilte Erlaubnis (`Browser.grantPermissions`) gilt nur, solange die Verbindung offen ist, die sie erteilt hat; schliesst sie, setzt Chrome die Erlaubnis zurück und kündigt das Abo (Push-Dienst antwortet 410). Mit offener Browser-Verbindung (`/json/version`) lief die Zustellung im sichtbaren Chrome sofort durch.
-
-**Ursprung:** #37, E2E und Nachweis auf fly.io.
-
-**Einschätzung:** Im E2E die Erlaubnis über die Browser-Verbindung statt über die Seite erteilen und prüfen, ob das Abo dann verlässlich gelingt; falls ja, die Zustellung fest prüfen statt «eingeschaltet oder Meldung». Braucht Netz zum Push-Dienst; offline bliebe die Meldung der richtige Ausgang.
+## Ausgewertet am 31.10.2026
+
+19 Einträge, alle abgeschlossen. Massstab: Der Pilot ist befristet (vier Wochen, fünf Lehrpersonen) und soll mit wenig weiterem Aufwand fertig werden. Was kein falsches Verhalten für Lehrpersonen oder Auftraggeberin bedeutet, wird nicht mehr bearbeitet. Die Einträge mit dem Ausgang «nichts tun» wurden darum nicht einzeln nachgeprüft: Ob sie zutreffen, ändert den Ausgang nicht.
+
+### Erledigt / überholt
+
+- 2026-10-30 — Nachweis auf fly.io endet an der Anmeldung → überholt: Testkonten werden per `fly ssh` angelegt und danach gelöscht (so bei #37), angemeldete Seiten prüft zudem Koschi auf dem Gerät (#17, #37).
+
+### An bestehende Issues gehängt
+
+- 2026-10-30 — #18 Minors aus den Reviews → Für die Auftraggeberin zählen nur zwei Punkte: Excel zeigt die Datumsspalte als «#####» und macht aus den Adressen der Aufnahmen keine Links. Beides als Satz für die Testanleitung an #9. Der Löschhinweis zum Export ist mit #8 und #10 (Abschluss) abgedeckt. Der Rest ist Kosmetik und Testabdeckung, siehe unten.
+
+### Abgehakt (befristeter Pilot, kein falsches Verhalten)
+
+Gemeinsamer Trigger: Das Instrument wird über den Pilot hinaus betrieben oder weiterentwickelt. Dann diese Liste vor der ersten Arbeit wieder lesen.
+
+- 2026-10-30 — Eingabemaske: Doppelklick legt doppelt an (Verwaltung) → nur die Auftraggeberin erfasst, ein Doppel sieht und löscht sie.
+- 2026-10-30 — Entwurfsschutz: Entwürfe bleiben im Tab liegen → geteilte Handys sind im Pilot nicht vorgesehen.
+- 2026-10-30 — Lehrpersonen-Ansicht: Abfragen und Event-Loop → bei fünf Lehrpersonen ohne Wirkung.
+- 2026-10-30 — Lehrpersonen-Ansicht: Struktur und Benennung im Code → Lesbarkeit.
+- 2026-10-30 — Doppelte Logik um Aufnahmen → Lesbarkeit.
+- 2026-10-30 — Aufnahmen: kleine Robustheitspunkte → ohne Folgen im Betrieb.
+- 2026-10-30 — Lehrpersonen-Ansicht: Kleinigkeiten an der Oberfläche → Gestaltung ist mit #20 abgeschlossen.
+- 2026-10-30 — Aufnahme-Seiten: kleine Bedienpunkte → Kosmetik und seltene Rückfallwege.
+- 2026-10-30 — Rückfall ohne Aufnahmefähigkeit: Formate → betrifft nur Browser ohne Aufnahmefunktion; iPhone und Chrome nehmen auf.
+- 2026-10-30 — Doppelter gesprochener Eintrag bei verlorener Antwort → selten, die Lehrperson kann ihn löschen.
+- 2026-10-30 — Gast und Vorschau: Randfälle im Betrieb → `HEAD` steht als Memory fest, einen Verbindungspool gibt es nicht.
+- 2026-10-30 — Tests der Lehrpersonen-Ansicht: Lücken → Verhalten per Probe belegt.
+- 2026-10-30 — Tests der Lehrpersonen-Ansicht: Lesbarkeit → Kosmetik.
+- 2026-10-30 — Tests von Gast und Vorschau: Lücken → Verhalten heute korrekt.
+- 2026-10-30 — Tests von Gast und Vorschau: Lesbarkeit → Kosmetik.
+- 2026-10-30 — Aufnahmen: Testlücken ohne bekannten Fehler → Aufnahme ist auf dem iPhone belegt (#17).
+- 2026-10-31 — E2E: Abo für Benachrichtigungen im Headless-Chrome nur gelegentlich → Zustellung ist auf fly.io und auf dem iPhone belegt (#37).
 
 ## Ausgewertet am 30.10.2026
 
