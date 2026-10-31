@@ -7,7 +7,7 @@
   <p class="gedaempft">Erstellt {{ eintrag.erstellt | zeitpunkt }}{% if geaendert %} · geändert {{ eintrag.geaendert | zeitpunkt }}{% endif %}</p>
 </header>
 {% if bezug_text %}
-<section class="karte karte--impuls">
+<section class="karte {% if bezug_art == 'impuls' %}karte--impuls{% else %}karte--bezug{% endif %}">
   <p class="impuls__text">{{ bezug_text }}</p>
 </section>
 {% endif %}

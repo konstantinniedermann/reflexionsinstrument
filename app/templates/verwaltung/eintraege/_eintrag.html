@@ -3,7 +3,7 @@
 {% set bezeichnungen = {"frei": "Freier Eintrag", "leitfragen": "Zur Leitfrage", "impuls": "Zum Impuls", "aufnahme": "Gesprochener Eintrag"} %}
 <article class="karte karte--eintrag">
   <div class="eintrag__kopf">
-    <span class="marke{% if eintrag.art == 'runde' %} marke--runde{% endif %}">{{ {"runde": "Runde", "impuls": "Impuls"}.get(eintrag.art, "Tagebuch") }}</span>
+    <span class="marke marke--{{ {"runde": "runde", "impuls": "impuls"}.get(eintrag.art, "tagebuch") }}">{{ {"runde": "Runde", "impuls": "Impuls"}.get(eintrag.art, "Tagebuch") }}</span>
     <span class="gedaempft">{% if mit_name %}{{ eintrag.anzeigename }} · {% endif %}{% if karte.woche %}Woche {{ karte.woche }} · {% endif %}{{ eintrag.erstellt | zeitpunkt }}{% if eintrag.geaendert != eintrag.erstellt %} · {{ "zuletzt gespeichert" if eintrag.art == "runde" else "geändert" }} {{ eintrag.geaendert | zeitpunkt }}{% endif %}</span>
   </div>
   {% if eintrag.art == "runde" %}

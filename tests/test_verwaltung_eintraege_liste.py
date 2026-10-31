@@ -107,8 +107,8 @@ def test_tagebuch_arten(client, auftraggeberin, lehrperson, db, heute_ist):
     assert "Zum Impuls" in liste
     assert "Alter Impulstext" in liste
     assert "Neu" not in liste
-    assert '<span class="marke">Impuls</span>' in liste
-    assert '<span class="marke">Tagebuch</span>' in liste
+    assert '<span class="marke marke--impuls">Impuls</span>' in liste
+    assert '<span class="marke marke--tagebuch">Tagebuch</span>' in liste
 
 
 def test_aufnahme(client, auftraggeberin, lehrperson, db, heute_ist, einstellungen):

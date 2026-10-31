@@ -8,7 +8,7 @@
 {% for k in karten %}
 <a class="karte karte--eintrag" href="{{ ansicht.url(k.pfad) }}">
   <div class="eintrag__kopf">
-    <span class="marke{% if k.marke == 'Runde' %} marke--runde{% endif %}">{{ k.marke }}</span>
+    <span class="marke {% if k.marke == 'Runde' %}marke--runde{% elif k.marke == 'Impuls' %}marke--impuls{% else %}marke--tagebuch{% endif %}">{{ k.marke }}</span>
     <span class="gedaempft">{{ k.erstellt | zeitpunkt }}{% if k.geaendert != k.erstellt %} · geändert {{ k.geaendert | zeitpunkt }}{% endif %}</span>
   </div>
   <span class="eintrag__titel">{{ k.titel }}</span>
