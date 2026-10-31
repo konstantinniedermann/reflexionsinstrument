@@ -1500,6 +1500,11 @@ input[type="checkbox"] {
 
 /* Benachrichtigungen (#37) */
 
+/* Die Verwaltungsnavigation bricht mit sechs Punkten auf dem Handy um. */
+.verwaltungsnavigation {
+  row-gap: 0;
+}
+
 .karte--benachrichtigung [hidden] {
   display: none;
 }

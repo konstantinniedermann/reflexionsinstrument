@@ -95,13 +95,14 @@ def _zahl(wert: str | None) -> int:
 
 def _seite(request: Request, db: sqlite3.Connection, status=200, **kontext):
     eingerichtet = request.app.state.vapid is not None
-    if "text" not in kontext:
-        impuls = aktueller_impuls(db, hole_heute(request))
-        kontext["text"] = impuls["text"] if impuls else ""
     abfrage = request.query_params
     ergebnis = None
     if abfrage.get("gesendet", "").isdigit():
         ergebnis = {k: _zahl(abfrage.get(k)) for k in ("gesendet", "entfernt", "nicht")}
+    if "text" not in kontext:
+        # Vorschlag: der aktuelle Impuls. Nach dem Senden leer, damit nichts doppelt hinausgeht.
+        impuls = None if ergebnis else aktueller_impuls(db, hole_heute(request))
+        kontext["text"] = impuls["text"] if impuls else ""
     return templates.TemplateResponse(
         request,
         "verwaltung/benachrichtigung.html",

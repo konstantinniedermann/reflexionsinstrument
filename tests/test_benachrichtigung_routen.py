@@ -163,3 +163,11 @@ def test_verwaltung_ergebnis_aus_adresse_nur_zahlen(leitung):
 def test_alle_abos_bleiben_beim_anzeigen(leitung, db):
     leitung.get("/verwaltung/benachrichtigung")
     assert alle_abos(db) == []
+
+
+def test_nach_dem_senden_feld_leer(leitung, db, heute_ist):
+    testdaten.lege_impuls_an(db, "Was hat dich heute überrascht?", "2026-11-23")
+    heute_ist(date(2026, 11, 24))
+    seite = leitung.get("/verwaltung/benachrichtigung?gesendet=1&entfernt=0&nicht=0").text
+    assert "Gesendet an 1 Gerät." in seite
+    assert "Was hat dich heute überrascht?" not in seite
