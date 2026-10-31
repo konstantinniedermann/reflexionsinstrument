@@ -700,6 +700,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "bcrypt" },
+    { name = "cryptography" },
     { name = "fastapi" },
     { name = "http-ece" },
     { name = "itsdangerous" },
@@ -719,6 +720,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "bcrypt", specifier = ">=5.0.0" },
+    { name = "cryptography", specifier = ">=46" },
     { name = "fastapi", specifier = ">=0.162.0" },
     { name = "http-ece", specifier = ">=1.2.1" },
     { name = "itsdangerous", specifier = ">=2.2.0" },

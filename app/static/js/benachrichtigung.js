@@ -108,8 +108,10 @@
       const registrierung = await navigator.serviceWorker.getRegistration();
       const abo = registrierung && (await registrierung.pushManager.getSubscription());
       if (abo) {
-        await melde("/benachrichtigung/abo/loeschen", { endpunkt: abo.endpoint });
+        // Zuerst im Browser kündigen: Scheitert danach die Meldung an den Server, lehnt der
+        // Push-Dienst das alte Abo beim nächsten Versand ab, und der Server entfernt es.
         await abo.unsubscribe();
+        await melde("/benachrichtigung/abo/loeschen", { endpunkt: abo.endpoint });
       }
       zeige("aus", true);
     } catch {
@@ -146,10 +148,21 @@
     }
   }
 
+  // Während ein Vorgang läuft, sind die Knöpfe gesperrt (kein doppeltes Einschalten).
+  async function gesperrt(vorgang) {
+    const knoepfe = box.querySelectorAll("button");
+    for (const k of knoepfe) k.disabled = true;
+    try {
+      await vorgang();
+    } finally {
+      for (const k of knoepfe) k.disabled = false;
+    }
+  }
+
   box.addEventListener("click", (ereignis) => {
     const aktion = ereignis.target.closest("[data-aktion]")?.dataset.aktion;
-    if (aktion === "ein") einschalten();
-    else if (aktion === "aus") ausschalten();
+    if (aktion === "ein") gesperrt(einschalten);
+    else if (aktion === "aus") gesperrt(ausschalten);
     else if (aktion === "spaeter") {
       try {
         localStorage.setItem(SPAETER, "1");

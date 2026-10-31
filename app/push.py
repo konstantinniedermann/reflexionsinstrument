@@ -23,7 +23,19 @@ ABSENDER = "https://reflexionsinstrument.fly.dev"
 GUELTIGKEIT_SIGNATUR = 12 * 3600
 LEBENSDAUER_NACHRICHT = 86400  # so lange hält der Push-Dienst sie für ein ausgeschaltetes Gerät
 ZEITLIMIT = 10
-UNGUELTIG = {401, 403, 404, 410}  # Abo abgelaufen oder zu einem anderen Schlüssel
+# Abo abgelaufen oder gekündigt. 401/403 nicht: Das kann auch ein Fehler unserer Signatur sein,
+# dann würden beim ersten Versand alle Abos gelöscht. Einen neuen Schlüssel erkennt das Seiten-Skript.
+UNGUELTIG = {404, 410}
+
+
+class _OhneWeiterleitung(urllib.request.HTTPRedirectHandler):
+    """Keiner Weiterleitung folgen: Die Signatur gehört nur dem Push-Dienst der Abo-Adresse."""
+
+    def redirect_request(self, *args, **kwargs):
+        return None
+
+
+_OHNE_WEITERLEITUNG = urllib.request.build_opener(_OhneWeiterleitung)
 
 
 @dataclass(frozen=True)
@@ -65,7 +77,7 @@ def _unb64(wert: str) -> bytes:
     return base64.urlsafe_b64decode(wert + "=" * (-len(wert) % 4))
 
 
-def sende(vapid: Vapid02, abo: sqlite3.Row, nutzlast: bytes, oeffne=urllib.request.urlopen):
+def sende(vapid: Vapid02, abo: sqlite3.Row, nutzlast: bytes, oeffne=_OHNE_WEITERLEITUNG.open):
     """Schickt eine Nachricht an ein Gerät. Gibt den HTTP-Status zurück, None bei Netzfehler."""
     teile = urlsplit(abo["endpunkt"])
     koerper = http_ece.encrypt(
@@ -99,13 +111,17 @@ def sende(vapid: Vapid02, abo: sqlite3.Row, nutzlast: bytes, oeffne=urllib.reque
         status = fehler.code
     except (urllib.error.URLError, OSError):
         status = None
+    except Exception as fehler:  # noqa: BLE001 - ein Gerät darf den Versand an die anderen nicht stoppen
+        # Nur der Typ: der Text kann die Abo-Adresse enthalten.
+        _log.warning("Benachrichtigung an %s: %s", teile.hostname, type(fehler).__name__)
+        status = None
     # Nur Dienst und Status: Pfad und Schlüssel identifizieren das Gerät, der Text ist Inhalt.
     _log.info("Benachrichtigung an %s: %s", teile.hostname, status or "nicht erreicht")
     return status
 
 
 def verschicke_an_alle(
-    db: sqlite3.Connection, vapid: Vapid02, titel: str, text: str, oeffne=urllib.request.urlopen
+    db: sqlite3.Connection, vapid: Vapid02, titel: str, text: str, oeffne=_OHNE_WEITERLEITUNG.open
 ) -> Ergebnis:
     nutzlast = json.dumps({"titel": titel, "text": text}, ensure_ascii=False).encode("utf-8")
     gesendet = entfernt = nicht_erreicht = 0

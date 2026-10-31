@@ -56,6 +56,10 @@ def test_erlaubte_dienste(endpunkt):
         "https://fcm.googleapis.com/" + "a" * 1000,
         "",
         "kein-url",
+        "https://fcm.googleapis.com/fcm/send/a b",
+        "https://fcm.googleapis.com/fcm/send/a\tb",
+        "https://fcm.googleapis.com/fcm/send/a\x7f",
+        "https://fcm.googleapis.com/fcm/send/ä",
     ],
 )
 def test_abgelehnte_adressen(endpunkt):

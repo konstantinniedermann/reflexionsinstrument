@@ -6,6 +6,7 @@ Adressen bekannter Push-Dienste erlaubt (Schutz gegen Anfragen an beliebige Serv
 
 import base64
 import binascii
+import re
 import sqlite3
 from dataclasses import dataclass
 from urllib.parse import urlsplit
@@ -43,6 +44,9 @@ def _erlaubter_host(host: str) -> bool:
 def pruefe_abo(endpunkt: str, p256dh: str, auth: str) -> Abo:
     if not endpunkt or len(endpunkt) > MAX_LAENGE_ENDPUNKT:
         raise ValueError("Adresse fehlt oder ist zu lang")
+    # Nur sichtbares ASCII: Leer- und Steuerzeichen liessen den Versand später scheitern.
+    if not re.fullmatch(r"[!-~]+", endpunkt):
+        raise ValueError("Adresse nicht erlaubt")
     teile = urlsplit(endpunkt)
     if teile.scheme != "https" or teile.username or teile.password:
         raise ValueError("Adresse nicht erlaubt")

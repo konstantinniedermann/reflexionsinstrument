@@ -1,10 +1,12 @@
 """Versand der Benachrichtigungen: Verschlüsselung, Signatur, Umgang mit Antworten (#37)."""
 
 import base64
+import http.client
 import json
 import logging
 import os
 import urllib.error
+import urllib.request
 
 import http_ece
 import pytest
@@ -112,7 +114,7 @@ def test_header(db, lehrperson, vapid):
     assert anspruch["sub"] == "https://reflexionsinstrument.fly.dev"
 
 
-@pytest.mark.parametrize("status", [404, 410, 401, 403])
+@pytest.mark.parametrize("status", [404, 410])
 def test_ungueltiges_abo_wird_entfernt(db, lehrperson, vapid, status):
     speichere_abo(db, lehrperson["id"], Geraet().abo)
     ergebnis = verschicke_an_alle(db, vapid, "T", "x", oeffne=Dienst(status))
@@ -120,9 +122,11 @@ def test_ungueltiges_abo_wird_entfernt(db, lehrperson, vapid, status):
     assert anzahl_abos(db) == 0
 
 
-def test_500_bleibt(db, lehrperson, vapid):
+@pytest.mark.parametrize("status", [500, 401, 403, 301])
+def test_andere_antworten_abo_bleibt(db, lehrperson, vapid, status):
+    # 401/403 kann auch ein Fehler auf unserer Seite sein (Signatur); dann nicht alle Abos löschen.
     speichere_abo(db, lehrperson["id"], Geraet().abo)
-    ergebnis = verschicke_an_alle(db, vapid, "T", "x", oeffne=Dienst(500))
+    ergebnis = verschicke_an_alle(db, vapid, "T", "x", oeffne=Dienst(status))
     assert ergebnis == Ergebnis(gesendet=0, entfernt=0, nicht_erreicht=1)
     assert anzahl_abos(db) == 1
 
@@ -149,3 +153,40 @@ def test_log_ohne_endpunkt_und_text(db, lehrperson, vapid, caplog):
     assert "fcm.googleapis.com" in caplog.text
     assert "geheimer-pfad" not in caplog.text
     assert "Geheimer Text" not in caplog.text
+
+
+@pytest.mark.parametrize(
+    "fehler",
+    [
+        http.client.InvalidURL("x"),
+        http.client.BadStatusLine("x"),
+        UnicodeEncodeError("ascii", "ä", 0, 1, "x"),
+    ],
+)
+def test_unerwarteter_fehler_andere_bekommen_es(db, lehrperson, zweite_lehrperson, vapid, fehler):
+    speichere_abo(db, lehrperson["id"], Geraet(ENDPUNKT + "a").abo)
+    speichere_abo(db, zweite_lehrperson["id"], Geraet(ENDPUNKT + "b").abo)
+    ergebnis = verschicke_an_alle(db, vapid, "T", "x", oeffne=Dienst(fehler, 201))
+    assert ergebnis == Ergebnis(gesendet=1, entfernt=0, nicht_erreicht=1)
+
+
+def test_folgt_keiner_weiterleitung(db, lehrperson, vapid, monkeypatch):
+    """Der echte Versand folgt keiner Weiterleitung (die Signatur ginge sonst an ein anderes Ziel)."""
+    from app import push
+
+    angefragt = []
+
+    class Weiterleitung(http.client.HTTPResponse):
+        pass
+
+    def antwort_302(self, anfrage):
+        angefragt.append(anfrage.full_url)
+        kopf = http.client.HTTPMessage()
+        kopf["Location"] = "https://127.0.0.1/innen"
+        return push._OHNE_WEITERLEITUNG.error("https", anfrage, None, 302, "Found", kopf)
+
+    monkeypatch.setattr(urllib.request.HTTPSHandler, "https_open", antwort_302)
+    speichere_abo(db, lehrperson["id"], Geraet().abo)
+    ergebnis = verschicke_an_alle(db, vapid, "T", "x")
+    assert angefragt == [ENDPUNKT]
+    assert ergebnis.nicht_erreicht == 1
