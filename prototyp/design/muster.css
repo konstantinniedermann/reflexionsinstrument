@@ -1,0 +1,850 @@
+/* Gestaltungsmuster A/B/C (Wegwerf-Prototyp).
+   docs/superpowers/specs/2026-11-01-design-muster-design.md
+   Registerfarben matt; Schrift darauf immer schwarz (WCAG AA). */
+
+/* ---------- Farben pro Muster ---------- */
+body[data-muster="a"] {
+  --c-start: #dcd6ca;
+  --c-runden: #e3c98a;
+  --c-tagebuch: #dca496;
+  --c-eintraege: #c3cdec;
+  --c-info: #c5d9a3;
+  --anteil: 34%;
+}
+body[data-muster="b"] {
+  --c-start: #d8d2c4;
+  --c-runden: #e6d097;
+  --c-tagebuch: #e1b2b4;
+  --c-eintraege: #b9c7df;
+  --c-info: #bdd2bf;
+  --anteil: 38%;
+}
+body[data-muster="c"] {
+  --c-start: #bdb5a6;
+  --c-runden: #d0aa52;
+  --c-tagebuch: #c98673;
+  --c-eintraege: #8d9fc8;
+  --c-info: #97ae84;
+  --anteil: 30%;
+}
+
+.reg-start,
+body[data-reg="start"] {
+  --r: var(--c-start);
+}
+.reg-runden,
+body[data-reg="runden"] {
+  --r: var(--c-runden);
+}
+.reg-tagebuch,
+body[data-reg="tagebuch"] {
+  --r: var(--c-tagebuch);
+}
+.reg-eintraege,
+body[data-reg="eintraege"] {
+  --r: var(--c-eintraege);
+}
+.reg-info,
+body[data-reg="info"] {
+  --r: var(--c-info);
+}
+
+/* Seitenhintergrund: weicher Ton der Registerfarbe */
+body {
+  --seite: var(--r);
+  --tint: color-mix(in srgb, var(--r) var(--anteil), #ffffff);
+  --tinte: #111111;
+  --gedaempft: #3f3f3f;
+  --linie: #111111;
+  --sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --serif: Georgia, "Times New Roman", serif;
+}
+
+/* ---------- Grundlage ---------- */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--tint);
+  color: var(--tinte);
+  font-family: var(--sans);
+  font-size: 17px;
+  line-height: 1.45;
+  transition: background-color 0.25s ease;
+}
+
+h1,
+h2 {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+}
+
+h1 {
+  font-size: 2rem;
+}
+
+h2 {
+  font-size: 1.3rem;
+}
+
+p {
+  margin: 0;
+}
+
+a {
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 3px solid #111;
+  outline-offset: 2px;
+}
+
+.inhalt {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 20px 16px calc(110px + env(safe-area-inset-bottom));
+  display: grid;
+  gap: 16px;
+}
+
+.inhalt:focus {
+  outline: none;
+}
+
+.ueberzeile {
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.lead {
+  margin-top: 8px;
+}
+
+.meta {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--gedaempft);
+}
+
+.kopf {
+  display: grid;
+  gap: 4px;
+  padding-bottom: 4px;
+}
+
+.etikett {
+  justify-self: start;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--r);
+}
+
+.zwischentitel {
+  margin-top: 8px;
+  font-size: 1.1rem;
+}
+
+.block {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  text-decoration: none;
+}
+
+.flaeche {
+  background: var(--r);
+}
+
+.block--link {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  font-weight: 700;
+}
+
+.block--link .meta {
+  font-weight: 400;
+  margin-top: 4px;
+}
+
+.pfeil {
+  font-size: 1.5rem;
+  line-height: 1;
+  font-weight: 400;
+}
+
+.zeile__titel {
+  font-weight: 700;
+}
+
+.impuls {
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+}
+
+.liste,
+.eintraege {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+}
+
+.zeile {
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 0;
+  border-top: 1px solid rgba(0, 0, 0, 0.35);
+  text-decoration: none;
+  min-height: 48px;
+}
+
+.zeile--still,
+.zeile--gesperrt {
+  grid-template-columns: 1fr auto;
+}
+
+.zeile--gesperrt .zeile__titel {
+  font-weight: 400;
+}
+
+.marke {
+  display: inline-block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 2px 10px;
+  border: 1px solid #111;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.marke--offen {
+  background: #111;
+  color: #fff;
+}
+
+.eintraege {
+  gap: 12px;
+}
+
+.block--eintrag {
+  gap: 6px;
+  background: #fff;
+}
+
+.eintrag__kopf {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.eintrag__kopf .meta {
+  display: inline;
+}
+
+/* Knöpfe */
+.knopf {
+  justify-self: start;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 20px;
+  border: 1px solid #111;
+  border-radius: 999px;
+  background: #fff;
+  color: #111;
+  font: inherit;
+  font-weight: 700;
+  font-size: 1rem;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.knopf--haupt {
+  background: #111;
+  color: #fff;
+}
+
+.knopf--leise {
+  background: transparent;
+  border-color: transparent;
+  text-decoration: underline;
+  font-weight: 400;
+  padding-inline: 8px;
+}
+
+.knoepfe {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Formulare und Lesetexte bleiben auf Weiss */
+.formular,
+.lesetext {
+  background: #fff;
+}
+
+.feld {
+  display: grid;
+  gap: 8px;
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.feld__frage {
+  font-weight: 700;
+  padding: 0;
+}
+
+textarea {
+  width: 100%;
+  font: inherit;
+  padding: 12px;
+  border: 1px solid #111;
+  border-radius: 12px;
+  background: #fff;
+  color: #111;
+  resize: vertical;
+}
+
+.skala {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 6px;
+}
+
+.skala label {
+  position: relative;
+}
+
+.skala input {
+  position: absolute;
+  opacity: 0;
+  inset: 0;
+}
+
+.skala span {
+  display: grid;
+  place-items: center;
+  min-height: 44px;
+  border: 1px solid #111;
+  border-radius: 999px;
+  font-weight: 700;
+}
+
+.skala input:checked + span {
+  background: #111;
+  color: #fff;
+}
+
+.skala input:focus-visible + span {
+  outline: 3px solid #111;
+  outline-offset: 2px;
+}
+
+.skala__enden {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  color: var(--gedaempft);
+}
+
+.lesetext {
+  gap: 10px;
+}
+
+.lesetext h2 {
+  font-size: 1.15rem;
+  margin-top: 10px;
+}
+
+.lesetext h2:first-child {
+  margin-top: 0;
+}
+
+.hinweis {
+  padding: 12px 14px;
+  border: 1px dashed #111;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.6);
+  font-size: 0.95rem;
+}
+
+.abmelden {
+  display: grid;
+  justify-items: start;
+  gap: 0;
+  margin-top: 8px;
+}
+
+.abmelden .knopf {
+  padding-left: 0;
+}
+
+/* Meldung */
+.meldung {
+  position: fixed;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  max-width: calc(100% - 32px);
+  padding: 10px 18px;
+  background: #111;
+  color: #fff;
+  border-radius: 999px;
+  font-size: 0.95rem;
+  z-index: 20;
+}
+
+/* ---------- Musterleiste (gehört nicht zum Design) ---------- */
+.musterleiste {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 16px;
+  background: #2b2b2b;
+  color: #fff;
+  font-size: 0.85rem;
+}
+
+.musterleiste a {
+  color: #fff;
+}
+
+.musterleiste__zurueck {
+  text-decoration: none;
+}
+
+.musterleiste__schalter {
+  display: flex;
+  gap: 4px;
+}
+
+.musterleiste__schalter a {
+  display: grid;
+  place-items: center;
+  min-width: 36px;
+  min-height: 32px;
+  border-radius: 999px;
+  text-decoration: none;
+  font-weight: 700;
+  border: 1px solid #777;
+}
+
+.musterleiste__schalter a[aria-current] {
+  background: #fff;
+  color: #111;
+  border-color: #fff;
+}
+
+/* ---------- Kopf der App ---------- */
+.appkopf {
+  max-width: 560px;
+  margin: 0 auto;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 14px 16px 10px;
+}
+
+.appkopf__titel {
+  font-weight: 700;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+}
+
+.appkopf__name {
+  font-size: 0.9rem;
+  color: var(--gedaempft);
+}
+
+/* ---------- Untere Navigation (Aufbau wie im ersten Prototyp) ---------- */
+.tabs {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  padding: 6px max(8px, calc((100% - 560px) / 2)) calc(6px + env(safe-area-inset-bottom));
+  background: #fff;
+}
+
+.tabs a {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  padding: 6px 2px;
+  text-decoration: none;
+  font-size: 0.8rem;
+}
+
+.tabs svg {
+  width: 26px;
+  height: 26px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.tabs a[aria-current="page"] span {
+  font-weight: 700;
+}
+
+/* Der aktive Punkt trägt die Farbe der offenen Seite (Runden zählen zu Start) */
+.tabs a[aria-current="page"] {
+  --r: var(--seite);
+}
+
+/* ======================================================
+   Muster A «Spielplan»: nah an der Vorlage.
+   Weisser Kopf, feine schwarze Linien, Zeilen statt Karten,
+   Serifenschrift für Nebentexte, umrandete Pillen.
+   ====================================================== */
+body[data-muster="a"] .appkopf {
+  max-width: none;
+  justify-content: center;
+  position: relative;
+  background: #fff;
+  border-bottom: 1px solid var(--linie);
+  padding: 14px 16px;
+}
+
+body[data-muster="a"] .appkopf__titel {
+  font-size: 1.5rem;
+  letter-spacing: -0.01em;
+}
+
+body[data-muster="a"] .appkopf__name {
+  position: absolute;
+  right: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-family: var(--serif);
+  font-size: 0.8rem;
+}
+
+body[data-muster="a"] .inhalt {
+  gap: 0;
+  padding-top: 0;
+  padding-inline: 0;
+}
+
+body[data-muster="a"] .kopf {
+  padding: 24px 16px 20px;
+}
+
+body[data-muster="a"] .etikett--titel {
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  font-size: 2rem;
+}
+
+body[data-muster="a"] .lead,
+body[data-muster="a"] .meta,
+body[data-muster="a"] .skala__enden,
+body[data-muster="a"] .lesetext p,
+body[data-muster="a"] .block p:not(.impuls):not(.ueberzeile) {
+  font-family: var(--serif);
+}
+
+body[data-muster="a"] .block,
+body[data-muster="a"] .hinweis {
+  border-top: 1px solid var(--linie);
+  padding: 20px 16px;
+}
+
+body[data-muster="a"] .inhalt > :last-child,
+body[data-muster="a"] .eintraege li:last-child .block {
+  border-bottom: 1px solid var(--linie);
+}
+
+body[data-muster="a"] .hinweis {
+  border-radius: 0;
+  border-style: solid none none;
+  background: #fff;
+  font-family: var(--serif);
+}
+
+body[data-muster="a"] .zwischentitel {
+  margin: 0;
+  padding: 28px 16px 12px;
+  border-top: 1px solid var(--linie);
+}
+
+body[data-muster="a"] .eintraege {
+  gap: 0;
+}
+
+body[data-muster="a"] .block--eintrag {
+  background: transparent;
+}
+
+body[data-muster="a"] .formular,
+body[data-muster="a"] .lesetext {
+  background: rgba(255, 255, 255, 0.75);
+}
+
+body[data-muster="a"] .knopf:not(.knopf--leise) {
+  font-weight: 400;
+  font-family: var(--serif);
+}
+
+body[data-muster="a"] .knopf--haupt {
+  background: #fff;
+  color: #111;
+  border-width: 2px;
+  font-weight: 700;
+}
+
+body[data-muster="a"] .marke {
+  font-family: var(--serif);
+  font-weight: 400;
+}
+
+body[data-muster="a"] .marke--offen {
+  background: #fff;
+  color: #111;
+  border-width: 2px;
+  font-weight: 700;
+}
+
+body[data-muster="a"] .abmelden {
+  padding: 20px 16px;
+}
+
+body[data-muster="a"] .tabs {
+  border-top: 1px solid var(--linie);
+}
+
+body[data-muster="a"] .tabs {
+  padding-top: 0;
+}
+
+body[data-muster="a"] .tabs a {
+  border-top: 5px solid var(--r);
+  margin: 0 4px;
+  padding-top: 7px;
+}
+
+body[data-muster="a"] .tabs a svg {
+  border-radius: 999px;
+  padding: 3px;
+  width: 44px;
+  height: 30px;
+}
+
+body[data-muster="a"] .tabs a[aria-current="page"] svg {
+  background: var(--r);
+  outline: 1px solid #111;
+}
+
+/* ======================================================
+   Muster B «Register»: weisse Karten wie im Pilot,
+   Navigation als farbige Registerreiter.
+   ====================================================== */
+body[data-muster="b"] .block,
+body[data-muster="b"] .hinweis {
+  border-radius: 20px;
+}
+
+body[data-muster="b"] .block:not(.flaeche) {
+  background: #fff;
+}
+
+body[data-muster="b"] .kopf h1 {
+  font-size: 2.1rem;
+}
+
+body[data-muster="b"] .etikett--titel {
+  font-size: 1.6rem;
+  padding: 8px 20px;
+}
+
+body[data-muster="b"] .zeile {
+  border-top-color: rgba(0, 0, 0, 0.2);
+}
+
+body[data-muster="b"] .block--eintrag {
+  border-left: 10px solid var(--c-tagebuch);
+}
+
+body[data-muster="b"] .eintraege li:nth-child(3) .block--eintrag {
+  border-left-color: var(--c-runden);
+}
+
+body[data-muster="b"] .tabs {
+  background: #fff;
+  padding-top: 8px;
+  padding-bottom: env(safe-area-inset-bottom);
+  gap: 4px;
+  align-items: end;
+  box-shadow: 0 -1px 0 rgba(0, 0, 0, 0.12);
+}
+
+body[data-muster="b"] .tabs a {
+  background: var(--r);
+  border-radius: 16px 16px 0 0;
+  padding: 7px 2px 9px;
+}
+
+body[data-muster="b"] .tabs a[aria-current="page"] {
+  padding-top: 13px;
+  margin-top: -8px;
+  box-shadow: inset 0 3px 0 #111;
+}
+
+/* ======================================================
+   Muster C «Plakat»: grosser Titel auf einem Farbband,
+   kräftigere matte Töne, eckigere Formen.
+   ====================================================== */
+body[data-muster="c"] .appkopf {
+  max-width: none;
+  background: var(--r);
+  padding-bottom: 0;
+}
+
+body[data-muster="c"] .appkopf__titel {
+  font-size: 1rem;
+}
+
+body[data-muster="c"] .appkopf__name {
+  color: #111;
+}
+
+body[data-muster="c"] .inhalt {
+  padding-top: 0;
+}
+
+body[data-muster="c"] .kopf {
+  margin: 0 -16px;
+  padding: 18px 16px 26px;
+  background: var(--r);
+  border-bottom: 2px solid #111;
+}
+
+body[data-muster="c"] .kopf h1 {
+  font-size: 2.9rem;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+}
+
+body[data-muster="c"] .kopf .etikett:not(.etikett--titel) {
+  background: transparent;
+  padding: 0;
+  font-size: 0.8rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+body[data-muster="c"] .etikett--titel {
+  background: transparent;
+  padding: 0;
+  font-size: 2.9rem;
+  letter-spacing: -0.035em;
+  line-height: 0.95;
+  border-radius: 0;
+}
+
+body[data-muster="c"] .lead,
+body[data-muster="c"] .meta,
+body[data-muster="c"] .lesetext p {
+  font-family: var(--serif);
+}
+
+body[data-muster="c"] .lead {
+  font-size: 1.05rem;
+  margin-top: 10px;
+}
+
+body[data-muster="c"] .block,
+body[data-muster="c"] .hinweis {
+  border: 2px solid #111;
+  border-radius: 6px;
+}
+
+body[data-muster="c"] .block:not(.flaeche) {
+  background: #fff;
+}
+
+body[data-muster="c"] .marke {
+  border-radius: 4px;
+}
+
+body[data-muster="c"] .knopf {
+  border-width: 2px;
+}
+
+body[data-muster="c"] .zeile {
+  border-top: 1px solid #111;
+}
+
+body[data-muster="c"] .tabs {
+  border-top: 2px solid #111;
+  padding-top: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+body[data-muster="c"] .tabs a {
+  padding: 10px 2px 14px;
+  border-inline: 1px solid transparent;
+  box-shadow: inset 0 -6px 0 var(--r);
+}
+
+body[data-muster="c"] .tabs a[aria-current="page"] {
+  background: var(--r);
+  border-inline-color: #111;
+}
+
+body[data-muster="c"] .tabs a:first-child[aria-current="page"] {
+  border-left-color: transparent;
+}
+
+body[data-muster="c"] .tabs a:last-child[aria-current="page"] {
+  border-right-color: transparent;
+}
+
+@media (min-width: 700px) {
+  body[data-muster="c"] .kopf {
+    margin: 0;
+    border: 2px solid #111;
+    border-top: 0;
+    border-radius: 0 0 6px 6px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  body {
+    transition: none;
+  }
+}

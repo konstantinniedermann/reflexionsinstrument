@@ -42,3 +42,6 @@ Gestrichelte Kästen «Zum Besprechen» stellen auf jeder Seite die offenen Frag
 ## Prüfung
 - `node --test tests/*.test.js`: reine Logik (Freischaltung der Runden, Trennung der Einträge pro Lehrperson, CSV-Export inkl. Schutz vor Formel-Injection)
 - `node tests/e2e-prototyp.mjs`: Durchklicken in Headless-Chrome in Handy-Breite (390 px), beide Rollen, Datenschutz-Grenzen (fremde Einträge, Zugriff auf die Übersicht), HTML-Einschleusung, kein horizontales Scrollen, helles und dunkles Farbschema, Desktop-Breite
+
+## Gestaltungsmuster (`prototyp/design/`)
+Drei klickbare Gestaltungsmuster zur Auswahl durch die Auftraggeberin, veröffentlicht unter `/design/` derselben GitHub-Pages-Adresse. Entscheidungen im [Design-Dokument](superpowers/specs/2026-11-01-design-muster-design.md). Ebenfalls Wegwerf-Prototyp.
