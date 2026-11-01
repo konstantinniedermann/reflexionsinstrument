@@ -134,7 +134,7 @@ flowchart LR
 |---|---|---|
 | Muss | Ruhig und professionell, keine Emojis, kein Chatbot-Look. Umsetzung siehe [Design Gestaltung](superpowers/specs/2026-10-31-gestaltung-design.md) (#20). | A |
 | Muss | Mobile-first, aber auch am Computer gut bedienbar | A |
-| Soll | Bereiche (zum Beispiel Runden, Tagebuch, Impulse, Info) mit Farben kennzeichnen, um die Navigation zu erleichtern. Umsetzung siehe [Design Bereichsfarben](superpowers/specs/2026-10-31-bereichsfarben-design.md). | A |
+| Soll | Bereiche (zum Beispiel Runden, Tagebuch, Impulse, Info) mit Farben kennzeichnen, um die Navigation zu erleichtern. Umsetzung siehe [Design Bereichsfarben](superpowers/specs/2026-10-31-bereichsfarben-design.md), Farbtöne und Navigation seit [Muster B](superpowers/specs/2026-11-01-muster-b-uebernahme-design.md). | A |
 | Soll | Stil und Farben nach Vorgaben der Auftraggeberin anpassen | A: nennt eine Website als Vorlage, «eine Anlehnung, eine Tendenz reicht». Das ist ihr Input zu Stil und Farben, weiterer folgt nicht. |
 
 ## Bewusst nicht gebaut
