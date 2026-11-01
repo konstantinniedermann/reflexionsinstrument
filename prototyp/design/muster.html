@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="de-CH">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex" />
+    <meta name="color-scheme" content="light" />
+    <title>Muster – Reflexionsheft</title>
+    <link rel="stylesheet" href="muster.css" />
+  </head>
+  <body data-muster="a" data-reg="start">
+    <div class="musterleiste">
+      <a class="musterleiste__zurueck" href="./">‹ Alle Muster</a>
+      <nav class="musterleiste__schalter" id="muster-schalter" aria-label="Muster wechseln">
+        <a data-m="a" href="?m=a">A</a>
+        <a data-m="b" href="?m=b">B</a>
+        <a data-m="c" href="?m=c">C</a>
+      </nav>
+    </div>
+
+    <header class="appkopf">
+      <span class="appkopf__titel">reflexionsheft</span>
+      <span class="appkopf__name">Lehrperson 1</span>
+    </header>
+
+    <main id="app" class="inhalt" tabindex="-1"></main>
+
+    <p class="meldung" id="meldung" role="status" hidden></p>
+
+    <nav class="tabs" id="tabs" aria-label="Hauptnavigation">
+      <a href="#start" data-nav="start" class="reg-start">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5M5.5 9.5V20h13V9.5" /></svg>
+        <span>Start</span>
+      </a>
+      <a href="#tagebuch" data-nav="tagebuch" class="reg-tagebuch">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20h4L19 9l-4-4L4 16v4ZM13.5 6.5l4 4" /></svg>
+        <span>Tagebuch</span>
+      </a>
+      <a href="#eintraege" data-nav="eintraege" class="reg-eintraege">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 6h12M8 12h12M8 18h12M4 6h.01M4 12h.01M4 18h.01" /></svg>
+        <span>Einträge</span>
+      </a>
+      <a href="#info" data-nav="info" class="reg-info">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 6.5C10 5 7 4.5 3.5 5v13c3.5-.5 6.5 0 8.5 1.5 2-1.5 5-2 8.5-1.5V5C17 4.5 14 5 12 6.5Zm0 0v13" /></svg>
+        <span>Info</span>
+      </a>
+    </nav>
+
+    <script src="muster.js"></script>
+  </body>
+</html>
