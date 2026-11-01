@@ -3,10 +3,10 @@
 /* Gestaltung (#20): Anlehnung an eine Vorlage der Auftraggeberin, siehe
    docs/superpowers/specs/2026-10-31-gestaltung-design.md */
 :root {
-  --papier: #f1f1f1;
+  --papier: #f0ede8;
   --karte: #ffffff;
   --tinte: #111111;
-  --gedaempft: #555555;
+  --gedaempft: #474747;
   --linie: #e0e0e0;
   --akzent: #111111;
   --akzent-text: #ffffff;
@@ -16,29 +16,29 @@
   --hinweis-linie: #6b5a00;
   --fehler: #b3261e;
   --schatten: none;
-  --radius: 22px;
+  --radius: 20px;
   --radius-klein: 14px;
   --pille: 999px;
   --sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
 
-  /* Bereichsfarben, Schrift darauf jeweils --auf-<bereich> */
-  --farbe-start: #000000;
-  --auf-start: #ffffff;
-  --farbe-runden: #ffe100;
+  /* Bereichsfarben (matt, Muster B), Schrift darauf jeweils --auf-<bereich> */
+  --farbe-start: #d8d2c4;
+  --auf-start: #000000;
+  --farbe-runden: #e6d097;
   --auf-runden: #000000;
-  --farbe-tagebuch: #e77cb0;
+  --farbe-tagebuch: #e1b2b4;
   --auf-tagebuch: #000000;
-  --farbe-impuls: #7bc96f;
+  --farbe-impuls: #cdc0e2;
   --auf-impuls: #000000;
-  --farbe-eintraege: #5949f4;
-  --auf-eintraege: #ffffff;
-  --farbe-info: #d9d9d9;
+  --farbe-eintraege: #b9c7df;
+  --auf-eintraege: #000000;
+  --farbe-info: #bdd2bf;
   --auf-info: #000000;
   /* nur Verwaltung */
-  --farbe-inhalte: #d35d31;
+  --farbe-inhalte: #e6bb97;
   --auf-inhalte: #000000;
-  --farbe-zugaenge: #1536a2;
-  --auf-zugaenge: #ffffff;
+  --farbe-zugaenge: #a9cdc6;
+  --auf-zugaenge: #000000;
   color-scheme: light;
 }
 
@@ -56,8 +56,6 @@
     --hinweis: #2b2610;
     --hinweis-linie: #e6cf5c;
     --fehler: #ff8a80;
-    --farbe-start: #f1f1f1;
-    --auf-start: #000000;
     color-scheme: dark;
   }
 }
@@ -1613,3 +1611,154 @@ h1.seitenetikett {
 }
 
 /* Ende Abmelden */
+
+/* Muster B «Register», siehe
+   docs/superpowers/specs/2026-11-01-muster-b-uebernahme-design.md */
+
+/* Seitenhintergrund: weicher Ton der Registerfarbe */
+body.seite {
+  background: color-mix(in srgb, var(--bereich) 38%, #ffffff);
+}
+
+@media (prefers-color-scheme: dark) {
+  body.seite {
+    background: color-mix(in srgb, var(--bereich) 16%, #111111);
+  }
+}
+
+.seitenkopf__titel {
+  font-size: 1.15rem;
+}
+
+h1 {
+  font-size: 2rem;
+}
+
+/* Karten ohne Rand; Hinweise gestrichelt */
+.karte,
+.fall {
+  border-color: transparent;
+}
+
+.karte--ruhend,
+.karte--rueckblick {
+  border-color: var(--gedaempft);
+}
+
+.hinweis {
+  border: 1px dashed var(--tinte);
+  background: color-mix(in srgb, var(--karte) 60%, transparent);
+  color: var(--tinte);
+}
+
+textarea,
+input[type="text"],
+input[type="password"],
+input[type="date"] {
+  border-color: var(--tinte);
+}
+
+.skala__wert span {
+  border-color: var(--tinte);
+  border-radius: var(--pille);
+}
+
+/* Fehler bleiben rot markiert, trotz schwarzer Umrandung oben */
+input[aria-invalid="true"],
+textarea[aria-invalid="true"],
+.skala__wert input[aria-invalid="true"] + span {
+  border-color: var(--fehler);
+}
+
+/* Knöpfe auf Farbflächen: weiss mit schwarzem Rand */
+.flaeche .knopf {
+  background: #ffffff;
+  border-color: #000000;
+  color: #000000;
+}
+
+.flaeche .marke {
+  background: transparent;
+  border-color: #000000;
+  color: #000000;
+}
+
+/* Runden auf der Startseite: Zeilen mit feinen Linien */
+.flaeche .runden {
+  gap: 0;
+}
+
+.flaeche .runde,
+.flaeche .runde--offen,
+.flaeche .runde--gesperrt {
+  background: transparent;
+  border: 0;
+  border-top: 1px solid rgb(0 0 0 / 0.25);
+  border-radius: 0;
+  padding: 0.75rem 0;
+  color: #000000;
+}
+
+.flaeche .runde--offen .runde__titel {
+  font-weight: 700;
+}
+
+.flaeche .runde--offen .marke--offen {
+  background: #000000;
+  border-color: #000000;
+  color: #ffffff;
+}
+
+.flaeche .naechste {
+  font-weight: 400;
+}
+
+/* Meine Einträge: weisse Karte mit Farbstreifen der Art */
+.karte--art {
+  border-left: 10px solid var(--bereich);
+}
+
+.karte--art:hover {
+  border-color: transparent;
+  border-left-color: var(--bereich);
+  box-shadow: inset 0 0 0 1px var(--tinte);
+}
+
+/* Untere Navigation: farbige Registerreiter, der offene höher mit schwarzer Kante */
+.tabs {
+  gap: 4px;
+  align-items: end;
+  padding: 8px max(8px, calc((100% - 40rem) / 2)) env(safe-area-inset-bottom);
+  background: var(--karte);
+  border-top: 0;
+  box-shadow: 0 -1px 0 rgb(0 0 0 / 0.12);
+}
+
+.tabs a,
+.tabs a[aria-current="page"] {
+  background: var(--bereich);
+  color: var(--auf-bereich);
+  border-radius: 16px 16px 0 0;
+  padding: 7px 2px 9px;
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.tabs a[aria-current="page"] {
+  padding-top: 13px;
+  margin-top: -8px;
+  box-shadow: inset 0 3px 0 #000000;
+  font-weight: 700;
+}
+
+.tabs a svg,
+.tabs a[aria-current="page"] svg {
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  color: inherit;
+}
+
+/* Ende Muster B */

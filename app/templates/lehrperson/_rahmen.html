@@ -8,6 +8,7 @@
 <a class="knopf knopf--klein knopf--zweit knopf--kopf" href="{{ ansicht.ausgang[1] }}">{{ ansicht.ausgang[0] }}</a>
 {% endif %}
 {% endblock %}
+{% block body_attribute %} class="seite bereich--{{ bereich }}"{% endblock %}
 {% block navigation %}
 {% include "lehrperson/_navigation.html" %}
 {% endblock %}
