@@ -20,7 +20,7 @@ from app.vorlagen import templates
 from app.zeit import hole_heute
 
 STATIC = Path(__file__).parent.parent / "static"
-FARBE = "#f1f1f1"
+FARBE = "#f0ede8"
 SYMBOLE = [180, 192, 512]
 
 DB = Annotated[sqlite3.Connection, Depends(hole_db)]

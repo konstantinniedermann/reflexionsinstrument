@@ -1634,10 +1634,24 @@ h1 {
   font-size: 2rem;
 }
 
+@media (min-width: 40rem) {
+  h1 {
+    font-size: 2.2rem;
+  }
+}
+
 /* Karten ohne Rand; Hinweise gestrichelt */
 .karte,
 .fall {
   border-color: transparent;
+}
+
+/* Im dunklen Schema sind Karten dunkler als der getönte Grund; ein feiner Rand trennt sie. */
+@media (prefers-color-scheme: dark) {
+  .karte:not(.flaeche),
+  .fall:not(.flaeche) {
+    border-color: rgb(255 255 255 / 0.16);
+  }
 }
 
 .karte--ruhend,
@@ -1649,6 +1663,10 @@ h1 {
   border: 1px dashed var(--tinte);
   background: color-mix(in srgb, var(--karte) 60%, transparent);
   color: var(--tinte);
+}
+
+.hinweis.fehler {
+  color: var(--fehler);
 }
 
 textarea,
