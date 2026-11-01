@@ -1,5 +1,7 @@
 # Design: Bereichsfarben als Navigationshilfe, näher an der Vorlage
 
+> Farbtöne, Navigation und Darstellung von «Meine Einträge» abgelöst durch [Muster B](2026-11-01-muster-b-uebernahme-design.md).
+
 Grundlage: [Gestaltung (#20)](2026-10-31-gestaltung-design.md), Anforderungen (Abschnitt «Gestaltung»: Bereiche mit Farben kennzeichnen, das macht die Navigation einfacher). Neuer Wunsch: Die App soll bunter und näher an der Vorlage sein, die Farben sollen bei der Navigation helfen, pro Bereich. Die Entscheidungen hier hat Claude getroffen (Projektregel «Fragen selbst beantworten»).
 
 ## Ausgangslage

@@ -80,7 +80,7 @@ def test_tagebuch_wahl_farbig(client, lehrperson, inhalte):
     assert len(_flaeche(text, "impuls")) == 1
 
 
-def test_meine_eintraege_in_der_farbe_der_art(client, db, lehrperson, inhalte):
+def test_meine_eintraege_mit_streifen_der_art(client, db, lehrperson, inhalte):
     testdaten.lege_antwort_an(db, inhalte["fragen"][0], lehrperson["id"], "Antwort")
     testdaten.lege_eintrag_an(db, lehrperson["id"], "frei", "Frei")
     testdaten.lege_eintrag_an(
@@ -89,8 +89,8 @@ def test_meine_eintraege_in_der_farbe_der_art(client, db, lehrperson, inhalte):
     db.commit()
     als_lehrperson(client, lehrperson)
     text = client.get("/lehrperson/eintraege").text
-    for bereich in ("runden", "tagebuch", "impuls"):
-        assert len([t for t in _flaeche(text, bereich) if "karte--eintrag" in t]) == 1, bereich
+    karten = re.findall(r'<a class="karte karte--eintrag karte--art bereich--([a-z]+)"', text)
+    assert sorted(karten) == ["impuls", "runden", "tagebuch"]
 
 
 def _aktiv(text: str) -> list[str]:

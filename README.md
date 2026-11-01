@@ -13,7 +13,7 @@ Der **klickbare Wegwerf-Prototyp** hat dazu gedient, Feedback zu holen. Er ist n
 
 Alle Texte im Prototyp sind Platzhalter. Eingaben bleiben im jeweiligen Browser.
 
-Für die nächste Gestaltungsrunde gibt es drei **Gestaltungsmuster** zur Auswahl durch die Auftraggeberin, ebenfalls Wegwerf-Prototyp: https://konstantinniedermann.github.io/reflexionsinstrument/design/ (Entscheidungen im [Design-Dokument](docs/superpowers/specs/2026-11-01-design-muster-design.md)). Die Auswahl steht noch aus.
+Für die nächste Gestaltungsrunde gibt es drei **Gestaltungsmuster** zur Auswahl durch die Auftraggeberin, ebenfalls Wegwerf-Prototyp: https://konstantinniedermann.github.io/reflexionsinstrument/design/ (Entscheidungen im [Design-Dokument](docs/superpowers/specs/2026-11-01-design-muster-design.md)). Gewählt wurde Muster B; es ist in die Pilot-Version übernommen ([Design-Dokument](docs/superpowers/specs/2026-11-01-muster-b-uebernahme-design.md)).
 
 ## Pilot-Version
 
