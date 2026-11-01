@@ -13,6 +13,8 @@ Der **klickbare Wegwerf-Prototyp** hat dazu gedient, Feedback zu holen. Er ist n
 
 Alle Texte im Prototyp sind Platzhalter. Eingaben bleiben im jeweiligen Browser.
 
+Für die nächste Gestaltungsrunde gibt es drei **Gestaltungsmuster** zur Auswahl durch die Auftraggeberin, ebenfalls Wegwerf-Prototyp: https://konstantinniedermann.github.io/reflexionsinstrument/design/ (Entscheidungen im [Design-Dokument](docs/superpowers/specs/2026-11-01-design-muster-design.md)). Die Auswahl steht noch aus.
+
 ## Pilot-Version
 
 Voraussetzung: [uv](https://docs.astral.sh/uv/). Alle Befehle stehen in `make help`.
