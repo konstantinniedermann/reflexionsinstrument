@@ -40,11 +40,11 @@ flowchart LR
     W1[Woche 1: Fallbeispiel 1 mit Fragen] --> W2[Woche 2: Fallbeispiel 2 mit Fragen]
     W2 --> W3[Woche 3: Fallbeispiel 3 mit Fragen]
     W3 --> W4[Woche 4: Rückblick, bewusst beobachten]
-    T[Tagebuch: jederzeit, frei oder zu Leitfragen]
+    T[Tagebuch: jederzeit, frei, mit aufklappbarer unterstützender Frage]
     I[Impuls: einmal pro Woche]
 ```
 
-- Pro Woche wird eine **Runde** freigeschaltet. In den Wochen 1–3 hat jede Runde ein Fallbeispiel, alle bekommen dasselbe (A). Woche 4 hat kein Fallbeispiel, sondern ruft zum bewussten Beobachten und zum Rückblick auf (A).
+- Pro Woche wird am Montag eine **Runde** freigeschaltet. In den Wochen 1–3 hat jede Runde ein Fallbeispiel, alle bekommen dasselbe (A). Zuerst wird Frage 1 beantwortet, danach erscheint eine Zusatzinfo mit zwei weiteren Fragen (A, Rückmeldung 15.11.). Woche 4 hat kein Fallbeispiel, sondern zwei Reflexionsfragen (A).
 - Ein Rückblick auf die eigenen Antworten aus Runde 1 ist nicht nötig (A).
 - Das **Tagebuch** steht jederzeit offen.
 - Einmal pro Woche gibt es einen **Impuls** (A).
@@ -69,7 +69,8 @@ flowchart LR
 
 | Prio | Anforderung | Herkunft |
 |---|---|---|
-| Muss | Eine Runde hat einen Titel, einen optionalen Fallbeispiel-Text, eine Liste von Fragen und ein Freischaltdatum | C: Woche 4 ohne Fallbeispiel ist damit eine normale Runde. Die Auftraggeberin gestaltet sie selbst. |
+| Muss | Eine Runde hat einen Titel, einen optionalen Fallbeispiel-Text, eine optionale Zusatzinfo, eine Liste von Fragen und ein Freischaltdatum | C: Woche 4 ohne Fallbeispiel ist damit eine normale Runde. Die Auftraggeberin gestaltet sie selbst. |
+| Muss | Die Zusatzinfo steht nach Frage 1 und erscheint mit den weiteren Fragen erst, wenn Frage 1 gespeichert ist. Umsetzung siehe [Design Zusatzinfo](superpowers/specs/2026-11-15-ablauf-zusatzinfo-design.md). | A: «soll erst erscheinen, wenn die Ausgangslage bearbeitet wurde» |
 | Muss | Fragetypen: Freitext und Skala | A: «Skala ist gut» |
 | Muss | Eine Runde erscheint ab ihrem Freischaltdatum. Freigeschaltete Runden bleiben offen. | A: eine pro Woche. C: Datum statt Knopf, damit sie nicht daran denken muss |
 | Muss | Antworten werden gespeichert, sobald die Lehrperson auf «Speichern» tippt, und lassen sich jederzeit ändern oder löschen. Es gibt kein endgültiges Abschicken. | A: «anpassbar/bearbeitbar sollen die Antworten immer sein» |
@@ -79,7 +80,8 @@ flowchart LR
 
 | Prio | Anforderung | Herkunft |
 |---|---|---|
-| Muss | Beim Erstellen eines Eintrags wählen: frei schreiben, frei sprechen (Aufnahme) oder zu Leitfragen schreiben | A |
+| Muss | Beim Erstellen eines Eintrags wählen: frei schreiben oder frei sprechen (Aufnahme) | A |
+| Muss | Beim freien Schreiben und Sprechen steht die unterstützende Frage zugeklappt über dem Feld; aufklappen ist freiwillig. Die Auftraggeberin erfasst sie in der Eingabemaske unter «Unterstützende Fragen». | A: Rückmeldung 15.11., ersetzt die eigene Auswahl «zu Leitfragen schreiben» |
 | Muss | Sprachaufnahme direkt im Browser, auf Handy und Computer | A: «Tagebuch soll einsprechbar sein» |
 | Muss | Gut sichtbarer Hinweis: keine Namen, keine Orte, keine Klassenbezeichnungen, nichts, was Rückschlüsse auf Personen erlaubt | A |
 | Muss | Einträge ändern und löschen | A |
@@ -97,7 +99,8 @@ flowchart LR
 | Prio | Anforderung | Herkunft |
 |---|---|---|
 | Muss | Infoblock aus kurzen, aufklappbaren Abschnitten, jederzeit erreichbar. Er enthält auch die Erklärung zur Bedienung. | A |
-| Muss | Alle Texte (Titel, Begrüssung, Infoblock, Fallbeispiele, Fragen, Leitfragen, Impulse, Hinweistexte) sind Inhalt, kein Code. Die Auftraggeberin erfasst sie selbst. | A |
+| Muss | Alle Texte (Titel, Begrüssung, Infoblock, Fallbeispiele, Zusatzinfos, Fragen, unterstützende Fragen, Impulse, Hinweistexte) sind Inhalt, kein Code. Die Auftraggeberin erfasst sie selbst. | A |
+| Muss | Lesetexte (Begrüssung, Hinweise, Infoblock, Fallbeispiel, Zusatzinfo) stehen im Blocksatz mit Silbentrennung | A: Rückmeldung 15.11. |
 | Muss | Einfache Formatierung: Absätze, Aufzählungen, Hervorhebung | C |
 
 ### Eingabemaske der Auftraggeberin
