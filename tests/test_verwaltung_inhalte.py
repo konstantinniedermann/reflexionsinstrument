@@ -915,7 +915,12 @@ def test_runde_mit_zusatzinfo_anlegen_und_bearbeiten(client, auftraggeberin, db)
     seite = client.get(f"{RUNDEN}/{rid}")
     assert "Zusatzinfo" in seite.text
     assert "<strong>Lage</strong>" in seite.text
+    assert "erst, wenn die Runde mindestens eine Frage hat" in seite.text
+    neue_frage(db, rid)
+    db.commit()
+    seite = client.get(f"{RUNDEN}/{rid}")
     assert "Erscheint nach Frage 1" in seite.text
+    assert "mindestens eine Frage" not in seite.text
     formular = client.get(f"{RUNDEN}/{rid}/bearbeiten")
     assert 'name="zusatzinfo"' in formular.text
     assert "Neue **Lage** im Fall." in formular.text

@@ -21,7 +21,11 @@
   {% endif %}
   <h2>Zusatzinfo</h2>
   {% if runde.zusatzinfo %}
+  {% if fragen %}
   <p class="gedaempft">Erscheint nach Frage 1, sobald die Lehrperson sie beantwortet hat.</p>
+  {% else %}
+  <p class="hinweis">Die Zusatzinfo erscheint erst, wenn die Runde mindestens eine Frage hat.</p>
+  {% endif %}
   <div class="formatiert">{{ runde.zusatzinfo | formatiert }}</div>
   {% else %}
   <p class="gedaempft">Keine Zusatzinfo.</p>

@@ -4,7 +4,7 @@ from datetime import date
 
 import pytest
 import testdaten
-from conftest import als_lehrperson, csrf_von
+from conftest import als_lehrperson, als_leitung, csrf_von
 
 ZUSATZ = "Neue **Wendung** im Fall"
 SATZ = "Sobald du deine Antwort gespeichert hast, folgt eine Zusatzinformation"
@@ -162,3 +162,38 @@ def test_gast_sieht_zusatzinfo_nach_abschicken(runde, client):
     assert antwort.status_code == 200
     assert _offen(antwort.text)
     assert _zu(_seite(client, rid, "/gast"))
+
+
+def test_aufnahme_auf_erste_frage_springt_zur_zusatzinfo(runde, client):
+    rid, (f1, _, _) = runde
+    seite = f"/lehrperson/runden/{rid}/fragen/{f1}/aufnahme"
+    datei = {"aufnahme": ("aufnahme.webm", testdaten.WEBM_ANFANG + bytes(60), "audio/webm")}
+    antwort = client.post(
+        seite, files=datei, data={"csrf": csrf_von(client, seite)}, follow_redirects=False
+    )
+    assert antwort.status_code == 303
+    assert antwort.headers["location"].endswith("#zusatzinfo")
+    assert _offen(_seite(client, rid))
+    # zweite Aufnahme (ersetzen): Zusatzinfo war schon offen, Sprung wie bisher zur Frage
+    antwort = client.post(
+        seite, files=datei, data={"csrf": csrf_von(client, seite)}, follow_redirects=False
+    )
+    assert antwort.headers["location"].endswith(f"#frage-{f1}")
+
+
+def test_fehlerseite_der_lehrperson_zeigt_nur_gespeichertes(runde, client):
+    rid, (f1, _, _) = runde
+    antwort = _post(client, rid, {f"antwort_{f1}": "x" * 20_001})
+    assert antwort.status_code == 400
+    assert _zu(antwort.text)
+
+
+def test_vorschau_zeigt_zusatzinfo_nach_abschicken(runde, client, auftraggeberin):
+    rid, (f1, _, _) = runde
+    client.cookies.clear()
+    als_leitung(client, auftraggeberin)
+    basis = "/verwaltung/vorschau/2026-11-23"
+    assert _zu(_seite(client, rid, basis))
+    antwort = _post(client, rid, {f"antwort_{f1}": "Probe"}, basis=basis)
+    assert antwort.status_code == 200
+    assert _offen(antwort.text)

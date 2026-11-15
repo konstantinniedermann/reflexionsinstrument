@@ -137,7 +137,7 @@ def _platzhalter_laden(daten_verzeichnis: Path, argumente: argparse.Namespace) -
         db.close()
     print(
         f"Platzhalter geladen: {zahlen['info_abschnitte']} Abschnitte, {zahlen['runden']} Runden, "
-        f"{zahlen['fragen']} Fragen, {zahlen['leitfragen']} Leitfragen, {zahlen['impulse']} Impulse."
+        f"{zahlen['fragen']} Fragen, {zahlen['leitfragen']} unterstützende Fragen, {zahlen['impulse']} Impulse."
     )
     return 0
 

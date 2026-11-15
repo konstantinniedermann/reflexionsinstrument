@@ -157,7 +157,10 @@ def kontext_runde(
     antworten = antworten_der_runde(db, konto_id, runde_id) if konto_id is not None else {}
     fehler = fehler or {}
     zeilen = _zeilen(db, runde_id, antworten, eingaben, fehler)
-    offen = not runde["zusatzinfo"] or zusatzinfo_offen(zeilen, antworten)
+    # Lehrperson: nur Gespeichertes zählt (auch auf einer Fehlerseite). Gast und Vorschau
+    # speichern nie, dort zählt der eben abgeschickte Wert.
+    massgebend = _zeilen(db, runde_id, antworten) if ansicht.speichert else zeilen
+    offen = not runde["zusatzinfo"] or zusatzinfo_offen(massgebend, antworten)
     return {
         "ansicht": ansicht,
         "bereich": "runden",

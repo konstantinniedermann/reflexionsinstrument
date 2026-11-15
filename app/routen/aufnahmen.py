@@ -18,6 +18,7 @@ from app.db import hole_db
 from app.eingaben import InhaltFehler
 from app.groesse import ZuGross
 from app.konten import Konto
+from app.seiten_lehrperson import zusatzinfo_freigegeben
 from app.sichtbar import sichtbare_runde
 from app.sitzung import braucht_auftraggeberin, braucht_lehrperson
 from app.texte import lies_text
@@ -220,10 +221,14 @@ async def antwort_aufnahme_speichern(
     verzeichnis = _verzeichnis(request)
 
     def uebernehmen(gespeichert: aufnahmen.Datei, dauer: int | None, _text: str | None):
+        mit_zusatzinfo = bool(runde["zusatzinfo"])
+        vorher = mit_zusatzinfo and zusatzinfo_freigegeben(db, ansicht.konto_id, runde_id)
         aufnahmen.haenge_an_antwort(db, ansicht.konto_id, frage_id, gespeichert, dauer, verzeichnis)
-        return RedirectResponse(
-            f"/lehrperson/runden/{runde_id}?erledigt=gespeichert#frage-{frage_id}", 303
+        neu_offen = (
+            mit_zusatzinfo and not vorher and zusatzinfo_freigegeben(db, ansicht.konto_id, runde_id)
         )
+        anker = "zusatzinfo" if neu_offen else f"frage-{frage_id}"
+        return RedirectResponse(f"/lehrperson/runden/{runde_id}?erledigt=gespeichert#{anker}", 303)
 
     antwort = await _speichere_upload(
         request,
