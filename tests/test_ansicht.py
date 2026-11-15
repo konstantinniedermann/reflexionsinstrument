@@ -245,7 +245,7 @@ def test_gast_tagebuch(seiten_client, db):
     wahl = seiten_client.get("/test-gast/tagebuch_wahl").text
     assert f'href="/gast/tagebuch/neu/impuls/{imp}"' in wahl
     assert 'href="/gast/tagebuch/neu/frei"' in wahl
-    assert 'href="/gast/tagebuch/neu/leitfrage/1"' in wahl
+    assert "/tagebuch/neu/leitfrage/" not in wahl
     assert "/lehrperson" not in wahl
     formular = seiten_client.get(f"/test-gast/tagebuch/impuls/{imp}").text
     assert 'action="/gast/tagebuch/neu/impuls/' in formular

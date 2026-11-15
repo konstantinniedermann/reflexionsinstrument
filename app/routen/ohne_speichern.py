@@ -73,10 +73,6 @@ def registriere_seiten(
     def neu_impuls(request: Request, db: DB_LESEND, ansicht: ANSICHT, impuls_id: Id):
         return neu(request, db, ansicht, "impuls", impuls_id)
 
-    @router.get("/tagebuch/neu/leitfrage/{leitfrage_id}")
-    def neu_leitfrage(request: Request, db: DB_LESEND, ansicht: ANSICHT, leitfrage_id: Id):
-        return neu(request, db, ansicht, "leitfrage", leitfrage_id)
-
     @router.post("/runden/{runde_id}", dependencies=[Depends(pruefe_csrf)])
     async def runde_pruefen(request: Request, db: DB_LESEND, ansicht: ANSICHT, runde_id: Id):
         if sichtbare_runde(db, runde_id, ansicht.stichtag) is None:
@@ -118,9 +114,3 @@ def registriere_seiten(
     @router.post("/tagebuch/neu/impuls/{impuls_id}", dependencies=[Depends(pruefe_csrf)])
     async def neu_impuls_pruefen(request: Request, db: DB_LESEND, ansicht: ANSICHT, impuls_id: Id):
         return await neu_pruefen(request, db, ansicht, "impuls", impuls_id)
-
-    @router.post("/tagebuch/neu/leitfrage/{leitfrage_id}", dependencies=[Depends(pruefe_csrf)])
-    async def neu_leitfrage_pruefen(
-        request: Request, db: DB_LESEND, ansicht: ANSICHT, leitfrage_id: Id
-    ):
-        return await neu_pruefen(request, db, ansicht, "leitfrage", leitfrage_id)

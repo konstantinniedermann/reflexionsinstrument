@@ -1,0 +1,13 @@
+{# Unterstützende Fragen zum Tagebuch: freiwillig aufklappen, standardmässig zu. #}
+{% if unterstuetzung %}
+<details class="karte aufklapp unterstuetzung">
+  <summary>{% if unterstuetzung | length > 1 %}Unterstützende Fragen{% else %}Unterstützende Frage{% endif %}</summary>
+  <div class="aufklapp__inhalt">
+    {% if unterstuetzung | length > 1 %}
+    <ul>{% for frage in unterstuetzung %}<li>{{ frage.text }}</li>{% endfor %}</ul>
+    {% else %}
+    <p>{{ unterstuetzung[0].text }}</p>
+    {% endif %}
+  </div>
+</details>
+{% endif %}

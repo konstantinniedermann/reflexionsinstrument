@@ -86,11 +86,11 @@ def test_vorschau_seiten(leitung, db):
         "/tagebuch/neu",
         "/tagebuch/neu/frei",
         f"/tagebuch/neu/impuls/{iid}",
-        f"/tagebuch/neu/leitfrage/{lid}",
     ):
         assert leitung.get(f"{V}/2026-12-07{pfad}").status_code == 200, pfad
     assert leitung.get(f"{V}/2026-12-07/tagebuch/neu/impuls/{spaet}").status_code == 404
-    assert leitung.get(f"{V}/2026-12-07/tagebuch/neu/leitfrage/999").status_code == 404
+    assert leitung.get(f"{V}/2026-12-07/tagebuch/neu/leitfrage/{lid}").status_code == 404
+    assert "Leitfrage A" in leitung.get(f"{V}/2026-12-07/tagebuch/neu/frei").text
 
 
 @pytest.mark.parametrize(

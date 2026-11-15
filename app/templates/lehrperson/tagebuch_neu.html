@@ -11,6 +11,7 @@
 </section>
 {% endif %}
 <div class="hinweis formatiert">{{ hinweis | formatiert }}</div>
+{% include "lehrperson/_unterstuetzung.html" %}
 <form class="formular" method="post" action="{{ aktion }}"{% if entwurf %} data-entwurf="{{ entwurf }}"{% endif %}>
   {{ csrf_feld(request) }}
   {% include "lehrperson/_entwurf_hinweis.html" %}

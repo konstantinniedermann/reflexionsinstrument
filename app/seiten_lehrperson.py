@@ -91,6 +91,56 @@ def kontext_info(db: sqlite3.Connection, ansicht: Ansicht) -> dict:
     }
 
 
+def _zeilen(
+    db: sqlite3.Connection,
+    runde_id: int,
+    antworten: Mapping[int, sqlite3.Row],
+    eingaben: Mapping[str, str] | None = None,
+    fehler: Mapping[str, str] | None = None,
+) -> list[dict]:
+    """Eine Zeile pro Frage; Formularwerte aus `eingaben` ersetzen gespeicherte Antworten."""
+    fehler = fehler or {}
+    zeilen = []
+    for frage in inhalte.fragen(db, runde_id):
+        feld = f"antwort_{frage['id']}"
+        antwort = antworten.get(frage["id"])
+        if eingaben is not None and feld in eingaben:
+            wert = eingaben[feld]
+        elif antwort is None:
+            wert = ""
+        elif frage["typ"] == "skala":
+            wert = "" if antwort["skalawert"] is None else str(antwort["skalawert"])
+        else:
+            wert = antwort["text"] or ""
+        zeilen.append({"frage": frage, "feld": feld, "wert": wert, "fehler": fehler.get(feld)})
+    return zeilen
+
+
+SKALAWERTE = ("1", "2", "3", "4", "5")
+
+
+def zusatzinfo_offen(zeilen: list[dict], antworten: Mapping[int, sqlite3.Row]) -> bool:
+    """Offen, sobald irgendeine Frage der Runde beantwortet ist (Text, Skalawert oder Aufnahme).
+
+    Normal ist das Frage 1, weil die übrigen Fragen erst danach erscheinen. Eine spätere Antwort
+    hält die Zusatzinfo offen, auch wenn die erste wieder gelöscht wurde. «Keine Angabe» zählt nicht.
+    """
+    for zeile in zeilen:
+        wert = zeile["wert"].strip()
+        if wert in SKALAWERTE if zeile["frage"]["typ"] == "skala" else wert:
+            return True
+        antwort = antworten.get(zeile["frage"]["id"])
+        if antwort is not None and antwort["aufnahme_id"] is not None:
+            return True
+    return False
+
+
+def zusatzinfo_freigegeben(db: sqlite3.Connection, konto_id: int, runde_id: int) -> bool:
+    """Wie `zusatzinfo_offen`, nur aus den gespeicherten Antworten des Kontos."""
+    antworten = antworten_der_runde(db, konto_id, runde_id)
+    return zusatzinfo_offen(_zeilen(db, runde_id, antworten), antworten)
+
+
 def kontext_runde(
     db: sqlite3.Connection,
     ansicht: Ansicht,
@@ -106,25 +156,18 @@ def kontext_runde(
     konto_id = ansicht.konto_id
     antworten = antworten_der_runde(db, konto_id, runde_id) if konto_id is not None else {}
     fehler = fehler or {}
-    zeilen = []
-    for frage in inhalte.fragen(db, runde_id):
-        feld = f"antwort_{frage['id']}"
-        antwort = antworten.get(frage["id"])
-        if eingaben is not None and feld in eingaben:
-            wert = eingaben[feld]
-        elif antwort is None:
-            wert = ""
-        elif frage["typ"] == "skala":
-            wert = "" if antwort["skalawert"] is None else str(antwort["skalawert"])
-        else:
-            wert = antwort["text"] or ""
-        zeilen.append({"frage": frage, "feld": feld, "wert": wert, "fehler": fehler.get(feld)})
+    zeilen = _zeilen(db, runde_id, antworten, eingaben, fehler)
+    # Lehrperson: nur Gespeichertes zählt (auch auf einer Fehlerseite). Gast und Vorschau
+    # speichern nie, dort zählt der eben abgeschickte Wert.
+    massgebend = _zeilen(db, runde_id, antworten) if ansicht.speichert else zeilen
+    offen = not runde["zusatzinfo"] or zusatzinfo_offen(massgebend, antworten)
     return {
         "ansicht": ansicht,
         "bereich": "runden",
         "meldung": meldung or (MELDUNG_FEHLER if fehler else None),
         "runde": runde,
-        "zeilen": zeilen,
+        "zeilen": zeilen if offen else zeilen[:1],
+        "zusatzinfo_offen": offen,
         "antworten": antworten,
         "zuletzt": max((a["geaendert"] for a in antworten.values()), default=None),
         "hinweis": lies_text(db, "hinweis_tagebuch"),
@@ -138,29 +181,24 @@ def kontext_tagebuch_wahl(db: sqlite3.Connection, ansicht: Ansicht) -> dict:
         "bereich": "tagebuch",
         "meldung": None,
         "impuls": aktueller_impuls(db, ansicht.stichtag),
-        "leitfragen": inhalte.leitfragen(db),
     }
 
 
 ARTEN_NEU = {
     "frei": "Freier Eintrag",
     "impuls": "Zum Impuls",
-    "leitfrage": "Zur Leitfrage",
 }
 
 
 def hole_bezug(
     db: sqlite3.Connection, ansicht: Ansicht, art: str, bezug_id: int | None
 ) -> sqlite3.Row | None:
-    """Impuls (am Stichtag sichtbar) oder Leitfrage; unbekannt oder nicht sichtbar: 404."""
+    """Impuls (am Stichtag sichtbar); unbekannt oder nicht sichtbar: 404."""
     if art == "frei":
         return None
-    if bezug_id is None:
+    if art != "impuls" or bezug_id is None:
         raise HTTPException(404)
-    if art == "impuls":
-        bezug = sichtbarer_impuls(db, bezug_id, ansicht.stichtag)
-    else:
-        bezug = inhalte.leitfrage(db, bezug_id)
+    bezug = sichtbarer_impuls(db, bezug_id, ansicht.stichtag)
     if bezug is None:
         raise HTTPException(404)
     return bezug
@@ -175,7 +213,10 @@ def kontext_tagebuch_neu(
     fehler: dict[str, str] | None = None,
     meldung: str | None = None,
 ) -> dict:
-    """Formular fuer einen neuen Eintrag; `art` ist `frei`, `impuls` oder `leitfrage`."""
+    """Formular fuer einen neuen Eintrag; `art` ist `frei` oder `impuls`.
+
+    Beim freien Eintrag stehen die unterstuetzenden Fragen (Tabelle `leitfragen`) zum Aufklappen.
+    """
     bezug = hole_bezug(db, ansicht, art, bezug_id)
     fehler = fehler or {}
     return {
@@ -191,13 +232,14 @@ def kontext_tagebuch_neu(
         "text": text or "",
         "fehler": fehler.get("text"),
         "hinweis": lies_text(db, "hinweis_tagebuch"),
+        "unterstuetzung": inhalte.leitfragen(db) if art == "frei" else [],
         "entwurf": _entwurf(ansicht, "neu-frei" if bezug is None else f"neu-{art}-{bezug['id']}"),
     }
 
 
 ARTEN_EINTRAG = {
     "frei": "Freier Eintrag",
-    "leitfragen": "Zur Leitfrage",
+    "leitfragen": "Zur unterstützenden Frage",
     "impuls": "Zum Impuls",
     "aufnahme": "Gesprochener Eintrag",
 }
@@ -207,8 +249,6 @@ def _neu_schluessel(eintrag: sqlite3.Row) -> str:
     """Formular «neu», aus dem der Eintrag entstand (aus Art und Bezug, nicht aus der Adresse)."""
     if eintrag["art"] == "impuls" and eintrag["impuls_id"] is not None:
         return f"neu-impuls-{eintrag['impuls_id']}"
-    if eintrag["art"] == "leitfragen" and eintrag["leitfrage_id"] is not None:
-        return f"neu-leitfrage-{eintrag['leitfrage_id']}"
     return "neu-frei"
 
 
@@ -281,7 +321,7 @@ def _karte(db: sqlite3.Connection, karte: Eintrag) -> dict:
             "pfad": pfad,
         }
     if z.tagebuch_art == "leitfragen":
-        titel = f"Zur Leitfrage: {_kurz(z.frage, 60)}"
+        titel = f"Zur unterstützenden Frage: {_kurz(z.frage, 60)}"
     elif z.tagebuch_art == "aufnahme":
         dauer = z.aufnahme_dauer_sekunden
         return basis | {

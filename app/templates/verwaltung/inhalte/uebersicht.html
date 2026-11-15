@@ -3,7 +3,7 @@
 {% macro offen() %}<span class="marke marke--offen">Noch offen</span>{% endmacro %}
 {% block inhalt %}
 <h1>Inhalte</h1>
-<p class="gedaempft">Hier legst du fest, was die Lehrpersonen im Instrument sehen: Titel und Begrüssung, Infoblock, Runden mit Fragen, Leitfragen, Impulse und Hinweise.</p>
+<p class="gedaempft">Hier legst du fest, was die Lehrpersonen im Instrument sehen: Titel und Begrüssung, Infoblock, Runden mit Fragen, unterstützende Fragen, Impulse und Hinweise.</p>
 <p><a href="/verwaltung/vorschau">So sieht es eine Lehrperson</a></p>
 <ul class="liste-ohne">
   <li>
@@ -38,9 +38,9 @@
   <li>
     <a class="karte karte--link flaeche bereich--tagebuch" id="bereich-leitfragen" href="/verwaltung/inhalte/leitfragen">
       <span class="karte__text">
-        <strong>Leitfragen</strong>
-        <span class="gedaempft">Fragen fürs Tagebuch</span>
-        <span class="gedaempft">{{ zahl(zahlen.leitfragen, "Leitfrage", "Leitfragen") }}</span>
+        <strong>Unterstützende Fragen</strong>
+        <span class="gedaempft">Zum Aufklappen im Tagebuch</span>
+        <span class="gedaempft">{{ zahl(zahlen.leitfragen, "unterstützende Frage", "unterstützende Fragen") }}</span>
       </span>
     </a>
   </li>

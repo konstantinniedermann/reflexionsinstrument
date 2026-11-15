@@ -36,13 +36,4 @@
   <span class="pfeil" aria-hidden="true">›</span>
 </a>
 {% endif %}
-{% if leitfragen %}
-<h2>Zu einer Leitfrage schreiben</h2>
-{% for leitfrage in leitfragen %}
-<a class="karte karte--link flaeche bereich--tagebuch" href="{{ ansicht.url('/tagebuch/neu/leitfrage/' ~ leitfrage.id) }}">
-  <span>{{ leitfrage.text }}</span>
-  <span class="pfeil" aria-hidden="true">›</span>
-</a>
-{% endfor %}
-{% endif %}
 {% endblock %}

@@ -102,7 +102,7 @@ def test_tagebuch_arten(client, auftraggeberin, lehrperson, db, heute_ist):
     liste = _liste(client, auftraggeberin)
 
     assert "Freier Eintrag" in liste
-    assert "Zur Leitfrage" in liste
+    assert "Zur unterstützenden Frage" in liste
     assert "Was war heute wichtig?" in liste
     assert "Zum Impuls" in liste
     assert "Alter Impulstext" in liste

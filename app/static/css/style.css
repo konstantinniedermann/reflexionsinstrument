@@ -1027,6 +1027,15 @@ textarea[aria-invalid="true"] {
   margin-bottom: 0;
 }
 
+/* Lesetexte der Lehrpersonen-Ansicht im Blocksatz; die Silbentrennung (lang="de")
+   verhindert grosse Lücken in schmalen Handy-Spalten. Die Verwaltung bleibt im Flattersatz. */
+.seite .formatiert p,
+.seite .formatiert li {
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+}
+
 .feld__kopf {
   display: flex;
   flex-wrap: wrap;

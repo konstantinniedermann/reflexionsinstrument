@@ -102,7 +102,7 @@ def test_platzhalter_laden(daten, capsys):
     assert (
         capsys.readouterr().out.strip()
         == f"Platzhalter geladen: {e['info_abschnitte']} Abschnitte, {e['runden']} Runden, "
-        f"{e['fragen']} Fragen, {e['leitfragen']} Leitfragen, {e['impulse']} Impulse."
+        f"{e['fragen']} Fragen, {e['leitfragen']} unterstützende Fragen, {e['impulse']} Impulse."
     )
     db = _db(daten)
     assert zaehle_inhalte(db) == e

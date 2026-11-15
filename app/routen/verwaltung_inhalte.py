@@ -188,6 +188,15 @@ def _runde_formular(
     )
 
 
+def _runde_werte(titel: str, freischaltdatum: str, fallbeispiel: str, zusatzinfo: str) -> dict:
+    return {
+        "titel": titel,
+        "freischaltdatum": freischaltdatum,
+        "fallbeispiel": fallbeispiel,
+        "zusatzinfo": zusatzinfo,
+    }
+
+
 def _neue_runde_seite(
     request: Request, db: sqlite3.Connection, werte=None, fehler=None, status=200
 ):
@@ -197,6 +206,7 @@ def _neue_runde_seite(
             "titel": "",
             "freischaltdatum": "" if vorschlag is None else vorschlag.isoformat(),
             "fallbeispiel": "",
+            "zusatzinfo": "",
         }
     return _runde_formular(request, "Neue Runde", RUNDEN, RUNDEN, werte, fehler, status)
 
@@ -213,11 +223,12 @@ def runde_anlegen(
     titel: Annotated[str, Form()] = "",
     freischaltdatum: Annotated[str, Form()] = "",
     fallbeispiel: Annotated[str, Form()] = "",
+    zusatzinfo: Annotated[str, Form()] = "",
 ):
     try:
-        runde_id = lege_runde_an(db, titel, fallbeispiel, freischaltdatum)
+        runde_id = lege_runde_an(db, titel, fallbeispiel, freischaltdatum, zusatzinfo)
     except InhaltFehler as fehler:
-        werte = {"titel": titel, "freischaltdatum": freischaltdatum, "fallbeispiel": fallbeispiel}
+        werte = _runde_werte(titel, freischaltdatum, fallbeispiel, zusatzinfo)
         return _neue_runde_seite(request, db, werte, {fehler.feld: fehler.meldung}, 400)
     return _weiter(f"{RUNDEN}/{runde_id}", "angelegt")
 
@@ -254,6 +265,7 @@ def _bearbeiten_seite(
             "titel": zeile["titel"],
             "freischaltdatum": zeile["freischaltdatum"],
             "fallbeispiel": zeile["fallbeispiel"] or "",
+            "zusatzinfo": zeile["zusatzinfo"] or "",
         }
     sichtbar = zeitplan(zeile["freischaltdatum"], None, heute).sichtbar
     return _runde_formular(
@@ -282,13 +294,14 @@ def runde_speichern(
     titel: Annotated[str, Form()] = "",
     freischaltdatum: Annotated[str, Form()] = "",
     fallbeispiel: Annotated[str, Form()] = "",
+    zusatzinfo: Annotated[str, Form()] = "",
 ):
     zeile = _oder_404(runde(db, runde_id))
     try:
         with _vorhanden():
-            aendere_runde(db, runde_id, titel, fallbeispiel, freischaltdatum)
+            aendere_runde(db, runde_id, titel, fallbeispiel, freischaltdatum, zusatzinfo)
     except InhaltFehler as fehler:
-        werte = {"titel": titel, "freischaltdatum": freischaltdatum, "fallbeispiel": fallbeispiel}
+        werte = _runde_werte(titel, freischaltdatum, fallbeispiel, zusatzinfo)
         return _bearbeiten_seite(
             request, db, zeile, heute, werte, {fehler.feld: fehler.meldung}, 400
         )
@@ -668,7 +681,7 @@ def _leitfrage_formular(
 def _neue_leitfrage_seite(request: Request, werte=None, fehler=None, status=200):
     werte = werte or {"text": ""}
     return _leitfrage_formular(
-        request, "Neue Leitfrage", LEITFRAGEN, LEITFRAGEN, werte, fehler, status
+        request, "Neue unterstützende Frage", LEITFRAGEN, LEITFRAGEN, werte, fehler, status
     )
 
 
@@ -690,7 +703,7 @@ def _leitfrage_bearbeiten_seite(request: Request, zeile, werte=None, fehler=None
     werte = werte or {"text": zeile["text"]}
     return _leitfrage_formular(
         request,
-        "Leitfrage bearbeiten",
+        "Unterstützende Frage bearbeiten",
         f"{LEITFRAGEN}/{zeile['id']}",
         f"{LEITFRAGEN}#leitfrage-{zeile['id']}",
         werte,
@@ -732,8 +745,8 @@ def leitfrage_verschieben(db: DB, leitfrage_id: Id, richtung: Annotated[str, For
 
 def _leitfrage_loeschen_seite(request: Request, zeile):
     kontext = {
-        "ueberschrift": "Leitfrage löschen",
-        "frage_text": f"Leitfrage ‹{zeile['text']}› löschen?",
+        "ueberschrift": "Unterstützende Frage löschen",
+        "frage_text": f"Unterstützende Frage ‹{zeile['text']}› löschen?",
         "aktion": f"{LEITFRAGEN}/{zeile['id']}/loeschen",
         "zurueck": f"{LEITFRAGEN}#leitfrage-{zeile['id']}",
     }

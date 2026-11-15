@@ -31,6 +31,7 @@ from app.seiten_lehrperson import (
     kontext_tagebuch_eintrag,
     kontext_tagebuch_neu,
     kontext_tagebuch_wahl,
+    zusatzinfo_freigegeben,
 )
 from app.sichtbar import sichtbare_runde
 from app.sitzung import braucht_lehrperson
@@ -85,14 +86,24 @@ def runde_anzeigen(request: Request, db: DB, ansicht: ANSICHT, runde_id: Id):
 @router.post("/runden/{runde_id}", dependencies=[Depends(pruefe_csrf)])
 async def runde_speichern(request: Request, db: DB, ansicht: ANSICHT, runde_id: Id):
     formular = {k: v for k, v in (await request.form()).items() if isinstance(v, str)}
+    neu_offen = False  # Zusatzinfo erst durch dieses Speichern sichtbar geworden
     try:
         # Sichtbarkeit, Fragetypen und Speichern in einer Transaktion: Ein Typwechsel
         # dazwischen kann keine unsichtbare Antwort schreiben.
         with transaktion(db):
-            if sichtbare_runde(db, runde_id, ansicht.stichtag) is None:
+            runde = sichtbare_runde(db, runde_id, ansicht.stichtag)
+            if runde is None:
                 raise HTTPException(404)
             fragen = inhalte.fragen(db, runde_id)
+            vorher = bool(runde["zusatzinfo"]) and zusatzinfo_freigegeben(
+                db, ansicht.konto_id, runde_id
+            )
             speichere_antworten(db, ansicht.konto_id, lies_runden_eingaben(fragen, formular))
+            neu_offen = (
+                bool(runde["zusatzinfo"])
+                and not vorher
+                and zusatzinfo_freigegeben(db, ansicht.konto_id, runde_id)
+            )
     except InhaltFehler as e:
         kontext = kontext_runde(
             db, ansicht, runde_id, eingaben=formular, fehler={e.feld: e.meldung}
@@ -100,6 +111,8 @@ async def runde_speichern(request: Request, db: DB, ansicht: ANSICHT, runde_id: 
         return templates.TemplateResponse(request, VORLAGEN["runde"], kontext, status_code=400)
     pfad = ansicht.url(f"/runden/{runde_id}")
     treffer = ANKER.fullmatch(formular.get("anker", ""))
+    if neu_offen and (treffer is None or treffer.group(1) == "frage"):
+        return _weiter(pfad, "gespeichert", "zusatzinfo")
     if treffer is None:
         return _weiter(pfad, "gespeichert")
     art, nummer = treffer.group(1), int(treffer.group(2))
@@ -148,7 +161,7 @@ def tagebuch_wahl(request: Request, db: DB, ansicht: ANSICHT):
 
 
 # Art im Pfad -> Art in der Datenbank
-ART_IN_DB = {"frei": "frei", "impuls": "impuls", "leitfrage": "leitfragen"}
+ART_IN_DB = {"frei": "frei", "impuls": "impuls"}
 
 
 def _neu_anzeigen(request: Request, db, ansicht, art: str, bezug_id: int | None):
@@ -164,8 +177,7 @@ def _neu_anlegen(request: Request, db, ansicht, art: str, bezug_id: int | None, 
             ansicht.konto_id,
             ART_IN_DB[art],
             text,
-            impuls=bezug if art == "impuls" else None,
-            leitfrage=bezug if art == "leitfrage" else None,
+            impuls=bezug,
         )
     except InhaltFehler as e:
         kontext = kontext_tagebuch_neu(
@@ -197,18 +209,6 @@ def neu_impuls(
     request: Request, db: DB, ansicht: ANSICHT, impuls_id: Id, text: Annotated[str, Form()] = ""
 ):
     return _neu_anlegen(request, db, ansicht, "impuls", impuls_id, text)
-
-
-@router.get("/tagebuch/neu/leitfrage/{leitfrage_id}")
-def neu_leitfrage_anzeigen(request: Request, db: DB, ansicht: ANSICHT, leitfrage_id: Id):
-    return _neu_anzeigen(request, db, ansicht, "leitfrage", leitfrage_id)
-
-
-@router.post("/tagebuch/neu/leitfrage/{leitfrage_id}", dependencies=[Depends(pruefe_csrf)])
-def neu_leitfrage(
-    request: Request, db: DB, ansicht: ANSICHT, leitfrage_id: Id, text: Annotated[str, Form()] = ""
-):
-    return _neu_anlegen(request, db, ansicht, "leitfrage", leitfrage_id, text)
 
 
 def _eigener_eintrag(db, ansicht: Ansicht, eintrag_id: int):
