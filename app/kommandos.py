@@ -69,7 +69,11 @@ def lade_platzhalter(db: sqlite3.Connection, daten: dict, projektstart: date) ->
             lege_info_an(db, abschnitt["titel"], abschnitt["inhalt"])
         for eintrag in daten["runden"]:
             runde_id = lege_runde_an(
-                db, eintrag["titel"], eintrag["fallbeispiel"] or "", tag(eintrag["tag"])
+                db,
+                eintrag["titel"],
+                eintrag["fallbeispiel"] or "",
+                tag(eintrag["tag"]),
+                eintrag.get("zusatzinfo") or "",
             )
             for frage in eintrag["fragen"]:
                 lege_frage_an(

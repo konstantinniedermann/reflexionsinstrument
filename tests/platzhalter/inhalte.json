@@ -23,6 +23,7 @@
     {
       "titel": "Runde 1: Einstieg",
       "fallbeispiel": "Platzhalter-Fallbeispiel. Ein Kind bringt zum dritten Mal in Folge die Hausaufgaben nicht mit. Es sagt, es habe sie vergessen.\n\nEine Kollegin meint: «Da musst du jetzt konsequent sein, sonst machen es bald alle so.»",
+      "zusatzinfo": "Platzhalter-Zusatzinfo. Später erfährst du, dass das Kind zu Hause wenig Ruhe zum Arbeiten hat.",
       "tag": 0,
       "fragen": [
         {"typ": "freitext", "text": "Was ist dein erster Gedanke zu dieser Situation?"},
@@ -34,6 +35,7 @@
     {
       "titel": "Runde 2: Unterwegs",
       "fallbeispiel": "Platzhalter-Fallbeispiel. Nach einer Prüfung schreibst du kurze Rückmeldungen. Beim Durchlesen merkst du, dass einige ausführlich und ermutigend sind, andere knapp.\n\nDu fragst dich, woran das liegt.",
+      "zusatzinfo": "Platzhalter-Zusatzinfo. Eine Kollegin hat dieselben Prüfungen gelesen und ganz andere Rückmeldungen geschrieben.",
       "tag": 7,
       "fragen": [
         {"typ": "freitext", "text": "Was löst diese Situation bei dir aus?"},
@@ -44,6 +46,7 @@
     {
       "titel": "Runde 3: Perspektivenwechsel",
       "fallbeispiel": "Platzhalter-Fallbeispiel. Für den Wandertag verteilst du Aufgaben: Karte lesen, Znüni organisieren, Fotos machen.\n\nSpäter fällt dir auf, dass du die Aufgaben fast gleich verteilt hast wie im letzten Jahr, ohne die Kinder zu fragen.",
+      "zusatzinfo": "Platzhalter-Zusatzinfo. Ein Kind sagt dir nach dem Wandertag, es hätte gern einmal die Karte gelesen.",
       "tag": 14,
       "fragen": [
         {"typ": "freitext", "text": "Was würden die Kinder zu dieser Verteilung sagen?"},

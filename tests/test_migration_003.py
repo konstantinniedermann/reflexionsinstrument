@@ -8,7 +8,7 @@ from app.db import MIGRATIONEN, migriere, verbinde
 
 
 def test_version_spalte_indizes(db):
-    assert db.execute("PRAGMA user_version").fetchone()[0] == 4
+    assert db.execute("PRAGMA user_version").fetchone()[0] == 5
     spalten = [z[1] for z in db.execute("PRAGMA table_info(aufnahmen)")]
     assert "dauer_sekunden" in spalten
     indizes = {z[0] for z in db.execute("SELECT name FROM sqlite_master WHERE type = 'index'")}
@@ -47,10 +47,13 @@ def test_migration_erhaelt_daten(tmp_path):
             assert zeilen, tabelle
         vorher = testdaten.abzug(conn)
 
-        assert migriere(conn) == 4
+        assert migriere(conn) == 5
         nachher = testdaten.abzug(conn)
         for tabelle in vorher:
-            if tabelle != "aufnahmen":
+            if tabelle == "runden":  # Migration 005 haengt die Spalte zusatzinfo an
+                assert [z[:-1] for z in nachher[tabelle]] == vorher[tabelle]
+                assert all(z[-1] is None for z in nachher[tabelle])
+            elif tabelle != "aufnahmen":
                 assert nachher[tabelle] == vorher[tabelle], tabelle
         alt = conn.execute(
             "SELECT id, konto_id, dateiname, mime_typ, groesse_bytes, erstellt FROM aufnahmen"

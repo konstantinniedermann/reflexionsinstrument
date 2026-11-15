@@ -904,3 +904,30 @@ def test_datenschutz_link_im_infoblock_fuehrt_zum_hinweis(client, auftraggeberin
     melde_an(client, auftraggeberin)
     assert f"{HINWEISE}/hinweis_datenspeicherung" in client.get("/verwaltung/inhalte/info").text
     assert client.get(f"{HINWEISE}/hinweis_datenspeicherung").status_code == 200
+
+
+def test_runde_mit_zusatzinfo_anlegen_und_bearbeiten(client, auftraggeberin, db):
+    melde_an(client, auftraggeberin)
+    antwort = sende(client, RUNDEN, **runde_felder(zusatzinfo="Neue **Lage** im Fall."))
+    assert antwort.status_code == 303
+    rid = db.execute("SELECT id FROM runden").fetchone()[0]
+    assert db.execute("SELECT zusatzinfo FROM runden").fetchone()[0] == "Neue **Lage** im Fall."
+    seite = client.get(f"{RUNDEN}/{rid}")
+    assert "Zusatzinfo" in seite.text
+    assert "<strong>Lage</strong>" in seite.text
+    assert "Erscheint nach Frage 1" in seite.text
+    formular = client.get(f"{RUNDEN}/{rid}/bearbeiten")
+    assert 'name="zusatzinfo"' in formular.text
+    assert "Neue **Lage** im Fall." in formular.text
+    pfad = f"{RUNDEN}/{rid}/bearbeiten"
+    antwort = sende(client, pfad, formular=pfad, **runde_felder(zusatzinfo="  "))
+    assert antwort.status_code == 303
+    assert db.execute("SELECT zusatzinfo FROM runden").fetchone()[0] is None
+    assert "Keine Zusatzinfo." in client.get(f"{RUNDEN}/{rid}").text
+
+
+def test_neue_runde_hat_feld_zusatzinfo(client, auftraggeberin, db):
+    melde_an(client, auftraggeberin)
+    seite = client.get(f"{RUNDEN}/neu")
+    assert 'name="zusatzinfo"' in seite.text
+    assert "Erscheint nach der ersten Frage" in seite.text

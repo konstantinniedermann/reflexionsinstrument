@@ -16,12 +16,15 @@ def lege_runde_an(
     freischaltdatum: str = "2026-11-23",
     fragen: tuple[tuple[str, str], ...] = (("freitext", "Frage A"), ("skala", "Frage B")),
     fallbeispiel: str | None = None,
+    zusatzinfo: str | None = None,
 ) -> tuple[int, list[int]]:
     """Legt eine Runde mit Fragen an; Skala-Fragen bekommen die Beschriftungen wenig/viel."""
     rid = db.execute(
         "INSERT INTO runden (titel, fallbeispiel, freischaltdatum) VALUES (?, ?, ?)",
         (titel, fallbeispiel, freischaltdatum),
     ).lastrowid
+    if zusatzinfo is not None:  # Spalte erst ab Migration 005
+        db.execute("UPDATE runden SET zusatzinfo = ? WHERE id = ?", (zusatzinfo, rid))
     ids = []
     for nummer, (typ, text) in enumerate(fragen, start=1):
         wenig, viel = ("wenig", "viel") if typ == "skala" else (None, None)

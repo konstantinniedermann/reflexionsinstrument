@@ -19,6 +19,13 @@
   {% else %}
   <p class="gedaempft">Kein Fallbeispiel.</p>
   {% endif %}
+  <h2>Zusatzinfo</h2>
+  {% if runde.zusatzinfo %}
+  <p class="gedaempft">Erscheint nach Frage 1, sobald die Lehrperson sie beantwortet hat.</p>
+  <div class="formatiert">{{ runde.zusatzinfo | formatiert }}</div>
+  {% else %}
+  <p class="gedaempft">Keine Zusatzinfo.</p>
+  {% endif %}
   <div class="aktionen">
     <a href="/verwaltung/inhalte/runden/{{ runde.id }}/bearbeiten">Angaben bearbeiten</a>
     <a href="/verwaltung/inhalte/runden/{{ runde.id }}/loeschen">Runde löschen</a>

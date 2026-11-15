@@ -116,7 +116,7 @@ def loesche_alle_inhalte(db: sqlite3.Connection) -> None:
 # ---------- Runden ----------
 
 _RUNDEN_SQL = (
-    "SELECT r.id, r.titel, r.fallbeispiel, r.freischaltdatum, "
+    "SELECT r.id, r.titel, r.fallbeispiel, r.zusatzinfo, r.freischaltdatum, "
     "(SELECT COUNT(*) FROM fragen f WHERE f.runde_id = r.id) AS anzahl_fragen FROM runden r"
 )
 
@@ -149,28 +149,40 @@ def datum_vorschlag_runde(db: sqlite3.Connection) -> date | None:
     return lies_projektstart(db)
 
 
-def _pruefe_runde(titel: str, fallbeispiel: str, freischaltdatum: str):
+def _pruefe_runde(titel: str, fallbeispiel: str, freischaltdatum: str, zusatzinfo: str):
     sauberer_titel = kurzer_text(titel, "titel", LAENGE_TITEL, "Bitte einen Titel eingeben.")
     text = langer_text(fallbeispiel, "fallbeispiel", None)
     datum = datum_feld(freischaltdatum, "freischaltdatum", pflicht=True)
-    return sauberer_titel, text, datum
+    info = langer_text(zusatzinfo, "zusatzinfo", None)
+    return sauberer_titel, text, datum, info
 
 
 def lege_runde_an(
-    db: sqlite3.Connection, titel: str, fallbeispiel: str, freischaltdatum: str
+    db: sqlite3.Connection,
+    titel: str,
+    fallbeispiel: str,
+    freischaltdatum: str,
+    zusatzinfo: str = "",
 ) -> int:
-    werte = _pruefe_runde(titel, fallbeispiel, freischaltdatum)
+    werte = _pruefe_runde(titel, fallbeispiel, freischaltdatum, zusatzinfo)
     return db.execute(
-        "INSERT INTO runden (titel, fallbeispiel, freischaltdatum) VALUES (?, ?, ?)", werte
+        "INSERT INTO runden (titel, fallbeispiel, freischaltdatum, zusatzinfo) VALUES (?, ?, ?, ?)",
+        werte,
     ).lastrowid
 
 
 def aendere_runde(
-    db: sqlite3.Connection, runde_id: int, titel: str, fallbeispiel: str, freischaltdatum: str
+    db: sqlite3.Connection,
+    runde_id: int,
+    titel: str,
+    fallbeispiel: str,
+    freischaltdatum: str,
+    zusatzinfo: str = "",
 ) -> None:
-    werte = _pruefe_runde(titel, fallbeispiel, freischaltdatum)
+    werte = _pruefe_runde(titel, fallbeispiel, freischaltdatum, zusatzinfo)
     aenderungen = db.execute(
-        "UPDATE runden SET titel = ?, fallbeispiel = ?, freischaltdatum = ? WHERE id = ?",
+        "UPDATE runden SET titel = ?, fallbeispiel = ?, freischaltdatum = ?, zusatzinfo = ? "
+        "WHERE id = ?",
         (*werte, runde_id),
     ).rowcount
     if aenderungen == 0:
