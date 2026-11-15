@@ -161,7 +161,7 @@ def tagebuch_wahl(request: Request, db: DB, ansicht: ANSICHT):
 
 
 # Art im Pfad -> Art in der Datenbank
-ART_IN_DB = {"frei": "frei", "impuls": "impuls", "leitfrage": "leitfragen"}
+ART_IN_DB = {"frei": "frei", "impuls": "impuls"}
 
 
 def _neu_anzeigen(request: Request, db, ansicht, art: str, bezug_id: int | None):
@@ -177,8 +177,7 @@ def _neu_anlegen(request: Request, db, ansicht, art: str, bezug_id: int | None, 
             ansicht.konto_id,
             ART_IN_DB[art],
             text,
-            impuls=bezug if art == "impuls" else None,
-            leitfrage=bezug if art == "leitfrage" else None,
+            impuls=bezug,
         )
     except InhaltFehler as e:
         kontext = kontext_tagebuch_neu(
@@ -210,18 +209,6 @@ def neu_impuls(
     request: Request, db: DB, ansicht: ANSICHT, impuls_id: Id, text: Annotated[str, Form()] = ""
 ):
     return _neu_anlegen(request, db, ansicht, "impuls", impuls_id, text)
-
-
-@router.get("/tagebuch/neu/leitfrage/{leitfrage_id}")
-def neu_leitfrage_anzeigen(request: Request, db: DB, ansicht: ANSICHT, leitfrage_id: Id):
-    return _neu_anzeigen(request, db, ansicht, "leitfrage", leitfrage_id)
-
-
-@router.post("/tagebuch/neu/leitfrage/{leitfrage_id}", dependencies=[Depends(pruefe_csrf)])
-def neu_leitfrage(
-    request: Request, db: DB, ansicht: ANSICHT, leitfrage_id: Id, text: Annotated[str, Form()] = ""
-):
-    return _neu_anlegen(request, db, ansicht, "leitfrage", leitfrage_id, text)
 
 
 def _eigener_eintrag(db, ansicht: Ansicht, eintrag_id: int):

@@ -76,7 +76,7 @@ def test_ueberschrift_wird_zum_etikett(client, lehrperson, inhalte, pfad, name):
 def test_tagebuch_wahl_farbig(client, lehrperson, inhalte):
     als_lehrperson(client, lehrperson)
     text = client.get("/lehrperson/tagebuch/neu").text
-    assert len(_flaeche(text, "tagebuch")) >= 3  # frei schreiben, frei sprechen, Leitfrage
+    assert len(_flaeche(text, "tagebuch")) == 2  # frei schreiben, frei sprechen
     assert len(_flaeche(text, "impuls")) == 1
 
 

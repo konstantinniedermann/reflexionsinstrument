@@ -1,6 +1,6 @@
 {# Parameter: karte (Karte), stand (Stand oder None, nur bei Runde), mit_name (bool). Texte nie formatiert, nie safe. #}
 {% set eintrag = karte.eintrag %}
-{% set bezeichnungen = {"frei": "Freier Eintrag", "leitfragen": "Zur Leitfrage", "impuls": "Zum Impuls", "aufnahme": "Gesprochener Eintrag"} %}
+{% set bezeichnungen = {"frei": "Freier Eintrag", "leitfragen": "Zur unterstützenden Frage", "impuls": "Zum Impuls", "aufnahme": "Gesprochener Eintrag"} %}
 <article class="karte karte--eintrag">
   <div class="eintrag__kopf">
     <span class="marke marke--{{ {"runde": "runde", "impuls": "impuls"}.get(eintrag.art, "tagebuch") }}">{{ {"runde": "Runde", "impuls": "Impuls"}.get(eintrag.art, "Tagebuch") }}</span>

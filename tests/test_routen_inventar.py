@@ -18,13 +18,11 @@ GAST_GET = {
     "/gast/tagebuch/neu",
     "/gast/tagebuch/neu/frei",
     "/gast/tagebuch/neu/impuls/1",
-    "/gast/tagebuch/neu/leitfrage/1",
 }
 GAST_POST = {
     "/gast/runden/1",
     "/gast/tagebuch/neu/frei",
     "/gast/tagebuch/neu/impuls/1",
-    "/gast/tagebuch/neu/leitfrage/1",
 }
 # Benachrichtigungen (#37): Manifest und Service Worker muss der Browser ohne Anmeldung laden,
 # sonst lässt sich das Instrument nicht auf den Startbildschirm legen. Beide enthalten nur den

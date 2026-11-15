@@ -58,7 +58,7 @@ def inhalte(db, einstellungen, lehrperson, heute_ist):
 
 @pytest.fixture
 def gast_seiten(inhalte):
-    """Alle sieben GET-Seiten der Gast-Ansicht, mit den IDs aus `inhalte`."""
+    """Alle sechs GET-Seiten der Gast-Ansicht, mit den IDs aus `inhalte`."""
     i = inhalte
     return [
         "/gast",
@@ -67,7 +67,6 @@ def gast_seiten(inhalte):
         "/gast/tagebuch/neu",
         "/gast/tagebuch/neu/frei",
         f"/gast/tagebuch/neu/impuls/{i['impuls']}",
-        f"/gast/tagebuch/neu/leitfrage/{i['leitfrage']}",
     ]
 
 
@@ -167,7 +166,7 @@ def test_gast_speichern_verworfen(client, inhalte):
     assert "&lt;script&gt;x&lt;/script&gt;" in antwort.text
     assert "<script>x" not in antwort.text
     antwort = client.post(
-        f"/gast/tagebuch/neu/leitfrage/{inhalte['leitfrage']}",
+        "/gast/tagebuch/neu/frei",
         data={"csrf": csrf, "text": "Notiz"},
     )
     assert antwort.status_code == 200
@@ -195,7 +194,6 @@ def _durchgang(client, i, seiten):
     tagebuch = [
         "/gast/tagebuch/neu/frei",
         f"/gast/tagebuch/neu/impuls/{i['impuls']}",
-        f"/gast/tagebuch/neu/leitfrage/{i['leitfrage']}",
     ]
     gueltig = {f"antwort_{i['f1']}": "Mein Text", f"antwort_{i['f2']}": "3"}
     assert client.post(runde, data={"csrf": csrf, **gueltig}).status_code == 200

@@ -93,6 +93,7 @@ def _seite_tagebuch(
         "meldung": meldung,
         "hinweis_tagebuch": lies_text(db, "hinweis_tagebuch"),
         "hinweis_aufnahme": lies_text(db, "hinweis_aufnahme"),
+        "unterstuetzung": inhalte.leitfragen(db),
         "max_dauer": aufnahmen.MAX_DAUER_SEKUNDEN,
         "max_bytes": aufnahmen.MAX_BYTES,
         "aktion": TAGEBUCH_AKTION,

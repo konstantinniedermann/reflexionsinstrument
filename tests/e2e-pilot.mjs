@@ -344,12 +344,14 @@ async function ablaufLehrperson() {
   pruefe(!!(await js("document.querySelector('.fall')")), "Runde 1: Fallbeispiel steht da");
   pruefe(await knoepfeOk("main .knopf:not([data-entwurf-hinweis] .knopf)"), "Runde 1: Knöpfe ganz im Bild und mindestens 44 px hoch");
   await keinUeberlauf("Runde 1 390 px");
+  pruefe((await text()).includes("folgt eine Zusatzinformation") && (await js("document.querySelectorAll('form.formular textarea').length")) === 1, "Runde 1: vor der ersten Antwort nur Frage 1, Zusatzinfo angekündigt");
   await screenshot("24-lp-runde");
   const erstesFeld = await js("document.querySelector('textarea').id");
   const antwort1 = "Mein erster Gedanke: erst einmal nachfragen.";
   await tippe(`#${erstesFeld}`, antwort1);
   await sende(`button[name=anker][value=${erstesFeld}]`);
-  pruefe((await js("location.hash")) === `#${erstesFeld}`, "Runde 1: nach dem kleinen Speichern steht die Seite bei der Frage");
+  pruefe((await js("location.hash")) === "#zusatzinfo", "Runde 1: nach dem Speichern der ersten Frage steht die Seite bei der Zusatzinfo");
+  pruefe(await js("!!document.querySelector('section#zusatzinfo.fall') && document.querySelectorAll('form.formular textarea').length > 1"), "Runde 1: Zusatzinfo und weitere Fragen erscheinen");
   pruefe((await meldung()).includes("Gespeichert."), "Runde 1: «Gespeichert.»");
   await keinUeberlauf("Runde 1 gespeichert 390 px");
   await screenshot("25-lp-runde-gespeichert");
@@ -384,7 +386,7 @@ async function ablaufLehrperson() {
   await screenshot("30-lp-nicht-gefunden");
   keineFehlerSeit(stand, "Runde 2 direkt", ["status of 404"]);
 
-  // 5. Tagebuch: frei (mit Skript und langem Wort), zum Impuls, zu einer Leitfrage
+  // 5. Tagebuch: frei (mit Skript und langem Wort), zum Impuls, frei mit aufgeklappter unterstützender Frage
   stand = merke();
   await oeffne("/lehrperson/tagebuch/neu");
   muss((await ueberschrift()) === "Tagebuch", "Tagebuch: Wahlseite");
@@ -412,10 +414,16 @@ async function ablaufLehrperson() {
   await sende(SPEICHERN);
   muss(/^\/lehrperson\/tagebuch\/\d+$/.test(await pfad()), "Tagebuch Impuls: gespeichert");
   await oeffne("/lehrperson/tagebuch/neu");
-  await sende("a[href*='/tagebuch/neu/leitfrage/']");
+  pruefe(!(await js("!!document.querySelector(\"a[href*='/leitfrage/']\")")), "Tagebuch: keine eigene Auswahl für unterstützende Fragen");
+  await sende("a[href$='/tagebuch/neu/frei']");
+  pruefe(await js("!!document.querySelector('details.unterstuetzung') && !document.querySelector('details.unterstuetzung').open"), "Tagebuch frei: unterstützende Frage zugeklappt");
+  await js("document.querySelector('details.unterstuetzung summary').click()");
+  pruefe(await js("document.querySelector('details.unterstuetzung').open"), "Tagebuch frei: unterstützende Frage lässt sich aufklappen");
+  await keinUeberlauf("Unterstützende Frage aufgeklappt 390 px");
+  await screenshot("27b-lp-unterstuetzende-frage");
   await tippe("#text", "Es ging um eine Absprache im Team.");
   await sende(SPEICHERN);
-  muss(/^\/lehrperson\/tagebuch\/\d+$/.test(await pfad()), "Tagebuch Leitfrage: gespeichert");
+  muss(/^\/lehrperson\/tagebuch\/\d+$/.test(await pfad()), "Tagebuch frei mit unterstützender Frage: gespeichert");
   const leitPfad = await pfad();
 
   // Meine Einträge: vier Karten

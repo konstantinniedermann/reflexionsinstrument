@@ -385,7 +385,7 @@ def leitfrage(db: sqlite3.Connection, leitfrage_id: int) -> sqlite3.Row | None:
 
 
 def _pruefe_leitfrage(text: str) -> str:
-    return kurzer_text(text, "text", LAENGE_KURZ, "Bitte eine Leitfrage eingeben.")
+    return kurzer_text(text, "text", LAENGE_KURZ, "Bitte eine Frage eingeben.")
 
 
 def lege_leitfrage_an(db: sqlite3.Connection, text: str) -> int:

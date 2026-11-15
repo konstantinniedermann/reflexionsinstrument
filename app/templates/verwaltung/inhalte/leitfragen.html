@@ -1,14 +1,14 @@
 {% extends "verwaltung/rahmen.html" %}
 {% from "verwaltung/inhalte/_teile.html" import verschieben with context %}
-{% block titel %}Leitfragen – {{ instrument_titel }}{% endblock %}
+{% block titel %}Unterstützende Fragen – {{ instrument_titel }}{% endblock %}
 {% block inhalt %}
 <p><a class="zurueck" href="/verwaltung/inhalte">‹ Inhalte</a></p>
-<h1>Leitfragen</h1>
+<h1>Unterstützende Fragen</h1>
 {% if meldung %}
 <p class="hinweis" role="status">{{ meldung }}</p>
 {% endif %}
-<p class="gedaempft">Die Lehrpersonen können ihr Tagebuch mit diesen Fragen beginnen. Sie erscheinen in dieser Reihenfolge.</p>
-<p><a class="knopf" href="/verwaltung/inhalte/leitfragen/neu">Neue Leitfrage</a></p>
+<p class="gedaempft">Im Tagebuch, beim freien Schreiben und Sprechen. Die Lehrpersonen können sie freiwillig aufklappen. Sie erscheinen in dieser Reihenfolge.</p>
+<p><a class="knopf" href="/verwaltung/inhalte/leitfragen/neu">Neue unterstützende Frage</a></p>
 {% if leitfragen %}
 <ul class="liste-ohne">
   {% for l in leitfragen %}
@@ -28,6 +28,6 @@
   {% endfor %}
 </ul>
 {% else %}
-<p class="hinweis">Noch keine Leitfrage. Lege mit «Neue Leitfrage» die erste an.</p>
+<p class="hinweis">Noch keine unterstützende Frage. Lege mit «Neue unterstützende Frage» die erste an.</p>
 {% endif %}
 {% endblock %}

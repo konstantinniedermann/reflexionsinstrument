@@ -681,7 +681,7 @@ def _leitfrage_formular(
 def _neue_leitfrage_seite(request: Request, werte=None, fehler=None, status=200):
     werte = werte or {"text": ""}
     return _leitfrage_formular(
-        request, "Neue Leitfrage", LEITFRAGEN, LEITFRAGEN, werte, fehler, status
+        request, "Neue unterstützende Frage", LEITFRAGEN, LEITFRAGEN, werte, fehler, status
     )
 
 
@@ -703,7 +703,7 @@ def _leitfrage_bearbeiten_seite(request: Request, zeile, werte=None, fehler=None
     werte = werte or {"text": zeile["text"]}
     return _leitfrage_formular(
         request,
-        "Leitfrage bearbeiten",
+        "Unterstützende Frage bearbeiten",
         f"{LEITFRAGEN}/{zeile['id']}",
         f"{LEITFRAGEN}#leitfrage-{zeile['id']}",
         werte,
@@ -745,8 +745,8 @@ def leitfrage_verschieben(db: DB, leitfrage_id: Id, richtung: Annotated[str, For
 
 def _leitfrage_loeschen_seite(request: Request, zeile):
     kontext = {
-        "ueberschrift": "Leitfrage löschen",
-        "frage_text": f"Leitfrage ‹{zeile['text']}› löschen?",
+        "ueberschrift": "Unterstützende Frage löschen",
+        "frage_text": f"Unterstützende Frage ‹{zeile['text']}› löschen?",
         "aktion": f"{LEITFRAGEN}/{zeile['id']}/loeschen",
         "zurueck": f"{LEITFRAGEN}#leitfrage-{zeile['id']}",
     }

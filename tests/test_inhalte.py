@@ -471,7 +471,7 @@ def test_leitfrage_eine_zeile(db):
     assert leitfrage(db, lid)["text"] == "a b"
     with pytest.raises(InhaltFehler) as fehler:
         lege_leitfrage_an(db, " ")
-    assert fehler.value.meldung == "Bitte eine Leitfrage eingeben."
+    assert fehler.value.meldung == "Bitte eine Frage eingeben."
     with pytest.raises(InhaltFehler):
         lege_leitfrage_an(db, "x" * 501)
     assert [x["text"] for x in leitfragen(db)] == ["a b"]

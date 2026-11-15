@@ -46,9 +46,8 @@ def test_wahl(client, welt):
     assert f'href="{NEU}/impuls/{welt["aktuell"]}"' in text
     assert "Impuls Jetzt" in text
     assert "Impuls Spaet" not in text and "Impuls Alt" not in text
-    assert "Zu einer Leitfrage schreiben" in text
-    for lid in (welt["l1"], welt["l2"]):
-        assert f'href="{NEU}/leitfrage/{lid}"' in text
+    assert "Leitfrage Eins" not in text  # steht seit dem 15.11. aufklappbar beim Schreiben
+    assert "/neu/leitfrage/" not in text
 
 
 def test_wahl_ohne_impuls_und_leitfragen(client, db, lehrperson, heute_ist):
@@ -59,7 +58,6 @@ def test_wahl_ohne_impuls_und_leitfragen(client, db, lehrperson, heute_ist):
     text = client.get(NEU).text
     assert f'href="{NEU}/frei"' in text
     assert "/neu/impuls/" not in text
-    assert "Zu einer Leitfrage schreiben" not in text
 
 
 def test_neu_frei(client, db, lehrperson, welt):
@@ -99,20 +97,69 @@ def test_neu_zum_impuls(client, db, welt):
     assert [e["impuls_text"] for e in _eintraege(db)] == ["Impuls Jetzt", "Impuls Alt"]
 
 
-def test_neu_zur_leitfrage(client, db, welt):
-    antwort = _anlegen(client, f"{NEU}/leitfrage/{welt['l1']}", "Gedanke")
-    assert antwort.status_code == 303
-    eintrag = _eintraege(db)[0]
-    assert eintrag["art"] == "leitfragen" and eintrag["leitfrage_text"] == "Leitfrage Eins"
-    text = client.get(antwort.headers["location"]).text
-    assert "Zur Leitfrage" in text and "Leitfrage Eins" in text
-    assert "Zu einer weiteren Leitfrage schreiben" in text
+def test_leitfrage_route_gibt_es_nicht_mehr(client, db, welt):
+    vorher = testdaten.abzug(db)
+    pfad = f"{NEU}/leitfrage/{welt['l1']}"
+    assert client.get(pfad).status_code == 404
+    csrf = csrf_von(client, f"{NEU}/frei")
+    assert client.post(pfad, data={"csrf": csrf, "text": "x"}).status_code in (404, 405)
+    assert testdaten.abzug(db) == vorher
+
+
+def _unterstuetzung(text):
+    treffer = re.search(
+        r'<details class="karte aufklapp unterstuetzung"([^>]*)>\s*<summary>(.*?)</summary>(.*?)</details>',
+        text,
+        re.DOTALL,
+    )
+    return treffer and (treffer.group(1), treffer.group(2), treffer.group(3))
+
+
+def test_frei_schreiben_zeigt_unterstuetzende_fragen_zugeklappt(client, welt):
+    attribute, titel, inhalt = _unterstuetzung(client.get(f"{NEU}/frei").text)
+    assert "open" not in attribute
+    assert titel == "Unterstützende Fragen"
+    assert "Leitfrage Eins" in inhalt and "Leitfrage Zwei" in inhalt
+
+
+def test_eine_unterstuetzende_frage_einzahl(client, db, welt):
+    db.execute("DELETE FROM leitfragen WHERE id = ?", (welt["l2"],))
+    db.commit()
+    _, titel, inhalt = _unterstuetzung(client.get(f"{NEU}/frei").text)
+    assert titel == "Unterstützende Frage"
+    assert "Leitfrage Eins" in inhalt
+
+
+def test_ohne_unterstuetzende_frage_kein_feld(client, db, lehrperson, heute_ist):
+    heute_ist(date(2026, 11, 24))
+    als_lehrperson(client, lehrperson)
+    assert "unterstuetzung" not in client.get(f"{NEU}/frei").text
+
+
+def test_impuls_ohne_unterstuetzende_frage(client, welt):
+    assert "unterstuetzung" not in client.get(f"{NEU}/impuls/{welt['aktuell']}").text
+
+
+def test_frei_sprechen_zeigt_unterstuetzende_fragen(client, welt):
+    attribute, _, inhalt = _unterstuetzung(client.get(f"{NEU}/aufnahme").text)
+    assert "open" not in attribute
+    assert "Leitfrage Eins" in inhalt
+
+
+def test_alter_eintrag_zur_leitfrage_bleibt_lesbar(client, db, lehrperson, welt):
+    eid = testdaten.lege_eintrag_an(
+        db, lehrperson["id"], "leitfragen", "Gedanke", leitfrage_id=welt["l1"]
+    )
+    db.commit()
+    text = client.get(f"/lehrperson/tagebuch/{eid}").text
+    assert "Zur unterstützenden Frage" in text and "Leitfrage Eins" in text
+    assert "Leitfrage schreiben" not in text
 
 
 def test_neu_bezug_404(client, db, welt):
     vorher = testdaten.abzug(db)
     csrf = csrf_von(client, f"{NEU}/frei")
-    for pfad in (f"{NEU}/impuls/{welt['spaet']}", f"{NEU}/leitfrage/9999", f"{NEU}/impuls/abc"):
+    for pfad in (f"{NEU}/impuls/{welt['spaet']}", f"{NEU}/impuls/abc"):
         assert client.get(pfad).status_code == 404, pfad
         assert client.post(pfad, data={"csrf": csrf, "text": "x"}).status_code == 404, pfad
     assert testdaten.abzug(db) == vorher
@@ -141,7 +188,7 @@ def test_neu_laden_legt_nicht_doppelt_an(client, db, welt):
 
 
 def test_doppelt_abgesendet_legt_einmal_an(client, db, welt):
-    pfad = f"{NEU}/leitfrage/{welt['l1']}"
+    pfad = f"{NEU}/impuls/{welt['aktuell']}"
     csrf = csrf_von(client, pfad)
     antworten = [client.post(pfad, data={"csrf": csrf, "text": "Gleich"}) for _ in range(2)]
     (eintrag,) = _eintraege(db)

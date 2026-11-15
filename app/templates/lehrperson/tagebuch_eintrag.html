@@ -26,9 +26,6 @@
   </div>
   <button type="submit" class="knopf">Speichern</button>
 </form>
-{% if eintrag.art == "leitfragen" %}
-<p><a href="{{ ansicht.url('/tagebuch/neu') }}">Zu einer weiteren Leitfrage schreiben</a></p>
-{% endif %}
 <p><a href="{{ ansicht.url() }}">Zur Startseite</a></p>
 <p><a href="{{ ansicht.url('/tagebuch/' ~ eintrag.id ~ '/loeschen') }}">Eintrag löschen</a></p>
 {% endblock %}

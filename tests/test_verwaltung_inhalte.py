@@ -718,7 +718,7 @@ def test_leitfragen_anlegen_bearbeiten(client, auftraggeberin, db):
     assert "Neu" in client.get(LEITFRAGEN).text
     fehler = sende(client, LEITFRAGEN, LEITFRAGEN, text=" ")
     assert fehler.status_code == 400
-    assert "Bitte eine Leitfrage eingeben." in fehler.text
+    assert "Bitte eine Frage eingeben." in fehler.text
 
 
 def test_leitfrage_mit_eintrag_hinweise(client, auftraggeberin, db):
@@ -931,3 +931,14 @@ def test_neue_runde_hat_feld_zusatzinfo(client, auftraggeberin, db):
     seite = client.get(f"{RUNDEN}/neu")
     assert 'name="zusatzinfo"' in seite.text
     assert "Erscheint nach der ersten Frage" in seite.text
+
+
+def test_leitfragen_heissen_unterstuetzende_fragen(client, auftraggeberin, db):
+    melde_an(client, auftraggeberin)
+    uebersicht = client.get("/verwaltung/inhalte").text
+    assert "Unterstützende Fragen" in uebersicht
+    assert "Leitfrage" not in uebersicht
+    liste = client.get("/verwaltung/inhalte/leitfragen").text
+    assert "<h1>Unterstützende Fragen</h1>" in liste
+    assert "freiwillig aufklappen" in liste
+    assert "Neue unterstützende Frage" in client.get("/verwaltung/inhalte/leitfragen/neu").text

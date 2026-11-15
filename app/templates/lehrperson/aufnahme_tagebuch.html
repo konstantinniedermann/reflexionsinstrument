@@ -7,6 +7,7 @@
 </header>
 <div class="hinweis formatiert">{{ hinweis_tagebuch | formatiert }}</div>
 <div class="hinweis formatiert">{{ hinweis_aufnahme | formatiert }}</div>
+{% include "lehrperson/_unterstuetzung.html" %}
 <form class="formular" method="post" action="{{ aktion }}" enctype="multipart/form-data">
   {{ csrf_feld(request) }}
   <input type="hidden" name="dauer_sekunden">
