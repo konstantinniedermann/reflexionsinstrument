@@ -19,16 +19,10 @@
   {% else %}
   <p class="gedaempft">Kein Fallbeispiel.</p>
   {% endif %}
+  {% if wartende_zusatzinfo %}
   <h2>Zusatzinfo</h2>
-  {% if runde.zusatzinfo %}
-  {% if fragen %}
-  <p class="gedaempft">Erscheint nach Frage 1, sobald die Lehrperson sie beantwortet hat.</p>
-  {% else %}
-  <p class="hinweis">Die Zusatzinfo erscheint erst, wenn die Runde mindestens eine Frage hat.</p>
-  {% endif %}
-  <div class="formatiert">{{ runde.zusatzinfo | formatiert }}</div>
-  {% else %}
-  <p class="gedaempft">Keine Zusatzinfo.</p>
+  <p class="hinweis">Erscheint, sobald die Runde eine Frage hat. Sie steht dann bei der ersten Frage.</p>
+  <div class="formatiert">{{ wartende_zusatzinfo | formatiert }}</div>
   {% endif %}
   <div class="aktionen">
     <a href="/verwaltung/inhalte/runden/{{ runde.id }}/bearbeiten">Angaben bearbeiten</a>
@@ -50,6 +44,13 @@
       <p><strong>{{ f.text }}</strong></p>
       {% if f.typ == "skala" %}
       <p class="gedaempft">1 = {{ f.skala_min_text }} · 5 = {{ f.skala_max_text }}</p>
+      {% endif %}
+      {% if f.zusatzinfo %}
+      <div class="zusatzinfo-vorschau">
+        <h3>Danach: Zusatzinfo</h3>
+        <p class="gedaempft">Erscheint, sobald die Fragen davor beantwortet sind.</p>
+        <div class="formatiert">{{ f.zusatzinfo | formatiert }}</div>
+      </div>
       {% endif %}
       <div class="aktionen">
         <a href="/verwaltung/inhalte/fragen/{{ f.id }}">Bearbeiten</a>

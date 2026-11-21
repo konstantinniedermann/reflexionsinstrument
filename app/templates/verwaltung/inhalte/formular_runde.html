@@ -29,13 +29,6 @@
       {{ formatier_hilfe() }}
       {{ feldfehler(fehler, "fallbeispiel") }}
     </div>
-    <div class="feld">
-      <label for="zusatzinfo">Zusatzinfo (freiwillig)</label>
-      <textarea id="zusatzinfo" name="zusatzinfo" rows="8" aria-describedby="hilfe-zusatzinfo{% if fehler.zusatzinfo %} fehler-zusatzinfo{% endif %}"{% if fehler.zusatzinfo %} aria-invalid="true"{% endif %}>{{ werte.zusatzinfo }}</textarea>
-      <p class="hilfe" id="hilfe-zusatzinfo">Erscheint nach der ersten Frage, sobald die Lehrperson sie beantwortet hat. Danach folgen die weiteren Fragen.</p>
-      {{ formatier_hilfe() }}
-      {{ feldfehler(fehler, "zusatzinfo") }}
-    </div>
     <button type="submit" class="knopf">Speichern</button>
     <a class="knopf knopf--leise" href="{{ abbrechen }}">Abbrechen</a>
   </form>

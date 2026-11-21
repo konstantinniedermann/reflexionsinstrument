@@ -54,11 +54,11 @@
     {% endif %}
   </div>
   {% endif %}
-  {% if loop.first and runde.zusatzinfo %}
-  {% if zusatzinfo_offen %}
-  <section class="fall formatiert flaeche bereich--runden" id="zusatzinfo" aria-label="Zusatzinfo">{{ runde.zusatzinfo | formatiert }}</section>
+  {% if frage.zusatzinfo %}
+  {% if frage.id == gesperrt_nach %}
+  <p class="gedaempft" id="zusatzinfo-{{ frage.id }}">{{ hinweis_zusatzinfo }}</p>
   {% else %}
-  <p class="gedaempft" id="zusatzinfo">Sobald du deine Antwort gespeichert hast, folgt eine Zusatzinformation{% if runde.anzahl_fragen > 1 %} mit weiteren Fragen{% endif %}.</p>
+  <section class="fall formatiert flaeche bereich--runden" id="zusatzinfo-{{ frage.id }}" aria-label="Zusatzinfo">{{ frage.zusatzinfo | formatiert }}</section>
   {% endif %}
   {% endif %}
   {% endfor %}

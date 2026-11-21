@@ -73,7 +73,6 @@ def lade_platzhalter(db: sqlite3.Connection, daten: dict, projektstart: date) ->
                 eintrag["titel"],
                 eintrag["fallbeispiel"] or "",
                 tag(eintrag["tag"]),
-                eintrag.get("zusatzinfo") or "",
             )
             for frage in eintrag["fragen"]:
                 lege_frage_an(
@@ -83,6 +82,7 @@ def lade_platzhalter(db: sqlite3.Connection, daten: dict, projektstart: date) ->
                     frage["text"],
                     frage.get("skala_min_text", ""),
                     frage.get("skala_max_text", ""),
+                    frage.get("zusatzinfo", ""),
                 )
         for text in daten["leitfragen"]:
             lege_leitfrage_an(db, text)
