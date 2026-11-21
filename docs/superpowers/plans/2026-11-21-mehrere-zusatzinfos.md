@@ -32,7 +32,7 @@
 **Files:** Create `app/migrationen/006_zusatzinfo_pro_frage.sql`, `tests/test_migration_006.py`. Modify `app/inhalte.py`, `app/kommandos.py`, `tests/platzhalter/inhalte.json`, `tests/testdaten.py`, `tests/test_migration_003.py`, `tests/test_db.py`.
 
 **Interfaces – Produces:**
-- `lege_frage_an(db, runde_id, typ, text, skala_min_text, skala_max_text, zusatzinfo: str = "") -> int`: übernimmt bei der ersten Frage einer Runde eine wartende `runden.zusatzinfo`, wenn `zusatzinfo` leer ist, und leert sie bei der Runde.
+- `lege_frage_an(db, runde_id, typ, text, skala_min_text, skala_max_text, zusatzinfo: str = "") -> int`: speichert die abgeschickte Info und leert bei der ersten Frage eine wartende `runden.zusatzinfo` (das Formular zeigt sie vorbelegt).
 - `aendere_frage(..., zusatzinfo: str = "") -> None`.
 - `lege_runde_an`/`aendere_runde` ohne Parameter `zusatzinfo`; `runde()` liefert `zusatzinfo` weiter (wartende Info).
 - `testdaten.lege_runde_an(..., zusatzinfos: dict[int, str] | None = None)`: Index der Frage (0-basiert) → Info.
