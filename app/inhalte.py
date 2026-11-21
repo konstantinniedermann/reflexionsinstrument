@@ -258,8 +258,8 @@ def lege_frage_an(
     """Neue Frage am Ende der Runde.
 
     Wartet bei der Runde noch eine Zusatzinfo aus der Zeit vor Migration 006 (Runde ohne Frage),
-    geht sie an diese Frage, ausser die Frage bringt eine eigene mit. Das Formular zeigt die
-    wartende Info vorbelegt, darum ersetzt eine eigene sie bewusst.
+    zeigt das Formular der ersten Frage sie vorbelegt. Es gilt, was abgeschickt wird; danach
+    wartet bei der Runde nichts mehr, auch wenn das Feld bewusst geleert wurde.
     """
     typ, text, kleinste, groesste, info = _pruefe_frage(
         typ, text, skala_min_text, skala_max_text, zusatzinfo
@@ -273,7 +273,7 @@ def lege_frage_an(
                 "zusatzinfo, reihenfolge) "
                 "SELECT ?, ?, ?, ?, ?, ?, coalesce(max(reihenfolge), 0) + 1 FROM fragen "
                 "WHERE runde_id = ?",
-                (runde_id, typ, text, kleinste, groesste, info or wartend, runde_id),
+                (runde_id, typ, text, kleinste, groesste, info, runde_id),
             ).lastrowid
         except sqlite3.IntegrityError as fehler:
             if runde(db, runde_id) is None:

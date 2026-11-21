@@ -34,7 +34,7 @@ Nicht Ziel: eine Zusatzinfo vor Frage 1 (dafür gibt es das Fallbeispiel), Bilde
 | Info nach der letzten Frage | Erlaubt, erscheint am Schluss als abschliessende Information | Kein Grund, es zu verbieten |
 | Sprung nach dem Speichern | Zur ersten Zusatzinfo, die durch dieses Speichern aufging (Anker `zusatzinfo-<Frage-Id>`), sonst wie bisher | Die Lehrperson sieht sofort, was neu da ist |
 | Gast und Vorschau | Gleiche Regel; als beantwortet gilt der eben abgeschickte Wert. So lässt sich der Ablauf Abschnitt für Abschnitt durchspielen, solange die Werte im Formular mitgeschickt werden. | Wie bisher |
-| Bestehende Zusatzinfos | Migration 006 verschiebt jede Zusatzinfo einer Runde zu deren erster Frage, also an dieselbe Stelle wie bisher. Hat die Runde noch keine Frage, bleibt die Info bei der Runde stehen und wandert zur ersten Frage, sobald diese angelegt wird. Die Detailseite zeigt sie bis dahin mit dem Vermerk «erscheint, sobald die Runde eine Frage hat». | Nichts von dem, was sie schon erfasst hat, geht verloren oder verschiebt sich |
+| Bestehende Zusatzinfos | Migration 006 verschiebt jede Zusatzinfo einer Runde zu deren erster Frage, also an dieselbe Stelle wie bisher. Hat die Runde noch keine Frage, bleibt die Info bei der Runde stehen. Die Detailseite zeigt sie mit dem Vermerk «erscheint, sobald die Runde eine Frage hat», und das Formular der ersten neuen Frage zeigt sie vorbelegt. Es gilt, was dort abgeschickt wird; ein bewusst geleertes Feld verwirft sie. | Nichts von dem, was sie schon erfasst hat, geht verloren oder verschiebt sich |
 | Löschen einer Frage mit Zusatzinfo | Die Löschseite sagt, dass die Zusatzinfo mitgelöscht wird | Keine Überraschung |
 | Platzhalter-Inhalte | Zusatzinfos stehen bei den Fragen; Runde 1 bekommt zwei, damit der Ablauf sichtbar ist | Entwicklung und Anleitung zeigen den neuen Ablauf |
 | Export und Auswertung | Unverändert | Die Zusatzinfo ist Inhalt, keine Antwort |
@@ -43,7 +43,7 @@ Nicht Ziel: eine Zusatzinfo vor Frage 1 (dafür gibt es das Fallbeispiel), Bilde
 
 - Migration 006: `fragen.zusatzinfo TEXT`. Dazu ein `UPDATE`, das `runden.zusatzinfo` zur ersten Frage (kleinste `reihenfolge`, dann `id`) kopiert und bei der Runde leert. Keine neue Tabelle, keine neue Dependency.
 - Die Regel liegt an einer Stelle (`seiten_lehrperson.py`): Abschnitte bilden und die Zahl der offenen Abschnitte bestimmen. Lehrperson, Gast, Vorschau, das Speichern von Antworten und das Speichern einer Aufnahme verwenden sie gleich.
-- `lege_frage_an` übernimmt eine wartende Zusatzinfo der Runde, wenn es die erste Frage ist.
+- Das Formular der ersten Frage zeigt eine wartende Zusatzinfo vorbelegt; `lege_frage_an` leert sie danach bei der Runde.
 
 ## Prüfung
 

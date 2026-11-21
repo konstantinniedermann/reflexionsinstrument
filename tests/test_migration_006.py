@@ -48,7 +48,8 @@ def test_zusatzinfo_wandert_zur_ersten_frage(tmp_path):
         assert runde(conn, a)["zusatzinfo"] is None
         assert runde(conn, b)["zusatzinfo"] == "Info B"
 
-        neu = lege_frage_an(conn, b, "freitext", "Neu", "", "")
+        # Das Formular der ersten Frage schickt die vorbelegte Info mit.
+        neu = lege_frage_an(conn, b, "freitext", "Neu", "", "", zusatzinfo="Info B")
         assert conn.execute("SELECT zusatzinfo FROM fragen WHERE id = ?", (neu,)).fetchone()[0] == (
             "Info B"
         )
@@ -70,6 +71,23 @@ def test_eigene_info_ersetzt_wartende(tmp_path):
         zeile = conn.execute("SELECT zusatzinfo FROM fragen WHERE id = ?", (neu,)).fetchone()
         # Das Formular zeigt die wartende Info vorbelegt; wer sie ersetzt, tut das bewusst.
         assert zeile[0] == "Eigene"
+        assert runde(conn, b)["zusatzinfo"] is None
+    finally:
+        conn.close()
+
+
+def test_geleerte_wartende_info_ist_weg(tmp_path):
+    conn = _bis_005(tmp_path)
+    try:
+        b = conn.execute(
+            "INSERT INTO runden (titel, freischaltdatum, zusatzinfo) "
+            "VALUES ('B', '2026-11-30', 'Alt')"
+        ).lastrowid
+        conn.commit()
+        migriere(conn)
+        neu = lege_frage_an(conn, b, "freitext", "Neu", "", "", zusatzinfo="   ")
+        zeile = conn.execute("SELECT zusatzinfo FROM fragen WHERE id = ?", (neu,)).fetchone()
+        assert zeile[0] is None
         assert runde(conn, b)["zusatzinfo"] is None
     finally:
         conn.close()
