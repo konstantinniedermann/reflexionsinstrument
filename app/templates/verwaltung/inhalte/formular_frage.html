@@ -1,5 +1,5 @@
 {% extends "verwaltung/rahmen.html" %}
-{% from "verwaltung/inhalte/_teile.html" import fehlerkopf, feldfehler %}
+{% from "verwaltung/inhalte/_teile.html" import formatier_hilfe, fehlerkopf, feldfehler %}
 {% block titel %}{{ ueberschrift }} – {{ instrument_titel }}{% endblock %}
 {% block inhalt %}
 <p><a class="zurueck" href="{{ abbrechen }}">‹ Zurück</a></p>
@@ -49,6 +49,13 @@
              autocomplete="off"{% if fehler.skala_max_text %} aria-invalid="true" aria-describedby="fehler-skala_max_text"{% endif %} />
       <p class="hilfe">Nur bei der Skala nötig.</p>
       {{ feldfehler(fehler, "skala_max_text") }}
+    </div>
+    <div class="feld">
+      <label for="zusatzinfo">Zusatzinfo nach dieser Frage (freiwillig)</label>
+      <textarea id="zusatzinfo" name="zusatzinfo" rows="8" aria-describedby="hilfe-zusatzinfo{% if fehler.zusatzinfo %} fehler-zusatzinfo{% endif %}"{% if fehler.zusatzinfo %} aria-invalid="true"{% endif %}>{{ werte.zusatzinfo }}</textarea>
+      <p class="hilfe" id="hilfe-zusatzinfo">Erscheint nach dieser Frage, sobald die Lehrperson alle Fragen davor (seit der letzten Zusatzinfo) beantwortet hat. Danach folgen die weiteren Fragen.</p>
+      {{ formatier_hilfe() }}
+      {{ feldfehler(fehler, "zusatzinfo") }}
     </div>
     <button type="submit" class="knopf">Speichern</button>
     <a class="knopf knopf--leise" href="{{ abbrechen }}">Abbrechen</a>

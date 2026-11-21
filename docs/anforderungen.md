@@ -44,7 +44,7 @@ flowchart LR
     I[Impuls: einmal pro Woche]
 ```
 
-- Pro Woche wird am Montag eine **Runde** freigeschaltet. In den Wochen 1–3 hat jede Runde ein Fallbeispiel, alle bekommen dasselbe (A). Zuerst wird Frage 1 beantwortet, danach erscheint eine Zusatzinfo mit zwei weiteren Fragen (A, Rückmeldung 15.11.). Woche 4 hat kein Fallbeispiel, sondern zwei Reflexionsfragen (A).
+- Pro Woche wird am Montag eine **Runde** freigeschaltet. In den Wochen 1–3 hat jede Runde ein Fallbeispiel, alle bekommen dasselbe (A). Zuerst wird Frage 1 beantwortet, danach erscheint eine Zusatzinfo mit zwei weiteren Fragen (A, Rückmeldung 15.11.). Die Auftraggeberin möchte selbst weitere Zusatzinfos ergänzen können: Fall, Fragen, Zusatzinfo, Fragen, Zusatzinfo, Fragen (A, Wunsch 21.11.). Woche 4 hat kein Fallbeispiel, sondern zwei Reflexionsfragen (A).
 - Ein Rückblick auf die eigenen Antworten aus Runde 1 ist nicht nötig (A).
 - Das **Tagebuch** steht jederzeit offen.
 - Einmal pro Woche gibt es einen **Impuls** (A).
@@ -69,8 +69,8 @@ flowchart LR
 
 | Prio | Anforderung | Herkunft |
 |---|---|---|
-| Muss | Eine Runde hat einen Titel, einen optionalen Fallbeispiel-Text, eine optionale Zusatzinfo, eine Liste von Fragen und ein Freischaltdatum | C: Woche 4 ohne Fallbeispiel ist damit eine normale Runde. Die Auftraggeberin gestaltet sie selbst. |
-| Muss | Die Zusatzinfo steht nach Frage 1 und erscheint mit den weiteren Fragen erst, wenn Frage 1 gespeichert ist. Umsetzung siehe [Design Zusatzinfo](superpowers/specs/2026-11-15-ablauf-zusatzinfo-design.md). | A: «soll erst erscheinen, wenn die Ausgangslage bearbeitet wurde» |
+| Muss | Eine Runde hat einen Titel, einen optionalen Fallbeispiel-Text, eine Liste von Fragen und ein Freischaltdatum. Jede Frage kann eine Zusatzinfo tragen, die nach ihr erscheint | C: Woche 4 ohne Fallbeispiel ist damit eine normale Runde. Die Auftraggeberin gestaltet sie selbst. |
+| Muss | Eine Zusatzinfo erscheint mit den Fragen bis zur nächsten Zusatzinfo erst, wenn alle Fragen davor (seit der letzten Zusatzinfo) beantwortet und gespeichert sind. Umsetzung siehe [Design mehrere Zusatzinfos](superpowers/specs/2026-11-21-mehrere-zusatzinfos-design.md). | A: «soll erst erscheinen, wenn die Ausgangslage bearbeitet wurde»; Wunsch 21.11.: mehrere Zusatzinfos |
 | Muss | Fragetypen: Freitext und Skala | A: «Skala ist gut» |
 | Muss | Eine Runde erscheint ab ihrem Freischaltdatum. Freigeschaltete Runden bleiben offen. | A: eine pro Woche. C: Datum statt Knopf, damit sie nicht daran denken muss |
 | Muss | Antworten werden gespeichert, sobald die Lehrperson auf «Speichern» tippt, und lassen sich jederzeit ändern oder löschen. Es gibt kein endgültiges Abschicken. | A: «anpassbar/bearbeitbar sollen die Antworten immer sein» |

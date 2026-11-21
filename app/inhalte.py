@@ -149,40 +149,28 @@ def datum_vorschlag_runde(db: sqlite3.Connection) -> date | None:
     return lies_projektstart(db)
 
 
-def _pruefe_runde(titel: str, fallbeispiel: str, freischaltdatum: str, zusatzinfo: str):
+def _pruefe_runde(titel: str, fallbeispiel: str, freischaltdatum: str):
     sauberer_titel = kurzer_text(titel, "titel", LAENGE_TITEL, "Bitte einen Titel eingeben.")
     text = langer_text(fallbeispiel, "fallbeispiel", None)
     datum = datum_feld(freischaltdatum, "freischaltdatum", pflicht=True)
-    info = langer_text(zusatzinfo, "zusatzinfo", None)
-    return sauberer_titel, text, datum, info
+    return sauberer_titel, text, datum
 
 
 def lege_runde_an(
-    db: sqlite3.Connection,
-    titel: str,
-    fallbeispiel: str,
-    freischaltdatum: str,
-    zusatzinfo: str = "",
+    db: sqlite3.Connection, titel: str, fallbeispiel: str, freischaltdatum: str
 ) -> int:
-    werte = _pruefe_runde(titel, fallbeispiel, freischaltdatum, zusatzinfo)
+    werte = _pruefe_runde(titel, fallbeispiel, freischaltdatum)
     return db.execute(
-        "INSERT INTO runden (titel, fallbeispiel, freischaltdatum, zusatzinfo) VALUES (?, ?, ?, ?)",
-        werte,
+        "INSERT INTO runden (titel, fallbeispiel, freischaltdatum) VALUES (?, ?, ?)", werte
     ).lastrowid
 
 
 def aendere_runde(
-    db: sqlite3.Connection,
-    runde_id: int,
-    titel: str,
-    fallbeispiel: str,
-    freischaltdatum: str,
-    zusatzinfo: str = "",
+    db: sqlite3.Connection, runde_id: int, titel: str, fallbeispiel: str, freischaltdatum: str
 ) -> None:
-    werte = _pruefe_runde(titel, fallbeispiel, freischaltdatum, zusatzinfo)
+    werte = _pruefe_runde(titel, fallbeispiel, freischaltdatum)
     aenderungen = db.execute(
-        "UPDATE runden SET titel = ?, fallbeispiel = ?, freischaltdatum = ?, zusatzinfo = ? "
-        "WHERE id = ?",
+        "UPDATE runden SET titel = ?, fallbeispiel = ?, freischaltdatum = ? WHERE id = ?",
         (*werte, runde_id),
     ).rowcount
     if aenderungen == 0:
@@ -245,16 +233,17 @@ def frage(db: sqlite3.Connection, frage_id: int) -> sqlite3.Row | None:
     return db.execute(f"{_FRAGEN_SQL} WHERE f.id = ?", (frage_id,)).fetchone()
 
 
-def _pruefe_frage(typ: str, text: str, skala_min_text: str, skala_max_text: str):
+def _pruefe_frage(typ: str, text: str, skala_min_text: str, skala_max_text: str, zusatzinfo: str):
     if typ not in TYPEN:
         raise InhaltFehler("typ", "Bitte die Art der Antwort wählen.")
     sauberer_text = kurzer_text(text, "text", LAENGE_KURZ, "Bitte eine Frage eingeben.")
+    info = langer_text(zusatzinfo, "zusatzinfo", None)
     if typ != "skala":
-        return typ, sauberer_text, None, None
+        return typ, sauberer_text, None, None, info
     meldung = "Für die Skala braucht es beide Beschriftungen."
     kleinste = kurzer_text(skala_min_text, "skala_min_text", LAENGE_BESCHRIFTUNG, meldung)
     groesste = kurzer_text(skala_max_text, "skala_max_text", LAENGE_BESCHRIFTUNG, meldung)
-    return typ, sauberer_text, kleinste, groesste
+    return typ, sauberer_text, kleinste, groesste, info
 
 
 def lege_frage_an(
@@ -264,20 +253,45 @@ def lege_frage_an(
     text: str,
     skala_min_text: str,
     skala_max_text: str,
+    zusatzinfo: str = "",
 ) -> int:
-    werte = _pruefe_frage(typ, text, skala_min_text, skala_max_text)
-    try:
-        # Eine Anweisung: die naechste Nummer wird im selben Schritt gelesen und geschrieben.
-        return db.execute(
-            "INSERT INTO fragen (runde_id, typ, text, skala_min_text, skala_max_text, reihenfolge) "
-            "SELECT ?, ?, ?, ?, ?, coalesce(max(reihenfolge), 0) + 1 FROM fragen "
-            "WHERE runde_id = ?",
-            (runde_id, *werte, runde_id),
-        ).lastrowid
-    except sqlite3.IntegrityError as fehler:
-        if runde(db, runde_id) is None:
-            raise NichtGefunden(runde_id) from fehler
-        raise
+    """Neue Frage am Ende der Runde.
+
+    Wartet bei der Runde noch eine Zusatzinfo aus der Zeit vor Migration 006 (Runde ohne Frage),
+    zeigt das Formular der ersten Frage sie vorbelegt. Es gilt, was abgeschickt wird; danach
+    wartet bei der Runde nichts mehr, auch wenn das Feld bewusst geleert wurde.
+    """
+    typ, text, kleinste, groesste, info = _pruefe_frage(
+        typ, text, skala_min_text, skala_max_text, zusatzinfo
+    )
+    with transaktion(db):
+        wartend = wartende_zusatzinfo(db, runde_id)
+        try:
+            # Eine Anweisung: die naechste Nummer wird im selben Schritt gelesen und geschrieben.
+            frage_id = db.execute(
+                "INSERT INTO fragen (runde_id, typ, text, skala_min_text, skala_max_text, "
+                "zusatzinfo, reihenfolge) "
+                "SELECT ?, ?, ?, ?, ?, ?, coalesce(max(reihenfolge), 0) + 1 FROM fragen "
+                "WHERE runde_id = ?",
+                (runde_id, typ, text, kleinste, groesste, info, runde_id),
+            ).lastrowid
+        except sqlite3.IntegrityError as fehler:
+            if runde(db, runde_id) is None:
+                raise NichtGefunden(runde_id) from fehler
+            raise
+        if wartend is not None:
+            db.execute("UPDATE runden SET zusatzinfo = NULL WHERE id = ?", (runde_id,))
+        return frage_id
+
+
+def wartende_zusatzinfo(db: sqlite3.Connection, runde_id: int) -> str | None:
+    """Zusatzinfo, die noch bei einer Runde ohne Frage steht (nur nach Migration 006 möglich)."""
+    zeile = db.execute(
+        "SELECT zusatzinfo FROM runden r WHERE id = ? "
+        "AND NOT EXISTS (SELECT 1 FROM fragen f WHERE f.runde_id = r.id)",
+        (runde_id,),
+    ).fetchone()
+    return None if zeile is None else zeile["zusatzinfo"]
 
 
 def aendere_frage(
@@ -287,8 +301,9 @@ def aendere_frage(
     text: str,
     skala_min_text: str,
     skala_max_text: str,
+    zusatzinfo: str = "",
 ) -> None:
-    werte = _pruefe_frage(typ, text, skala_min_text, skala_max_text)
+    werte = _pruefe_frage(typ, text, skala_min_text, skala_max_text, zusatzinfo)
     with transaktion(db):
         bisher = frage(db, frage_id)
         if bisher is None:
@@ -300,8 +315,8 @@ def aendere_frage(
                 "Lege bei Bedarf eine neue Frage an.",
             )
         db.execute(
-            "UPDATE fragen SET typ = ?, text = ?, skala_min_text = ?, skala_max_text = ? "
-            "WHERE id = ?",
+            "UPDATE fragen SET typ = ?, text = ?, skala_min_text = ?, skala_max_text = ?, "
+            "zusatzinfo = ? WHERE id = ?",
             (*werte, frage_id),
         )
 

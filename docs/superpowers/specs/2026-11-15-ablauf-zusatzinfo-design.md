@@ -1,5 +1,7 @@
 # Design: Zusatzinfo pro Runde, unterstützende Frage im Tagebuch, Blocksatz
 
+> Die eine Zusatzinfo pro Runde ist abgelöst durch [mehrere Zusatzinfos pro Runde](2026-11-21-mehrere-zusatzinfos-design.md).
+
 Grundlage: Rückmeldung der Auftraggeberin vom 15.11.2026 (sinngemäss, Inhalte stehen nicht im Repo). Die Entscheidungen hat Claude getroffen (Projektregel «Fragen selbst beantworten»).
 
 ## Rückmeldung

@@ -44,6 +44,7 @@ from app.inhalte import (
     runden,
     speichere_allgemein,
     verschiebe,
+    wartende_zusatzinfo,
     zaehle_antworten_frage,
     zaehle_antworten_runde,
     zaehle_inhalte,
@@ -188,13 +189,8 @@ def _runde_formular(
     )
 
 
-def _runde_werte(titel: str, freischaltdatum: str, fallbeispiel: str, zusatzinfo: str) -> dict:
-    return {
-        "titel": titel,
-        "freischaltdatum": freischaltdatum,
-        "fallbeispiel": fallbeispiel,
-        "zusatzinfo": zusatzinfo,
-    }
+def _runde_werte(titel: str, freischaltdatum: str, fallbeispiel: str) -> dict:
+    return {"titel": titel, "freischaltdatum": freischaltdatum, "fallbeispiel": fallbeispiel}
 
 
 def _neue_runde_seite(
@@ -206,7 +202,6 @@ def _neue_runde_seite(
             "titel": "",
             "freischaltdatum": "" if vorschlag is None else vorschlag.isoformat(),
             "fallbeispiel": "",
-            "zusatzinfo": "",
         }
     return _runde_formular(request, "Neue Runde", RUNDEN, RUNDEN, werte, fehler, status)
 
@@ -223,12 +218,11 @@ def runde_anlegen(
     titel: Annotated[str, Form()] = "",
     freischaltdatum: Annotated[str, Form()] = "",
     fallbeispiel: Annotated[str, Form()] = "",
-    zusatzinfo: Annotated[str, Form()] = "",
 ):
     try:
-        runde_id = lege_runde_an(db, titel, fallbeispiel, freischaltdatum, zusatzinfo)
+        runde_id = lege_runde_an(db, titel, fallbeispiel, freischaltdatum)
     except InhaltFehler as fehler:
-        werte = _runde_werte(titel, freischaltdatum, fallbeispiel, zusatzinfo)
+        werte = _runde_werte(titel, freischaltdatum, fallbeispiel)
         return _neue_runde_seite(request, db, werte, {fehler.feld: fehler.meldung}, 400)
     return _weiter(f"{RUNDEN}/{runde_id}", "angelegt")
 
@@ -243,6 +237,7 @@ def runde_seite(request: Request, runde_id: Id, db: DB, heute: HEUTE):
         {
             "runde": zeile,
             "fragen": fragen(db, runde_id),
+            "wartende_zusatzinfo": wartende_zusatzinfo(db, runde_id),
             "projektstart": start,
             "zp": zeitplan(zeile["freischaltdatum"], start, heute),
             "meldung": _meldung(request),
@@ -265,7 +260,6 @@ def _bearbeiten_seite(
             "titel": zeile["titel"],
             "freischaltdatum": zeile["freischaltdatum"],
             "fallbeispiel": zeile["fallbeispiel"] or "",
-            "zusatzinfo": zeile["zusatzinfo"] or "",
         }
     sichtbar = zeitplan(zeile["freischaltdatum"], None, heute).sichtbar
     return _runde_formular(
@@ -294,14 +288,13 @@ def runde_speichern(
     titel: Annotated[str, Form()] = "",
     freischaltdatum: Annotated[str, Form()] = "",
     fallbeispiel: Annotated[str, Form()] = "",
-    zusatzinfo: Annotated[str, Form()] = "",
 ):
     zeile = _oder_404(runde(db, runde_id))
     try:
         with _vorhanden():
-            aendere_runde(db, runde_id, titel, fallbeispiel, freischaltdatum, zusatzinfo)
+            aendere_runde(db, runde_id, titel, fallbeispiel, freischaltdatum)
     except InhaltFehler as fehler:
-        werte = _runde_werte(titel, freischaltdatum, fallbeispiel, zusatzinfo)
+        werte = _runde_werte(titel, freischaltdatum, fallbeispiel)
         return _bearbeiten_seite(
             request, db, zeile, heute, werte, {fehler.feld: fehler.meldung}, 400
         )
@@ -389,15 +382,29 @@ def _frage_formular(
     )
 
 
-def _neue_frage_seite(request: Request, zeile_runde, werte=None, fehler=None, status=200):
-    werte = werte or {"typ": "freitext", "text": "", "skala_min_text": "", "skala_max_text": ""}
+def _frage_werte(typ: str, text: str, skala_min_text: str, skala_max_text: str, zusatzinfo: str):
+    return {
+        "typ": typ,
+        "text": text,
+        "skala_min_text": skala_min_text,
+        "skala_max_text": skala_max_text,
+        "zusatzinfo": zusatzinfo,
+    }
+
+
+def _neue_frage_seite(
+    request: Request, db: sqlite3.Connection, zeile_runde, werte=None, fehler=None, status=200
+):
+    # Eine Zusatzinfo, die noch bei der Runde wartet, steht bei der ersten Frage vorbelegt.
+    wartend = wartende_zusatzinfo(db, zeile_runde["id"]) or ""
+    werte = werte or _frage_werte("freitext", "", "", "", wartend)
     seite = f"{RUNDEN}/{zeile_runde['id']}"
     return _frage_formular(request, "Neue Frage", f"{seite}/fragen", seite, werte, fehler, status)
 
 
 @router.get("/runden/{runde_id}/fragen/neu")
 def frage_neu(request: Request, runde_id: Id, db: DB):
-    return _neue_frage_seite(request, _oder_404(runde(db, runde_id)))
+    return _neue_frage_seite(request, db, _oder_404(runde(db, runde_id)))
 
 
 @router.post("/runden/{runde_id}/fragen", dependencies=[Depends(pruefe_csrf)])
@@ -409,30 +416,29 @@ def frage_anlegen(
     text: Annotated[str, Form()] = "",
     skala_min_text: Annotated[str, Form()] = "",
     skala_max_text: Annotated[str, Form()] = "",
+    zusatzinfo: Annotated[str, Form()] = "",
 ):
     zeile = _oder_404(runde(db, runde_id))
     try:
         with _vorhanden():
-            frage_id = lege_frage_an(db, runde_id, typ, text, skala_min_text, skala_max_text)
+            frage_id = lege_frage_an(
+                db, runde_id, typ, text, skala_min_text, skala_max_text, zusatzinfo
+            )
     except InhaltFehler as fehler:
-        werte = {
-            "typ": typ,
-            "text": text,
-            "skala_min_text": skala_min_text,
-            "skala_max_text": skala_max_text,
-        }
-        return _neue_frage_seite(request, zeile, werte, {fehler.feld: fehler.meldung}, 400)
+        werte = _frage_werte(typ, text, skala_min_text, skala_max_text, zusatzinfo)
+        return _neue_frage_seite(request, db, zeile, werte, {fehler.feld: fehler.meldung}, 400)
     return _weiter(f"{RUNDEN}/{runde_id}", "angelegt", f"frage-{frage_id}")
 
 
 def _frage_bearbeiten_seite(request: Request, zeile, werte=None, fehler=None, status=200):
     if werte is None:
-        werte = {
-            "typ": zeile["typ"],
-            "text": zeile["text"],
-            "skala_min_text": zeile["skala_min_text"] or "",
-            "skala_max_text": zeile["skala_max_text"] or "",
-        }
+        werte = _frage_werte(
+            zeile["typ"],
+            zeile["text"],
+            zeile["skala_min_text"] or "",
+            zeile["skala_max_text"] or "",
+            zeile["zusatzinfo"] or "",
+        )
     return _frage_formular(
         request,
         "Frage bearbeiten",
@@ -459,18 +465,14 @@ def frage_speichern(
     text: Annotated[str, Form()] = "",
     skala_min_text: Annotated[str, Form()] = "",
     skala_max_text: Annotated[str, Form()] = "",
+    zusatzinfo: Annotated[str, Form()] = "",
 ):
     zeile = _oder_404(frage(db, frage_id))
     try:
         with _vorhanden():
-            aendere_frage(db, frage_id, typ, text, skala_min_text, skala_max_text)
+            aendere_frage(db, frage_id, typ, text, skala_min_text, skala_max_text, zusatzinfo)
     except InhaltFehler as fehler:
-        werte = {
-            "typ": typ,
-            "text": text,
-            "skala_min_text": skala_min_text,
-            "skala_max_text": skala_max_text,
-        }
+        werte = _frage_werte(typ, text, skala_min_text, skala_max_text, zusatzinfo)
         return _frage_bearbeiten_seite(request, zeile, werte, {fehler.feld: fehler.meldung}, 400)
     return _weiter(f"{RUNDEN}/{zeile['runde_id']}", "gespeichert", f"frage-{frage_id}")
 
@@ -499,6 +501,8 @@ def _frage_loeschen_seite(request: Request, zeile, antworten: int, status: int =
             "Damit keine Antworten verloren gehen, lässt sie sich nicht löschen. "
             "Den Text kannst du weiterhin ändern."
         )
+    elif zeile["zusatzinfo"]:
+        kontext["folgen"] = "Die Zusatzinfo nach dieser Frage wird mitgelöscht."
     return _loeschen_seite(request, status, **kontext)
 
 
