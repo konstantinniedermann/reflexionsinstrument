@@ -433,6 +433,21 @@ a {
   font-size: 1.1rem;
 }
 
+/* Zusatzinfo unter ihrer Frage in der Eingabemaske: abgesetzt, nicht lauter als die Frage */
+.zusatzinfo-vorschau {
+  border-left: 4px solid var(--farbe-runden);
+  padding-left: 0.9rem;
+}
+
+.zusatzinfo-vorschau h3 {
+  font-size: 1rem;
+  margin: 0;
+}
+
+.zusatzinfo-vorschau .gedaempft {
+  margin-top: 0.2rem;
+}
+
 /* ---------- Formulare ---------- */
 
 .formular {
