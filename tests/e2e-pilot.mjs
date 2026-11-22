@@ -350,7 +350,7 @@ async function ablaufLehrperson() {
   const antwort1 = "Mein erster Gedanke: erst einmal nachfragen.";
   await tippe(`#${erstesFeld}`, antwort1);
   await sende(`button[name=anker][value=${erstesFeld}]`);
-  pruefe((await js("location.hash")) === `#zusatzinfo-${erstesFeld.slice("frage-".length)}`, "Runde 1: nach dem Speichern der ersten Frage steht die Seite bei der Zusatzinfo");
+  pruefe((await js("location.hash")) === `#${await js("document.querySelector('section[id^=zusatzinfo-].fall').id")}`, "Runde 1: nach dem Speichern der ersten Frage steht die Seite bei der Zusatzinfo");
   pruefe(await js("document.querySelectorAll('section[id^=zusatzinfo-].fall').length === 1 && document.querySelectorAll('form.formular textarea').length === 3 && !document.querySelector('fieldset.feld')"), "Runde 1: erste Zusatzinfo und die Fragen 2 und 3 erscheinen, Frage 4 noch nicht");
   pruefe((await text()).includes("Sobald du alle Fragen oben beantwortet und gespeichert hast, folgt eine Zusatzinformation mit weiteren Fragen."), "Runde 1: zweite Zusatzinfo angekündigt");
   pruefe((await meldung()).includes("Gespeichert."), "Runde 1: «Gespeichert.»");
@@ -372,7 +372,7 @@ async function ablaufLehrperson() {
   const weitere = (await js("[...document.querySelectorAll('textarea')].map((e) => e.id)")).slice(1);
   for (const id of weitere) await tippe(`#${id}`, `Antwort zu ${id}`);
   await sende("form.formular > button[type=submit]");
-  pruefe((await js("location.hash")) === `#zusatzinfo-${weitere[1].slice("frage-".length)}`, "Runde 1: nach den Fragen 2 und 3 steht die Seite bei der zweiten Zusatzinfo");
+  pruefe((await js("location.hash")) === `#${await js("document.querySelectorAll('section[id^=zusatzinfo-].fall')[1].id")}`, "Runde 1: nach den Fragen 2 und 3 steht die Seite bei der zweiten Zusatzinfo");
   pruefe(await js("document.querySelectorAll('section[id^=zusatzinfo-].fall').length === 2 && !!document.querySelector('fieldset.feld')"), "Runde 1: zweite Zusatzinfo und Frage 4 erscheinen");
   pruefe(!(await text()).includes("folgt eine Zusatzinformation"), "Runde 1: keine Ankündigung mehr");
   await keinUeberlauf("Runde 1 alle Abschnitte 390 px");
@@ -992,7 +992,8 @@ async function ablaufEintraege() {
 async function ablaufGast() {
   const inhalt = JSON.parse(readFileSync(new URL("./platzhalter/inhalte.json", import.meta.url), "utf8"));
   const titel = inhalt.runden.map((r) => r.titel);
-  const frageText = (runde, nr) => inhalt.runden[runde - 1].fragen[nr].text;
+  // Nur Fragen zählen; Zusatzinfos stehen im selben Ablauf
+  const frageText = (runde, nr) => inhalt.runden[runde - 1].ablauf.filter((b) => "typ" in b)[nr].text;
   const dialoge = () => ereignisse.filter((e) => e === "Page.javascriptDialogOpening").length;
   const dialogeVorher = dialoge();
   const tag = (basisTag, plus) => {
@@ -1354,9 +1355,9 @@ async function ablaeufe() {
   pruefe((await text()).includes("Diese Runde hat noch keine Fragen."), "Runde: noch ohne Fragen");
   const langeFrage = "Woran hast du in dieser Woche gemerkt, dass sich dein Blick auf die Situation in der Klasse verändert hat, und was hat dich dazu gebracht, anders zu reagieren als sonst? Beschreibe bitte, was du konkret getan hast und wie die Klasse darauf reagiert hat.";
   await sende("a[href$='/fragen/neu']");
-  await fuelle({ "#text": langeFrage, "#zusatzinfo": "E2E-Zusatzinfo mit **neuer** Wendung." });
+  pruefe(!(await js("!!document.querySelector('#zusatzinfo')")), "Frage: Formular ohne Feld für eine Zusatzinfo");
+  await fuelle({ "#text": langeFrage });
   pruefe((await js("document.querySelectorAll('article[id^=frage-]').length")) === 1, "Runde: erste Frage (Text) steht in der Liste");
-  pruefe(await js("!!document.querySelector('article[id^=frage-] .zusatzinfo-vorschau strong')"), "Runde: Zusatzinfo steht unter der ersten Frage");
   // Skala ohne Beschriftung: Fehler am Feld
   stand = merke();
   await sende("a[href$='/fragen/neu']");
@@ -1389,8 +1390,28 @@ async function ablaeufe() {
   await sende("article[id^=frage-]:nth-of-type(1) form[action$='/verschieben'] button[aria-label*='nach unten']");
   const frageNachher = await kartenTexte("article[id^=frage-] > p strong");
   pruefe(frageNachher[1] === frageVorher[0] && frageNachher[0] === frageVorher[1], "Runde: Fragen umsortiert");
-  pruefe(await js("!document.querySelectorAll('article[id^=frage-]')[0].querySelector('.zusatzinfo-vorschau') && !!document.querySelectorAll('article[id^=frage-]')[1].querySelector('.zusatzinfo-vorschau')"), "Runde: Zusatzinfo wandert mit ihrer Frage");
   await keinUeberlauf("Runde nach Umsortieren 390 px");
+  // Zusatzinfo als eigener Baustein: kommt ans Ende, wandert mit «Nach oben» zwischen die Fragen
+  await sende("a[href$='/zusatzinfos/neu']");
+  await keinUeberlauf("Formular Zusatzinfo 390 px");
+  await screenshot("13b-zusatzinfo-formular");
+  await fuelle({ "#inhalt": "E2E-Zusatzinfo mit **neuer** Wendung." });
+  const ablaufArt = () => js("[...document.querySelectorAll('article[id^=frage-], article[id^=zusatzinfo-]')].map((a) => a.id.startsWith('frage-') ? 'F' : 'I').join('')");
+  pruefe((await ablaufArt()) === "FFFI", "Runde: neue Zusatzinfo steht am Ende des Ablaufs");
+  const infoId = await js("document.querySelector('article[id^=zusatzinfo-]').id");
+  pruefe((await js("location.hash")) === `#${infoId}`, "Runde: nach dem Anlegen steht die Seite bei der Zusatzinfo");
+  pruefe(await js(`!!document.querySelector("#${infoId} .formatiert strong")`), "Runde: Zusatzinfo formatiert");
+  pruefe((await text()).includes("Erscheint, sobald die Fragen davor beantwortet sind."), "Runde: Vermerk bei der Zusatzinfo");
+  for (let i = 0; i < 2; i++) await sende(`#${infoId} form[action$='/verschieben'] button[aria-label*='nach oben']`);
+  pruefe((await ablaufArt()) === "FIFF", "Runde: Zusatzinfo steht nach zweimal «Nach oben» nach der ersten Frage");
+  pruefe((await js("location.hash")) === `#${infoId}`, "Runde: Verschieben springt zur Zusatzinfo");
+  await sende(`#${infoId} form[action$='/verschieben'] button[aria-label*='nach oben']`);
+  pruefe((await ablaufArt()) === "IFFF" && (await text()).includes("Erscheint sofort beim Öffnen der Runde."), "Runde: Zusatzinfo ganz oben erscheint sofort");
+  pruefe(await knoepfeOk("main .verschieben button, main .aktionen a, main .knopf"), "Runde mit Zusatzinfo: Knöpfe ganz im Bild und mindestens 44 px hoch");
+  await keinUeberlauf("Runde mit Zusatzinfo 390 px");
+  await screenshot("13c-runde-ablauf");
+  await sende(`#${infoId} form[action$='/verschieben'] button[aria-label*='nach unten']`);
+  pruefe((await ablaufArt()) === "FIFF", "Runde: Zusatzinfo wieder nach der ersten Frage");
   keineFehlerSeit(stand, "Runde und Fragen");
   const rundenPfad = await pfad();
   await desktop();
