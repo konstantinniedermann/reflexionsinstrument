@@ -23,6 +23,18 @@ Letzte Auswertung: 31.10.2026 (19 Einträge, alle abgeschlossen)
 
 **Einschätzung:** Selten (zwei Geräte, alter Tab offen), der Hinweis warnt. Löschen auf der Startseite ginge nur ohne Vergleich mit dem gespeicherten Text und verlöre bei «Zurück» neuen, ungespeicherten Text. Darum nicht umgesetzt.
 
+### 2026-11-22 — Anleitung für die Auftraggeberin nennt einen verstrichenen Termin
+
+**Thema:** Anleitung
+
+**Fundort:** `intern/anleitung-bau/vorlage.html`, Abschnitt «Gut zu wissen» → «Bis wann» (gitignored, nur lokal).
+
+**Beobachtung:** Die PDF-Anleitung sagt, die Inhalte seien bis Freitag, 20.11.2026 zu erfassen, damit vor dem Start noch ein Testlauf möglich ist. Das Datum ist verstrichen; die Anleitung wurde am 22.11. wegen der frei anordenbaren Zusatzinfos neu gebaut, der Satz blieb stehen.
+
+**Ursprung:** Neubau der Anleitung nach PR #54.
+
+**Einschätzung:** Ein neues Datum kann nur Koschi festlegen. Satz streichen oder Datum ersetzen, dann Anleitung neu bauen.
+
 ## Ausgewertet am 31.10.2026
 
 19 Einträge, alle abgeschlossen. Massstab: Der Pilot ist befristet (vier Wochen, fünf Lehrpersonen) und soll mit wenig weiterem Aufwand fertig werden. Was kein falsches Verhalten für Lehrpersonen oder Auftraggeberin bedeutet, wird nicht mehr bearbeitet. Die Einträge mit dem Ausgang «nichts tun» wurden darum nicht einzeln nachgeprüft: Ob sie zutreffen, ändert den Ausgang nicht.
