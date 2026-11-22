@@ -15,6 +15,7 @@ TABELLEN = (
     "info_abschnitte",
     "runden",
     "fragen",
+    "zusatzinfos",
     "leitfragen",
     "impulse",
     "antworten",
@@ -45,6 +46,7 @@ def beispielinhalte(db):
     db.execute(
         "INSERT INTO fragen (id, runde_id, text, typ, reihenfolge) VALUES (1, 1, 'F', 'freitext', 1)"
     )
+    db.execute("INSERT INTO zusatzinfos (id, runde_id, inhalt, reihenfolge) VALUES (1, 1, 'Z', 2)")
     db.execute("INSERT INTO leitfragen (id, text, reihenfolge) VALUES (1, 'L', 1)")
     db.execute("INSERT INTO impulse (id, text, sichtbar_ab) VALUES (1, 'I', '2026-11-23')")
     db.execute("INSERT INTO einstellungen (schluessel, wert) VALUES ('titel', 'Vorher')")
