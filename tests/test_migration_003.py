@@ -8,7 +8,7 @@ from app.db import MIGRATIONEN, migriere, verbinde
 
 
 def test_version_spalte_indizes(db):
-    assert db.execute("PRAGMA user_version").fetchone()[0] == 6
+    assert db.execute("PRAGMA user_version").fetchone()[0] == 7
     spalten = [z[1] for z in db.execute("PRAGMA table_info(aufnahmen)")]
     assert "dauer_sekunden" in spalten
     indizes = {z[0] for z in db.execute("SELECT name FROM sqlite_master WHERE type = 'index'")}
@@ -47,13 +47,13 @@ def test_migration_erhaelt_daten(tmp_path):
             assert zeilen, tabelle
         vorher = testdaten.abzug(conn)
 
-        assert migriere(conn) == 6
+        assert migriere(conn) == 7
         nachher = testdaten.abzug(conn)
         for tabelle in vorher:
-            # Migration 005 haengt runden.zusatzinfo an, 006 fragen.zusatzinfo
-            if tabelle in ("runden", "fragen"):
-                assert [z[:-1] for z in nachher[tabelle]] == vorher[tabelle]
-                assert all(z[-1] is None for z in nachher[tabelle])
+            # 005/006 haengen zusatzinfo an, 007 nimmt sie wieder weg und nummeriert die
+            # Fragen pro Runde neu (2, 4, 6 …); die Reihenfolge selbst bleibt.
+            if tabelle == "fragen":
+                assert [z[:-1] for z in nachher[tabelle]] == [z[:-1] for z in vorher[tabelle]]
             elif tabelle != "aufnahmen":
                 assert nachher[tabelle] == vorher[tabelle], tabelle
         alt = conn.execute(

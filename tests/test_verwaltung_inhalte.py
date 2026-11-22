@@ -906,28 +906,107 @@ def test_datenschutz_link_im_infoblock_fuehrt_zum_hinweis(client, auftraggeberin
     assert client.get(f"{HINWEISE}/hinweis_datenspeicherung").status_code == 200
 
 
-def test_frage_mit_zusatzinfo_anlegen_und_bearbeiten(client, auftraggeberin, db):
+def test_frageformular_ohne_zusatzinfo(client, auftraggeberin, db):
+    rid = neue_runde(db)
+    fid = neue_frage(db, rid)
+    melde_an(client, auftraggeberin)
+    assert 'name="zusatzinfo"' not in client.get(f"{RUNDEN}/{rid}/fragen/neu").text
+    assert 'name="zusatzinfo"' not in client.get(f"/verwaltung/inhalte/fragen/{fid}").text
+    loeschen = client.get(f"/verwaltung/inhalte/fragen/{fid}/loeschen").text
+    assert "Zusatzinfo" not in loeschen.split("<main")[1]
+
+
+def test_zusatzinfo_anlegen_bearbeiten_loeschen(client, auftraggeberin, db):
+    rid = neue_runde(db)
+    neue_frage(db, rid, "Was ist gelungen?")
+    melde_an(client, auftraggeberin)
+    seite = client.get(f"{RUNDEN}/{rid}").text
+    assert f'href="{RUNDEN}/{rid}/zusatzinfos/neu"' in seite
+    neu = f"{RUNDEN}/{rid}/zusatzinfos/neu"
+    assert "schiebst du sie mit «Nach oben» an ihre Stelle" in client.get(neu).text
+    antwort = sende(client, f"{RUNDEN}/{rid}/zusatzinfos", formular=neu, inhalt="Neue **Lage**.")
+    assert antwort.status_code == 303
+    info = db.execute("SELECT id, inhalt FROM zusatzinfos").fetchone()
+    assert info["inhalt"] == "Neue **Lage**."
+    assert (
+        antwort.headers["location"] == f"{RUNDEN}/{rid}?erledigt=angelegt#zusatzinfo-{info['id']}"
+    )
+    seite = client.get(f"{RUNDEN}/{rid}").text
+    assert "<strong>Lage</strong>" in seite
+    assert "Erscheint, sobald die Fragen davor beantwortet sind." in seite
+    assert seite.index("Was ist gelungen?") < seite.index("<strong>Lage</strong>")
+
+    pfad = f"/verwaltung/inhalte/zusatzinfos/{info['id']}"
+    assert "Neue **Lage**." in client.get(pfad).text
+    antwort = sende(client, pfad, formular=pfad, inhalt="  ")
+    assert antwort.status_code == 400
+    assert "Bitte einen Text eingeben." in antwort.text
+    antwort = sende(client, pfad, formular=pfad, inhalt="Andere Lage")
+    assert antwort.status_code == 303
+    assert db.execute("SELECT inhalt FROM zusatzinfos").fetchone()[0] == "Andere Lage"
+
+    loeschen = f"{pfad}/loeschen"
+    assert "Zusatzinfo ‹Andere Lage› löschen?" in client.get(loeschen).text
+    antwort = sende(client, loeschen, formular=loeschen)
+    assert antwort.status_code == 303
+    assert db.execute("SELECT COUNT(*) FROM zusatzinfos").fetchone()[0] == 0
+
+
+def test_zusatzinfo_leer_anlegen_400(client, auftraggeberin, db):
     rid = neue_runde(db)
     melde_an(client, auftraggeberin)
-    neu = f"{RUNDEN}/{rid}/fragen/neu"
-    formular = client.get(neu).text
-    assert 'name="zusatzinfo"' in formular
-    assert "Erscheint nach dieser Frage, sobald die Lehrperson alle Fragen davor" in formular
-    felder = frage_felder(zusatzinfo="Neue **Lage** im Fall.")
-    antwort = sende(client, f"{RUNDEN}/{rid}/fragen", formular=neu, **felder)
-    assert antwort.status_code == 303
-    fid = db.execute("SELECT id FROM fragen").fetchone()[0]
-    assert db.execute("SELECT zusatzinfo FROM fragen").fetchone()[0] == "Neue **Lage** im Fall."
-    seite = client.get(f"{RUNDEN}/{rid}").text
-    assert "Danach: Zusatzinfo" in seite
-    assert "<strong>Lage</strong>" in seite
-    assert seite.index("Was ist gelungen?") < seite.index("<strong>Lage</strong>")
-    pfad = f"/verwaltung/inhalte/fragen/{fid}"
-    assert "Neue **Lage** im Fall." in client.get(pfad).text
-    antwort = sende(client, pfad, formular=pfad, **frage_felder(zusatzinfo="  "))
-    assert antwort.status_code == 303
-    assert db.execute("SELECT zusatzinfo FROM fragen").fetchone()[0] is None
-    assert "Danach: Zusatzinfo" not in client.get(f"{RUNDEN}/{rid}").text
+    neu = f"{RUNDEN}/{rid}/zusatzinfos/neu"
+    antwort = sende(client, f"{RUNDEN}/{rid}/zusatzinfos", formular=neu, inhalt="")
+    assert antwort.status_code == 400
+    assert 'aria-invalid="true"' in antwort.text
+    assert db.execute("SELECT COUNT(*) FROM zusatzinfos").fetchone()[0] == 0
+
+
+def test_zusatzinfo_unbekannt_404(client, auftraggeberin):
+    melde_an(client, auftraggeberin)
+    token = csrf_von(client, RUNDEN)
+    assert client.get(f"{RUNDEN}/999/zusatzinfos/neu").status_code == 404
+    assert (
+        client.post(f"{RUNDEN}/999/zusatzinfos", data={"csrf": token, "inhalt": "x"}).status_code
+        == 404
+    )
+    for pfad in (
+        "/verwaltung/inhalte/zusatzinfos/999",
+        "/verwaltung/inhalte/zusatzinfos/999/loeschen",
+    ):
+        assert client.get(pfad).status_code == 404, pfad
+        assert client.post(pfad, data={"csrf": token, "inhalt": "x"}).status_code == 404, pfad
+
+
+def test_ablauf_gemischt_verschieben(client, auftraggeberin, db):
+    rid = neue_runde(db)
+    fid = neue_frage(db, rid, "Was ist gelungen?")
+    melde_an(client, auftraggeberin)
+    neu = f"{RUNDEN}/{rid}/zusatzinfos/neu"
+    sende(client, f"{RUNDEN}/{rid}/zusatzinfos", formular=neu, inhalt="Info zuerst")
+    info = db.execute("SELECT id FROM zusatzinfos").fetchone()[0]
+    seite = f"{RUNDEN}/{rid}"
+    antwort = sende(
+        client,
+        f"/verwaltung/inhalte/zusatzinfos/{info}/verschieben",
+        formular=seite,
+        richtung="hoch",
+    )
+    assert antwort.headers["location"] == f"{seite}#zusatzinfo-{info}"
+    text = client.get(seite).text
+    assert text.index("Info zuerst") < text.index("Was ist gelungen?")
+    assert "Erscheint sofort beim Öffnen der Runde." in text
+    # Die Frage lässt sich wieder vor die Info schieben
+    sende(client, f"/verwaltung/inhalte/fragen/{fid}/verschieben", formular=seite, richtung="hoch")
+    text = client.get(seite).text
+    assert text.index("Was ist gelungen?") < text.index("Info zuerst")
+    antwort = sende(
+        client,
+        f"/verwaltung/inhalte/zusatzinfos/{info}/verschieben",
+        formular=seite,
+        richtung="quer",
+    )
+    assert antwort.status_code == 400
 
 
 def test_rundenformular_ohne_zusatzinfo(client, auftraggeberin, db):
@@ -935,40 +1014,6 @@ def test_rundenformular_ohne_zusatzinfo(client, auftraggeberin, db):
     assert 'name="zusatzinfo"' not in client.get(f"{RUNDEN}/neu").text
     rid = neue_runde(db)
     assert 'name="zusatzinfo"' not in client.get(f"{RUNDEN}/{rid}/bearbeiten").text
-
-
-def test_wartende_zusatzinfo_steht_bei_erster_frage_vorbelegt(client, auftraggeberin, db):
-    rid = neue_runde(db)
-    db.execute("UPDATE runden SET zusatzinfo = 'Wartet **noch**' WHERE id = ?", (rid,))
-    db.commit()
-    melde_an(client, auftraggeberin)
-    seite = client.get(f"{RUNDEN}/{rid}").text
-    assert "Erscheint, sobald die Runde eine Frage hat." in seite
-    assert "<strong>noch</strong>" in seite
-    neu = f"{RUNDEN}/{rid}/fragen/neu"
-    assert "Wartet **noch**" in client.get(neu).text
-    felder = frage_felder(zusatzinfo="Wartet **noch**")
-    sende(client, f"{RUNDEN}/{rid}/fragen", formular=neu, **felder)
-    assert db.execute("SELECT zusatzinfo FROM fragen").fetchone()[0] == "Wartet **noch**"
-    assert db.execute("SELECT zusatzinfo FROM runden").fetchone()[0] is None
-    seite = client.get(f"{RUNDEN}/{rid}").text
-    assert "sobald die Runde eine Frage hat" not in seite
-    assert "Danach: Zusatzinfo" in seite
-    # Die zweite Frage bekommt nichts vorbelegt.
-    assert (
-        "Wartet" not in client.get(neu).text.split('name="zusatzinfo"')[1].split("</textarea>")[0]
-    )
-
-
-def test_frage_mit_zusatzinfo_loeschen_nennt_sie(client, auftraggeberin, db):
-    rid = neue_runde(db)
-    fid = neue_frage(db, rid)
-    melde_an(client, auftraggeberin)
-    pfad = f"/verwaltung/inhalte/fragen/{fid}/loeschen"
-    assert "Zusatzinfo" not in client.get(pfad).text.split("<main")[1]
-    db.execute("UPDATE fragen SET zusatzinfo = 'Info' WHERE id = ?", (fid,))
-    db.commit()
-    assert "Die Zusatzinfo nach dieser Frage wird mitgelöscht." in client.get(pfad).text
 
 
 def test_leitfragen_heissen_unterstuetzende_fragen(client, auftraggeberin, db):

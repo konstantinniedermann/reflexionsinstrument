@@ -95,17 +95,22 @@ def kontext_info(db: sqlite3.Connection, ansicht: Ansicht) -> dict:
     }
 
 
-def _zeilen(
+def _bausteine(
     db: sqlite3.Connection,
     runde_id: int,
     antworten: Mapping[int, sqlite3.Row],
     eingaben: Mapping[str, str] | None = None,
     fehler: Mapping[str, str] | None = None,
 ) -> list[dict]:
-    """Eine Zeile pro Frage; Formularwerte aus `eingaben` ersetzen gespeicherte Antworten."""
+    """Ablauf der Runde. Fragen tragen Feld und Wert; Formularwerte aus `eingaben` ersetzen
+    gespeicherte Antworten. Zusatzinfos stehen unverändert dazwischen."""
     fehler = fehler or {}
-    zeilen = []
-    for frage in inhalte.fragen(db, runde_id):
+    bausteine = []
+    for baustein in inhalte.ablauf(db, runde_id):
+        if baustein["art"] != "frage":
+            bausteine.append(baustein)
+            continue
+        frage = baustein["frage"]
         feld = f"antwort_{frage['id']}"
         antwort = antworten.get(frage["id"])
         if eingaben is not None and feld in eingaben:
@@ -116,43 +121,49 @@ def _zeilen(
             wert = "" if antwort["skalawert"] is None else str(antwort["skalawert"])
         else:
             wert = antwort["text"] or ""
-        zeilen.append({"frage": frage, "feld": feld, "wert": wert, "fehler": fehler.get(feld)})
-    return zeilen
+        bausteine.append(baustein | {"feld": feld, "wert": wert, "fehler": fehler.get(feld)})
+    return bausteine
 
 
 SKALAWERTE = ("1", "2", "3", "4", "5")
 
 
-def _beantwortet(zeile: dict, antworten: Mapping[int, sqlite3.Row]) -> bool:
+def _beantwortet(baustein: dict, antworten: Mapping[int, sqlite3.Row]) -> bool:
     """Text, Skalawert oder Aufnahme; «Keine Angabe» zählt nicht."""
-    wert = zeile["wert"].strip()
-    if wert in SKALAWERTE if zeile["frage"]["typ"] == "skala" else wert:
+    wert = baustein["wert"].strip()
+    if wert in SKALAWERTE if baustein["frage"]["typ"] == "skala" else wert:
         return True
-    antwort = antworten.get(zeile["frage"]["id"])
+    antwort = antworten.get(baustein["frage"]["id"])
     return antwort is not None and antwort["aufnahme_id"] is not None
 
 
-def abschnitte(zeilen: list[dict]) -> list[list[dict]]:
-    """Fragen bis einschliesslich der ersten mit Zusatzinfo, dann bis zur nächsten usw.
+def _fragen(teil: list[dict]) -> list[dict]:
+    return [b for b in teil if b["art"] == "frage"]
 
-    Eine Zusatzinfo nach der letzten Frage ergibt einen leeren Schlussabschnitt.
+
+def abschnitte(bausteine: list[dict]) -> list[list[dict]]:
+    """Teilt den Ablauf vor jeder Zusatzinfo, der im laufenden Abschnitt eine Frage vorausgeht.
+
+    Zusatzinfos vor der ersten Frage gehören zum ersten Abschnitt, mehrere Zusatzinfos
+    hintereinander zum selben. Jeder weitere Abschnitt beginnt mit einer Zusatzinfo; eine
+    Zusatzinfo nach der letzten Frage ergibt einen Schlussabschnitt ohne Fragen.
     """
     teile: list[list[dict]] = [[]]
-    for zeile in zeilen:
-        teile[-1].append(zeile)
-        if zeile["frage"]["zusatzinfo"]:
+    for baustein in bausteine:
+        if baustein["art"] == "zusatzinfo" and _fragen(teile[-1]):
             teile.append([])
+        teile[-1].append(baustein)
     return teile
 
 
-def offene_abschnitte(zeilen: list[dict], antworten: Mapping[int, sqlite3.Row]) -> int:
+def offene_abschnitte(bausteine: list[dict], antworten: Mapping[int, sqlite3.Row]) -> int:
     """Zahl der offenen Abschnitte (mindestens 1).
 
     Ein Abschnitt geht auf, wenn alle Fragen des vorherigen beantwortet sind. Hat eine Frage
     schon eine Antwort, bleibt alles bis zu ihr offen, auch wenn eine frühere gelöscht wurde.
     """
-    teile = abschnitte(zeilen)
-    beantwortet = [[_beantwortet(z, antworten) for z in teil] for teil in teile]
+    teile = abschnitte(bausteine)
+    beantwortet = [[_beantwortet(b, antworten) for b in _fragen(teil)] for teil in teile]
     offen = max((i + 1 for i, teil in enumerate(beantwortet) if any(teil)), default=1)
     while offen < len(teile) and all(beantwortet[offen - 1]):
         offen += 1
@@ -162,18 +173,19 @@ def offene_abschnitte(zeilen: list[dict], antworten: Mapping[int, sqlite3.Row]) 
 def offene_abschnitte_gespeichert(db: sqlite3.Connection, konto_id: int, runde_id: int) -> int:
     """Wie `offene_abschnitte`, nur aus den gespeicherten Antworten des Kontos."""
     antworten = antworten_der_runde(db, konto_id, runde_id)
-    return offene_abschnitte(_zeilen(db, runde_id, antworten), antworten)
+    return offene_abschnitte(_bausteine(db, runde_id, antworten), antworten)
 
 
 def neu_geoeffnete_info(
     db: sqlite3.Connection, konto_id: int, runde_id: int, vorher: int
 ) -> int | None:
-    """Frage-Id der ersten Zusatzinfo, die seit `vorher` offenen Abschnitten aufging."""
+    """Id der ersten Zusatzinfo, die seit `vorher` offenen Abschnitten aufging."""
     antworten = antworten_der_runde(db, konto_id, runde_id)
-    zeilen = _zeilen(db, runde_id, antworten)
-    if offene_abschnitte(zeilen, antworten) <= vorher:
+    bausteine = _bausteine(db, runde_id, antworten)
+    if offene_abschnitte(bausteine, antworten) <= vorher:
         return None
-    return abschnitte(zeilen)[vorher - 1][-1]["frage"]["id"]
+    # Jeder Abschnitt nach dem ersten beginnt mit einer Zusatzinfo.
+    return abschnitte(bausteine)[vorher][0]["zusatzinfo"]["id"]
 
 
 def oeffnet_neuen_abschnitt(
@@ -184,21 +196,25 @@ def oeffnet_neuen_abschnitt(
     Dort wird nichts gespeichert; was offen war, zeigt das Formular selbst: an seinen Feldern
     und am Feld «offen», denn eine Zusatzinfo nach der letzten Frage hat kein eigenes Feld.
     """
-    zeilen = _zeilen(db, runde_id, {}, eingaben)
-    teile = abschnitte(zeilen)
+    bausteine = _bausteine(db, runde_id, {}, eingaben)
+    teile = abschnitte(bausteine)
     im_formular = max(
-        (i + 1 for i, teil in enumerate(teile) if any(z["feld"] in eingaben for z in teil)),
+        (
+            i + 1
+            for i, teil in enumerate(teile)
+            if any(b["feld"] in eingaben for b in _fragen(teil))
+        ),
         default=1,
     )
     gemeldet = eingaben.get("offen", "")
     if re.fullmatch(r"[0-9]{1,3}", gemeldet):
         im_formular = max(im_formular, int(gemeldet))
-    return offene_abschnitte(zeilen, {}) > im_formular
+    return offene_abschnitte(bausteine, {}) > im_formular
 
 
 def _hinweis_zusatzinfo(teil: list[dict], danach: list[dict]) -> str:
-    oben = "die Frage oben" if len(teil) == 1 else "alle Fragen oben"
-    weitere = " mit weiteren Fragen" if danach else ""
+    oben = "die Frage oben" if len(_fragen(teil)) == 1 else "alle Fragen oben"
+    weitere = " mit weiteren Fragen" if _fragen(danach) else ""
     return (
         f"Sobald du {oben} beantwortet und gespeichert hast, folgt eine Zusatzinformation{weitere}."
     )
@@ -219,23 +235,23 @@ def kontext_runde(
     konto_id = ansicht.konto_id
     antworten = antworten_der_runde(db, konto_id, runde_id) if konto_id is not None else {}
     fehler = fehler or {}
-    zeilen = _zeilen(db, runde_id, antworten, eingaben, fehler)
+    bausteine = _bausteine(db, runde_id, antworten, eingaben, fehler)
     # Lehrperson: nur Gespeichertes zählt (auch auf einer Fehlerseite). Gast und Vorschau
     # speichern nie, dort zählt der eben abgeschickte Wert.
-    massgebend = _zeilen(db, runde_id, antworten) if ansicht.speichert else zeilen
+    massgebend = _bausteine(db, runde_id, antworten) if ansicht.speichert else bausteine
     offen = offene_abschnitte(massgebend, antworten)
-    teile = abschnitte(zeilen)
-    gesperrt = teile[offen - 1][-1] if offen < len(teile) else None
+    teile = abschnitte(bausteine)
+    sichtbar = [b for teil in teile[:offen] for b in teil]
     return {
         "ansicht": ansicht,
         "bereich": "runden",
         "meldung": meldung or (MELDUNG_FEHLER if fehler else None),
         "runde": runde,
-        "zeilen": [zeile for teil in teile[:offen] for zeile in teil],
+        "bausteine": sichtbar,
+        "hat_fragen": bool(_fragen(sichtbar)),
         "offen": offen,
-        "gesperrt_nach": None if gesperrt is None else gesperrt["frage"]["id"],
         "hinweis_zusatzinfo": (
-            None if gesperrt is None else _hinweis_zusatzinfo(teile[offen - 1], teile[offen])
+            None if offen >= len(teile) else _hinweis_zusatzinfo(teile[offen - 1], teile[offen])
         ),
         "antworten": antworten,
         "zuletzt": max((a["geaendert"] for a in antworten.values()), default=None),

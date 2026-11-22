@@ -40,6 +40,7 @@ from app.inhalte import (
     runden,
     speichere_allgemein,
     verschiebe,
+    verschiebe_im_ablauf,
     zaehle_antworten_frage,
     zaehle_antworten_runde,
     zaehle_inhalte,
@@ -243,18 +244,18 @@ def test_verschiebe_frage(db):
     a, b, c = (_frage(db, r1, t) for t in "abc")
     _frage(db, r2, "x")
     _frage(db, r2, "y")
-    verschiebe(db, "frage", c, "hoch")
+    verschiebe_im_ablauf(db, "frage", c, "hoch")
     assert _texte(db, r1) == ["a", "c", "b"]
     assert [f["reihenfolge"] for f in fragen(db, r1)] == [1, 2, 3]
-    verschiebe(db, "frage", a, "hoch")
-    verschiebe(db, "frage", b, "runter")
+    verschiebe_im_ablauf(db, "frage", a, "hoch")
+    verschiebe_im_ablauf(db, "frage", b, "runter")
     assert _texte(db, r1) == ["a", "c", "b"]
     assert _texte(db, r2) == ["x", "y"]
     assert [f["reihenfolge"] for f in fragen(db, r2)] == [1, 2]
     with pytest.raises(ValueError):
-        verschiebe(db, "frage", a, "seitlich")
+        verschiebe_im_ablauf(db, "frage", a, "seitlich")
     with pytest.raises(ValueError):
-        verschiebe(db, "unbekannt", a, "hoch")
+        verschiebe_im_ablauf(db, "unbekannt", a, "hoch")
 
 
 def test_verschiebe_repariert_reihenfolge(db):
@@ -262,7 +263,7 @@ def test_verschiebe_repariert_reihenfolge(db):
     ids = [_frage(db, rid, t) for t in "abc"]
     for fid, wert in zip(ids, (0, 0, 5)):
         db.execute("UPDATE fragen SET reihenfolge = ? WHERE id = ?", (wert, fid))
-    verschiebe(db, "frage", ids[0], "hoch")
+    verschiebe_im_ablauf(db, "frage", ids[0], "hoch")
     assert [f["reihenfolge"] for f in fragen(db, rid)] == [1, 2, 3]
     assert _texte(db, rid) == ["a", "b", "c"]
 
@@ -270,7 +271,7 @@ def test_verschiebe_repariert_reihenfolge(db):
 def test_verschiebe_unbekannter_eintrag_wirft_nicht(db):
     rid = _runde(db)
     _frage(db, rid)
-    verschiebe(db, "frage", 999, "hoch")
+    verschiebe_im_ablauf(db, "frage", 999, "hoch")
     assert len(fragen(db, rid)) == 1
 
 

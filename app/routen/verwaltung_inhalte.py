@@ -13,15 +13,16 @@ from app.db import hole_db
 from app.eingaben import Gesperrt, InhaltFehler
 from app.inhalte import (
     NichtGefunden,
+    ablauf,
     aendere_frage,
     aendere_impuls,
     aendere_info,
     aendere_leitfrage,
     aendere_runde,
+    aendere_zusatzinfo,
     datum_vorschlag_impuls,
     datum_vorschlag_runde,
     frage,
-    fragen,
     impuls,
     impulse,
     info_abschnitt,
@@ -31,6 +32,7 @@ from app.inhalte import (
     lege_info_an,
     lege_leitfrage_an,
     lege_runde_an,
+    lege_zusatzinfo_an,
     leitfrage,
     leitfragen,
     lies_projektstart,
@@ -40,14 +42,16 @@ from app.inhalte import (
     loesche_info,
     loesche_leitfrage,
     loesche_runde,
+    loesche_zusatzinfo,
     runde,
     runden,
     speichere_allgemein,
     verschiebe,
-    wartende_zusatzinfo,
+    verschiebe_im_ablauf,
     zaehle_antworten_frage,
     zaehle_antworten_runde,
     zaehle_inhalte,
+    zusatzinfo,
 )
 from app.sitzung import braucht_auftraggeberin
 from app.texte import REGISTER, lies_text, lies_texte, lies_textstand, speichere_text
@@ -236,8 +240,7 @@ def runde_seite(request: Request, runde_id: Id, db: DB, heute: HEUTE):
         "verwaltung/inhalte/runde.html",
         {
             "runde": zeile,
-            "fragen": fragen(db, runde_id),
-            "wartende_zusatzinfo": wartende_zusatzinfo(db, runde_id),
+            "ablauf": _ablauf_mit_vermerk(db, runde_id),
             "projektstart": start,
             "zp": zeitplan(zeile["freischaltdatum"], start, heute),
             "meldung": _meldung(request),
@@ -382,22 +385,19 @@ def _frage_formular(
     )
 
 
-def _frage_werte(typ: str, text: str, skala_min_text: str, skala_max_text: str, zusatzinfo: str):
+def _frage_werte(typ: str, text: str, skala_min_text: str, skala_max_text: str):
     return {
         "typ": typ,
         "text": text,
         "skala_min_text": skala_min_text,
         "skala_max_text": skala_max_text,
-        "zusatzinfo": zusatzinfo,
     }
 
 
 def _neue_frage_seite(
     request: Request, db: sqlite3.Connection, zeile_runde, werte=None, fehler=None, status=200
 ):
-    # Eine Zusatzinfo, die noch bei der Runde wartet, steht bei der ersten Frage vorbelegt.
-    wartend = wartende_zusatzinfo(db, zeile_runde["id"]) or ""
-    werte = werte or _frage_werte("freitext", "", "", "", wartend)
+    werte = werte or _frage_werte("freitext", "", "", "")
     seite = f"{RUNDEN}/{zeile_runde['id']}"
     return _frage_formular(request, "Neue Frage", f"{seite}/fragen", seite, werte, fehler, status)
 
@@ -416,16 +416,13 @@ def frage_anlegen(
     text: Annotated[str, Form()] = "",
     skala_min_text: Annotated[str, Form()] = "",
     skala_max_text: Annotated[str, Form()] = "",
-    zusatzinfo: Annotated[str, Form()] = "",
 ):
     zeile = _oder_404(runde(db, runde_id))
     try:
         with _vorhanden():
-            frage_id = lege_frage_an(
-                db, runde_id, typ, text, skala_min_text, skala_max_text, zusatzinfo
-            )
+            frage_id = lege_frage_an(db, runde_id, typ, text, skala_min_text, skala_max_text)
     except InhaltFehler as fehler:
-        werte = _frage_werte(typ, text, skala_min_text, skala_max_text, zusatzinfo)
+        werte = _frage_werte(typ, text, skala_min_text, skala_max_text)
         return _neue_frage_seite(request, db, zeile, werte, {fehler.feld: fehler.meldung}, 400)
     return _weiter(f"{RUNDEN}/{runde_id}", "angelegt", f"frage-{frage_id}")
 
@@ -437,7 +434,6 @@ def _frage_bearbeiten_seite(request: Request, zeile, werte=None, fehler=None, st
             zeile["text"],
             zeile["skala_min_text"] or "",
             zeile["skala_max_text"] or "",
-            zeile["zusatzinfo"] or "",
         )
     return _frage_formular(
         request,
@@ -465,14 +461,13 @@ def frage_speichern(
     text: Annotated[str, Form()] = "",
     skala_min_text: Annotated[str, Form()] = "",
     skala_max_text: Annotated[str, Form()] = "",
-    zusatzinfo: Annotated[str, Form()] = "",
 ):
     zeile = _oder_404(frage(db, frage_id))
     try:
         with _vorhanden():
-            aendere_frage(db, frage_id, typ, text, skala_min_text, skala_max_text, zusatzinfo)
+            aendere_frage(db, frage_id, typ, text, skala_min_text, skala_max_text)
     except InhaltFehler as fehler:
-        werte = _frage_werte(typ, text, skala_min_text, skala_max_text, zusatzinfo)
+        werte = _frage_werte(typ, text, skala_min_text, skala_max_text)
         return _frage_bearbeiten_seite(request, zeile, werte, {fehler.feld: fehler.meldung}, 400)
     return _weiter(f"{RUNDEN}/{zeile['runde_id']}", "gespeichert", f"frage-{frage_id}")
 
@@ -481,7 +476,7 @@ def frage_speichern(
 def frage_verschieben(db: DB, frage_id: Id, richtung: Annotated[str, Form()] = ""):
     zeile = _oder_404(frage(db, frage_id))
     try:
-        verschiebe(db, "frage", frage_id, richtung)
+        verschiebe_im_ablauf(db, "frage", frage_id, richtung)
     except ValueError:
         raise HTTPException(400) from None
     return _weiter(f"{RUNDEN}/{zeile['runde_id']}", anker=f"frage-{frage_id}")
@@ -501,8 +496,6 @@ def _frage_loeschen_seite(request: Request, zeile, antworten: int, status: int =
             "Damit keine Antworten verloren gehen, lässt sie sich nicht löschen. "
             "Den Text kannst du weiterhin ändern."
         )
-    elif zeile["zusatzinfo"]:
-        kontext["folgen"] = "Die Zusatzinfo nach dieser Frage wird mitgelöscht."
     return _loeschen_seite(request, status, **kontext)
 
 
@@ -520,6 +513,140 @@ def frage_loeschen(request: Request, frage_id: Id, db: DB):
             loesche_frage(db, frage_id)
     except Gesperrt as gesperrt:
         return _frage_loeschen_seite(request, zeile, gesperrt.anzahl, 409)
+    return _weiter(f"{RUNDEN}/{zeile['runde_id']}", "geloescht")
+
+
+# ---------- Zusatzinfos ----------
+
+ZUSATZINFOS = f"{INHALTE}/zusatzinfos"
+
+
+def _ablauf_mit_vermerk(db: sqlite3.Connection, runde_id: int) -> list[dict]:
+    """Ablauf der Runde; jede Zusatzinfo weiss, ob vor ihr schon eine Frage steht.
+
+    Die Lehrperson sieht eine Zusatzinfo ohne Frage davor sofort, sonst erst nach den Fragen
+    davor (Regel in `seiten_lehrperson.abschnitte`).
+    """
+    bausteine, frage_davor = [], False
+    for baustein in ablauf(db, runde_id):
+        bausteine.append(baustein | {"sofort": not frage_davor})
+        frage_davor = frage_davor or baustein["art"] == "frage"
+    return bausteine
+
+
+def _zusatzinfo_formular(request: Request, ueberschrift, aktion, abbrechen, werte, fehler, status):
+    return templates.TemplateResponse(
+        request,
+        "verwaltung/inhalte/formular_zusatzinfo.html",
+        {
+            "ueberschrift": ueberschrift,
+            "aktion": aktion,
+            "abbrechen": abbrechen,
+            "werte": werte,
+            "fehler": fehler or {},
+        },
+        status_code=status,
+    )
+
+
+def _neue_zusatzinfo_seite(request: Request, runde_id: int, inhalt="", fehler=None, status=200):
+    seite = f"{RUNDEN}/{runde_id}"
+    return _zusatzinfo_formular(
+        request,
+        "Neue Zusatzinfo",
+        f"{seite}/zusatzinfos",
+        seite,
+        {"inhalt": inhalt},
+        fehler,
+        status,
+    )
+
+
+@router.get("/runden/{runde_id}/zusatzinfos/neu")
+def zusatzinfo_neu(request: Request, runde_id: Id, db: DB):
+    _oder_404(runde(db, runde_id))
+    return _neue_zusatzinfo_seite(request, runde_id)
+
+
+@router.post("/runden/{runde_id}/zusatzinfos", dependencies=[Depends(pruefe_csrf)])
+def zusatzinfo_anlegen(request: Request, runde_id: Id, db: DB, inhalt: Annotated[str, Form()] = ""):
+    _oder_404(runde(db, runde_id))
+    try:
+        with _vorhanden():
+            info_id = lege_zusatzinfo_an(db, runde_id, inhalt)
+    except InhaltFehler as fehler:
+        return _neue_zusatzinfo_seite(request, runde_id, inhalt, {fehler.feld: fehler.meldung}, 400)
+    return _weiter(f"{RUNDEN}/{runde_id}", "angelegt", f"zusatzinfo-{info_id}")
+
+
+def _zusatzinfo_bearbeiten_seite(request: Request, zeile, inhalt=None, fehler=None, status=200):
+    return _zusatzinfo_formular(
+        request,
+        "Zusatzinfo bearbeiten",
+        f"{ZUSATZINFOS}/{zeile['id']}",
+        f"{RUNDEN}/{zeile['runde_id']}#zusatzinfo-{zeile['id']}",
+        {"inhalt": zeile["inhalt"] if inhalt is None else inhalt},
+        fehler,
+        status,
+    )
+
+
+@router.get("/zusatzinfos/{info_id}")
+def zusatzinfo_bearbeiten(request: Request, info_id: Id, db: DB):
+    return _zusatzinfo_bearbeiten_seite(request, _oder_404(zusatzinfo(db, info_id)))
+
+
+@router.post("/zusatzinfos/{info_id}", dependencies=[Depends(pruefe_csrf)])
+def zusatzinfo_speichern(
+    request: Request, info_id: Id, db: DB, inhalt: Annotated[str, Form()] = ""
+):
+    zeile = _oder_404(zusatzinfo(db, info_id))
+    try:
+        with _vorhanden():
+            aendere_zusatzinfo(db, info_id, inhalt)
+    except InhaltFehler as fehler:
+        return _zusatzinfo_bearbeiten_seite(
+            request, zeile, inhalt, {fehler.feld: fehler.meldung}, 400
+        )
+    return _weiter(f"{RUNDEN}/{zeile['runde_id']}", "gespeichert", f"zusatzinfo-{info_id}")
+
+
+@router.post("/zusatzinfos/{info_id}/verschieben", dependencies=[Depends(pruefe_csrf)])
+def zusatzinfo_verschieben(db: DB, info_id: Id, richtung: Annotated[str, Form()] = ""):
+    zeile = _oder_404(zusatzinfo(db, info_id))
+    try:
+        verschiebe_im_ablauf(db, "zusatzinfo", info_id, richtung)
+    except ValueError:
+        raise HTTPException(400) from None
+    return _weiter(f"{RUNDEN}/{zeile['runde_id']}", anker=f"zusatzinfo-{info_id}")
+
+
+def _zusatzinfo_loeschen_seite(request: Request, zeile):
+    return _loeschen_seite(
+        request,
+        ueberschrift="Zusatzinfo löschen",
+        frage_text=f"Zusatzinfo ‹{_anfang(zeile['inhalt'])}› löschen?",
+        aktion=f"{ZUSATZINFOS}/{zeile['id']}/loeschen",
+        zurueck=f"{RUNDEN}/{zeile['runde_id']}#zusatzinfo-{zeile['id']}",
+    )
+
+
+def _anfang(text: str, laenge: int = 60) -> str:
+    """Erste Zeile, gekürzt: genug, um die Zusatzinfo auf der Löschseite zu erkennen."""
+    zeile = text.strip().splitlines()[0] if text.strip() else ""
+    return zeile if len(zeile) <= laenge else zeile[: laenge - 1].rstrip() + "…"
+
+
+@router.get("/zusatzinfos/{info_id}/loeschen")
+def zusatzinfo_loeschen_seite(request: Request, info_id: Id, db: DB):
+    return _zusatzinfo_loeschen_seite(request, _oder_404(zusatzinfo(db, info_id)))
+
+
+@router.post("/zusatzinfos/{info_id}/loeschen", dependencies=[Depends(pruefe_csrf)])
+def zusatzinfo_loeschen(info_id: Id, db: DB):
+    zeile = _oder_404(zusatzinfo(db, info_id))
+    with _vorhanden():
+        loesche_zusatzinfo(db, info_id)
     return _weiter(f"{RUNDEN}/{zeile['runde_id']}", "geloescht")
 
 

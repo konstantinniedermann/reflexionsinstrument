@@ -12,8 +12,9 @@ def test_lege_runde_an(db):
         (rid,),
     ).fetchall()
     assert [z[0] for z in zeilen] == [f1, f2]
-    assert (zeilen[0][1], zeilen[0][4]) == ("freitext", 1)
-    assert tuple(zeilen[1][1:]) == ("skala", "wenig", "viel", 2)
+    # Gerade Nummern lassen Platz für Zusatzinfos dazwischen
+    assert (zeilen[0][1], zeilen[0][4]) == ("freitext", 2)
+    assert tuple(zeilen[1][1:]) == ("skala", "wenig", "viel", 4)
     assert (
         db.execute("SELECT freischaltdatum FROM runden WHERE id = ?", (rid,)).fetchone()[0]
         == "2026-11-23"
@@ -53,7 +54,7 @@ def test_abzug_alle_tabellen(db):
             "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
         )
     }
-    assert len(namen) == 12
+    assert len(namen) == 13
     assert set(testdaten.abzug(db)) == namen
 
 

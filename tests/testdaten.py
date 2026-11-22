@@ -20,7 +20,8 @@ def lege_runde_an(
 ) -> tuple[int, list[int]]:
     """Legt eine Runde mit Fragen an; Skala-Fragen bekommen die Beschriftungen wenig/viel.
 
-    `zusatzinfos`: Stelle der Frage (ab 0) -> Zusatzinfo nach dieser Frage (Spalte ab Migration 006).
+    `zusatzinfos`: Stelle der Frage (ab 0) -> Zusatzinfo direkt nach dieser Frage; -1 steht vor
+    der ersten Frage. Fragen bekommen die Nummern 2, 4, 6 …, eine Zusatzinfo die Nummer dahinter.
     """
     rid = db.execute(
         "INSERT INTO runden (titel, fallbeispiel, freischaltdatum) VALUES (?, ?, ?)",
@@ -33,12 +34,23 @@ def lege_runde_an(
             db.execute(
                 "INSERT INTO fragen (runde_id, typ, text, skala_min_text, skala_max_text, "
                 "reihenfolge) VALUES (?, ?, ?, ?, ?, ?)",
-                (rid, typ, text, wenig, viel, nummer),
+                (rid, typ, text, wenig, viel, 2 * nummer),
             ).lastrowid
         )
-    for stelle, info in (zusatzinfos or {}).items():
-        db.execute("UPDATE fragen SET zusatzinfo = ? WHERE id = ?", (info, ids[stelle]))
+    for stelle, info in sorted((zusatzinfos or {}).items()):
+        db.execute(
+            "INSERT INTO zusatzinfos (runde_id, inhalt, reihenfolge) VALUES (?, ?, ?)",
+            (rid, info, 2 * (stelle + 1) + 1),
+        )
     return rid, ids
+
+
+def zusatzinfo_ids(db, runde_id: int) -> list[int]:
+    """Ids der Zusatzinfos einer Runde in ihrer Reihenfolge."""
+    zeilen = db.execute(
+        "SELECT id FROM zusatzinfos WHERE runde_id = ? ORDER BY reihenfolge, id", (runde_id,)
+    )
+    return [z["id"] for z in zeilen]
 
 
 def lege_impuls_an(db, text: str = "Impuls", sichtbar_ab: str = "2026-11-23") -> int:

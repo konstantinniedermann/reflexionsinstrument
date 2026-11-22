@@ -9,13 +9,19 @@
 {% if runde.fallbeispiel %}
 <section class="fall formatiert flaeche bereich--runden" aria-label="Fallbeispiel">{{ runde.fallbeispiel | formatiert }}</section>
 {% endif %}
-{% if zeilen %}
+{% macro zusatzinfo_abschnitt(z) -%}
+<section class="fall formatiert flaeche bereich--runden" id="zusatzinfo-{{ z.id }}" aria-label="Zusatzinfo">{{ z.inhalt | formatiert }}</section>
+{%- endmacro %}
+{% if hat_fragen %}
 <div class="hinweis formatiert">{{ hinweis | formatiert }}</div>
 <form class="formular" method="post" action="{{ ansicht.url('/runden/' ~ runde.id) }}"{% if entwurf %} data-entwurf="{{ entwurf }}"{% endif %}>
   {{ csrf_feld(request) }}
   {% if not ansicht.speichert %}<input type="hidden" name="offen" value="{{ offen }}">{% endif %}
   {% include "lehrperson/_entwurf_hinweis.html" %}
-  {% for zeile in zeilen %}
+  {% for zeile in bausteine %}
+  {% if zeile.art == "zusatzinfo" %}
+  {{ zusatzinfo_abschnitt(zeile.zusatzinfo) }}
+  {% else %}
   {% set frage = zeile.frage %}
   {% if frage.typ == "skala" %}
   <fieldset class="feld"{% if zeile.fehler %} aria-describedby="fehler-{{ zeile.feld }}"{% endif %}>
@@ -55,20 +61,20 @@
     {% endif %}
   </div>
   {% endif %}
-  {% if frage.zusatzinfo %}
-  {% if frage.id == gesperrt_nach %}
-  <p class="gedaempft" id="zusatzinfo-{{ frage.id }}">{{ hinweis_zusatzinfo }}</p>
-  {% else %}
-  <section class="fall formatiert flaeche bereich--runden" id="zusatzinfo-{{ frage.id }}" aria-label="Zusatzinfo">{{ frage.zusatzinfo | formatiert }}</section>
-  {% endif %}
   {% endif %}
   {% endfor %}
+  {% if hinweis_zusatzinfo %}
+  <p class="gedaempft" id="weiter-hinweis">{{ hinweis_zusatzinfo }}</p>
+  {% endif %}
   <button type="submit" class="knopf">Speichern</button>
 </form>
 <p class="gedaempft">Du kannst jederzeit zurückkommen und deine Antworten ändern.</p>
 {% if ansicht.speichert and antworten %}
 <p><a href="{{ ansicht.url('/runden/' ~ runde.id ~ '/loeschen') }}">Meine Antworten zu dieser Runde löschen</a></p>
 {% endif %}
+{% elif bausteine %}
+{% for zeile in bausteine %}{{ zusatzinfo_abschnitt(zeile.zusatzinfo) }}
+{% endfor %}
 {% else %}
 <p>Zu dieser Runde gibt es noch keine Fragen.</p>
 {% endif %}

@@ -1,4 +1,4 @@
-"""Zusatzinfos einer Runde: jede steht nach ihrer Frage und erscheint Abschnitt für Abschnitt.
+"""Zusatzinfos einer Runde: eigene Bausteine im Ablauf, Abschnitt für Abschnitt sichtbar.
 
 Ein Abschnitt geht auf, wenn alle Fragen des vorherigen beantwortet sind (Text, Skalawert oder
 Aufnahme; «Keine Angabe» zählt nicht) oder eine Frage ab ihm schon eine Antwort hat.
@@ -76,13 +76,14 @@ def test_ohne_antwort_nur_erste_frage(runde, client):
         assert f'name="antwort_{f}"' not in text
 
 
-def test_abschnitt_fuer_abschnitt_mit_sprung(runde, client):
+def test_abschnitt_fuer_abschnitt_mit_sprung(runde, client, db):
     rid, (f1, f2, f3, f4) = runde
+    info_a, info_b = testdaten.zusatzinfo_ids(db, rid)
     antwort = _post(client, rid, {f"antwort_{f1}": "Mein Gedanke", "anker": f"frage-{f1}"})
-    assert antwort.headers["location"].endswith(f"#zusatzinfo-{f1}")
+    assert antwort.headers["location"].endswith(f"#zusatzinfo-{info_a}")
     text = _seite(client, rid)
     assert _stufe(text) == 2
-    assert f'id="zusatzinfo-{f1}"' in text
+    assert f'id="zusatzinfo-{info_a}"' in text
     assert f"{ALLE} mit weiteren Fragen." in text
     assert text.index("Erste Frage") < text.index("Wendung") < text.index("Zweite Frage")
 
@@ -92,7 +93,7 @@ def test_abschnitt_fuer_abschnitt_mit_sprung(runde, client):
     assert _stufe(_seite(client, rid)) == 2
 
     antwort = _post(client, rid, {f"antwort_{f2}": "Weiter", f"antwort_{f3}": "4"})
-    assert antwort.headers["location"].endswith(f"#zusatzinfo-{f3}")
+    assert antwort.headers["location"].endswith(f"#zusatzinfo-{info_b}")
     text = _seite(client, rid)
     assert _stufe(text) == 3
     assert text.index("Dritte Frage") < text.index("Lage") < text.index("Vierte Frage")
@@ -203,7 +204,8 @@ def test_zusatzinfo_nach_der_letzten_frage(db, client, lehrperson, heute_ist):
     text = _seite(client, rid)
     assert f"{EINE}." in text
     antwort = _post(client, rid, {f"antwort_{f1}": "Ja"})
-    assert antwort.headers["location"].endswith(f"#zusatzinfo-{f1}")
+    (info,) = testdaten.zusatzinfo_ids(db, rid)
+    assert antwort.headers["location"].endswith(f"#zusatzinfo-{info}")
     text = _seite(client, rid)
     assert "<strong>Wendung</strong>" in text
     assert SATZ not in text
@@ -253,15 +255,16 @@ def test_gast_spielt_abschnitte_durch(runde, client):
     assert MELDUNG_GAST in antwort.text
 
 
-def test_aufnahme_auf_erste_frage_springt_zur_zusatzinfo(runde, client):
+def test_aufnahme_auf_erste_frage_springt_zur_zusatzinfo(runde, client, db):
     rid, (f1, _, _, _) = runde
+    info_a, _ = testdaten.zusatzinfo_ids(db, rid)
     seite = f"/lehrperson/runden/{rid}/fragen/{f1}/aufnahme"
     datei = {"aufnahme": ("aufnahme.webm", testdaten.WEBM_ANFANG + bytes(60), "audio/webm")}
     antwort = client.post(
         seite, files=datei, data={"csrf": csrf_von(client, seite)}, follow_redirects=False
     )
     assert antwort.status_code == 303
-    assert antwort.headers["location"].endswith(f"#zusatzinfo-{f1}")
+    assert antwort.headers["location"].endswith(f"#zusatzinfo-{info_a}")
     assert _stufe(_seite(client, rid)) == 2
     # zweite Aufnahme (ersetzen): Zusatzinfo war schon offen, Sprung wie bisher zur Frage
     antwort = client.post(
@@ -292,3 +295,84 @@ def test_vorschau_zeigt_zusatzinfo_nach_abschicken(runde, client, auftraggeberin
     assert f'role="status">{MELDUNG_VORSCHAU}<' in start
     # Andere Werte von «erledigt» zeigen nichts
     assert 'role="status"' not in client.get(f"{basis}?erledigt=gespeichert").text
+
+
+# ---------- Freier Ablauf (Wunsch 22.11.) ----------
+
+
+def _runde_mit(db, client, lehrperson, heute_ist, fragen, zusatzinfos, fallbeispiel=None):
+    rid, ids = testdaten.lege_runde_an(
+        db, "Frei", "2026-11-23", fragen, fallbeispiel=fallbeispiel, zusatzinfos=zusatzinfos
+    )
+    db.commit()
+    heute_ist(date(2026, 11, 24))
+    als_lehrperson(client, lehrperson)
+    return rid, ids
+
+
+ZWEI = (("freitext", "Erste Frage"), ("freitext", "Zweite Frage"), ("freitext", "Dritte Frage"))
+
+
+def test_zwei_fragen_info_frage(db, client, lehrperson, heute_ist):
+    """Ihr Beispiel für Runde 4: zuerst zwei Fragen, dann eine Information, dann eine Frage."""
+    rid, (f1, f2, _) = _runde_mit(db, client, lehrperson, heute_ist, ZWEI, {1: INFO_A})
+    text = _seite(client, rid)
+    assert "Zweite Frage" in text and "Wendung" not in text and "Dritte Frage" not in text
+    assert f"{ALLE} mit weiteren Fragen." in text
+    # Nur die erste beantwortet: noch zu
+    _post(client, rid, {f"antwort_{f1}": "a", "anker": f"frage-{f1}"})
+    assert "Wendung" not in _seite(client, rid)
+    antwort = _post(client, rid, {f"antwort_{f1}": "a", f"antwort_{f2}": "b"})
+    (info,) = testdaten.zusatzinfo_ids(db, rid)
+    assert antwort.headers["location"].endswith(f"#zusatzinfo-{info}")
+    text = _seite(client, rid)
+    assert text.index("Zweite Frage") < text.index("Wendung") < text.index("Dritte Frage")
+    assert SATZ not in text
+
+
+def test_info_vor_der_ersten_frage_steht_sofort_da(db, client, lehrperson, heute_ist):
+    """Runde ohne Fallbeispiel, die mit einer Information beginnt."""
+    rid, _ = _runde_mit(db, client, lehrperson, heute_ist, ZWEI, {-1: INFO_A})
+    text = _seite(client, rid)
+    assert text.index("Wendung") < text.index("Erste Frage")
+    assert "Dritte Frage" in text and SATZ not in text
+
+
+def test_zwei_infos_hintereinander_erscheinen_zusammen(db, client, lehrperson, heute_ist):
+    rid, (f1, _, _) = _runde_mit(db, client, lehrperson, heute_ist, ZWEI, {0: INFO_A})
+    testdaten_info = db.execute(
+        "INSERT INTO zusatzinfos (runde_id, inhalt, reihenfolge) VALUES (?, ?, 3)", (rid, INFO_B)
+    ).lastrowid
+    db.commit()
+    text = _seite(client, rid)
+    assert "Wendung" not in text and "Lage" not in text
+    assert f"{EINE} mit weiteren Fragen." in text
+    antwort = _post(client, rid, {f"antwort_{f1}": "a"})
+    erste = testdaten.zusatzinfo_ids(db, rid)[0]
+    assert erste != testdaten_info
+    assert antwort.headers["location"].endswith(f"#zusatzinfo-{erste}")
+    text = _seite(client, rid)
+    assert text.index("Erste Frage") < text.index("Wendung") < text.index("Lage")
+    assert text.index("Lage") < text.index("Zweite Frage")
+
+
+def test_runde_nur_mit_zusatzinfo(db, client, lehrperson, heute_ist):
+    rid, _ = _runde_mit(db, client, lehrperson, heute_ist, (), {-1: INFO_A})
+    antwort = client.get(f"/lehrperson/runden/{rid}")
+    assert antwort.status_code == 200
+    assert "<strong>Wendung</strong>" in antwort.text
+    assert '<form class="formular"' not in antwort.text
+    assert "noch keine Fragen" not in antwort.text
+
+
+def test_verschobene_info_versteckt_keine_antwort(db, client, lehrperson, heute_ist):
+    """Schiebt die Auftraggeberin eine Info vor eine schon beantwortete Frage, bleibt diese sichtbar."""
+    from app.inhalte import verschiebe_im_ablauf
+
+    rid, (f1, f2, f3) = _runde_mit(db, client, lehrperson, heute_ist, ZWEI, {1: INFO_A})
+    _post(client, rid, {f"antwort_{f1}": "a", f"antwort_{f2}": "b"})
+    (info,) = testdaten.zusatzinfo_ids(db, rid)
+    verschiebe_im_ablauf(db, "zusatzinfo", info, "hoch")  # jetzt: F1, Info, F2, F3
+    text = _seite(client, rid)
+    assert "Wendung" in text and f'name="antwort_{f2}"' in text
+    assert f'name="antwort_{f3}"' in text
