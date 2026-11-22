@@ -1025,3 +1025,34 @@ def test_leitfragen_heissen_unterstuetzende_fragen(client, auftraggeberin, db):
     assert "<h1>Unterstützende Fragen</h1>" in liste
     assert "freiwillig aufklappen" in liste
     assert "Neue unterstützende Frage" in client.get("/verwaltung/inhalte/leitfragen/neu").text
+
+
+def test_runde_loeschen_nennt_zusatzinfos(client, auftraggeberin, db):
+    rid = neue_runde(db)
+    neue_frage(db, rid)
+    db.execute("INSERT INTO zusatzinfos (runde_id, inhalt, reihenfolge) VALUES (?, 'I', 2)", (rid,))
+    nur_info = neue_runde(db, "2026-11-30")
+    db.execute(
+        "INSERT INTO zusatzinfos (runde_id, inhalt, reihenfolge) VALUES (?, 'I', 1)", (nur_info,)
+    )
+    db.commit()
+    melde_an(client, auftraggeberin)
+    text = client.get(f"{RUNDEN}/{rid}/loeschen").text
+    assert "Die Runde und ihre 1 Frage und 1 Zusatzinfo werden gelöscht." in text
+    text = client.get(f"{RUNDEN}/{nur_info}/loeschen").text
+    assert "Die Runde und ihre 1 Zusatzinfo werden gelöscht." in text
+
+
+def test_verschieben_der_zusatzinfo_nennt_ihren_anfang(client, auftraggeberin, db):
+    rid = neue_runde(db)
+    neue_frage(db, rid)
+    db.execute(
+        "INSERT INTO zusatzinfos (runde_id, inhalt, reihenfolge) VALUES (?, ?, 2)",
+        (rid, "Eine **neue** Lage im Fall"),
+    )
+    db.commit()
+    melde_an(client, auftraggeberin)
+    assert (
+        'aria-label="‹Zusatzinfo: Eine neue Lage im Fall› nach oben"'
+        in client.get(f"{RUNDEN}/{rid}").text
+    )

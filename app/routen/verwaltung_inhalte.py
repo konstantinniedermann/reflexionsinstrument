@@ -327,9 +327,13 @@ def _runde_loeschen_seite(request: Request, zeile, antworten: int, status: int =
             "Ihre Angaben und die Texte ihrer Fragen kannst du weiterhin ändern."
         )
     else:
+        teile = []
         if zeile["anzahl_fragen"]:
-            fragen_text = zahl(zeile["anzahl_fragen"], "Frage", "Fragen")
-            kontext["folgen"] = f"Die Runde und ihre {fragen_text} werden gelöscht."
+            teile.append(zahl(zeile["anzahl_fragen"], "Frage", "Fragen"))
+        if zeile["anzahl_zusatzinfos"]:
+            teile.append(zahl(zeile["anzahl_zusatzinfos"], "Zusatzinfo", "Zusatzinfos"))
+        if teile:
+            kontext["folgen"] = f"Die Runde und ihre {' und '.join(teile)} werden gelöscht."
         else:
             kontext["folgen"] = "Die Runde wird gelöscht."
     return _loeschen_seite(request, status, **kontext)

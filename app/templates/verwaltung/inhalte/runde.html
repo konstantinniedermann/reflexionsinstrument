@@ -59,7 +59,7 @@
         <a href="/verwaltung/inhalte/zusatzinfos/{{ z.id }}">Bearbeiten</a>
         <a href="/verwaltung/inhalte/zusatzinfos/{{ z.id }}/loeschen">Löschen</a>
       </div>
-      {{ verschieben("/verwaltung/inhalte/zusatzinfos/" ~ z.id, "Zusatzinfo " ~ loop.index, loop.first, loop.last) }}
+      {{ verschieben("/verwaltung/inhalte/zusatzinfos/" ~ z.id, "Zusatzinfo: " ~ (z.inhalt | replace("**", "") | truncate(50, true, "…", 0)), loop.first, loop.last) }}
     </article>
     {% endif %}
   </li>

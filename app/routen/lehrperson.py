@@ -85,7 +85,7 @@ def runde_anzeigen(request: Request, db: DB, ansicht: ANSICHT, runde_id: Id):
 @router.post("/runden/{runde_id}", dependencies=[Depends(pruefe_csrf)])
 async def runde_speichern(request: Request, db: DB, ansicht: ANSICHT, runde_id: Id):
     formular = {k: v for k, v in (await request.form()).items() if isinstance(v, str)}
-    neue_info = None  # Zusatzinfo, die erst durch dieses Speichern aufging (Frage-Id)
+    neue_info = None  # Id der Zusatzinfo, die erst durch dieses Speichern aufging
     try:
         # Sichtbarkeit, Fragetypen und Speichern in einer Transaktion: Ein Typwechsel
         # dazwischen kann keine unsichtbare Antwort schreiben.

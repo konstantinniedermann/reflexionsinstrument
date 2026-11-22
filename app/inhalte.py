@@ -117,7 +117,9 @@ def loesche_alle_inhalte(db: sqlite3.Connection) -> None:
 
 _RUNDEN_SQL = (
     "SELECT r.id, r.titel, r.fallbeispiel, r.freischaltdatum, "
-    "(SELECT COUNT(*) FROM fragen f WHERE f.runde_id = r.id) AS anzahl_fragen FROM runden r"
+    "(SELECT COUNT(*) FROM fragen f WHERE f.runde_id = r.id) AS anzahl_fragen, "
+    "(SELECT COUNT(*) FROM zusatzinfos z WHERE z.runde_id = r.id) AS anzahl_zusatzinfos "
+    "FROM runden r"
 )
 
 
