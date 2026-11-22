@@ -167,16 +167,22 @@ def _runde_und_csrf(leitung, db):
 def test_post_runde_speichert_nichts(leitung, db):
     rid, (f1, f2), csrf = _runde_und_csrf(leitung, db)
     vorher = testdaten.abzug(db)
-    antwort = leitung.post(
-        f"{V}/2026-12-07/runden/{rid}",
-        data={"csrf": csrf, f"antwort_{f1}": "Mein Text", f"antwort_{f2}": "4"},
-    )
+    url = f"{V}/2026-12-07/runden/{rid}"
+    daten = {"csrf": csrf, f"antwort_{f1}": "Mein Text", f"antwort_{f2}": "4"}
+    # Kleiner Knopf: die Seite bleibt mit den Eingaben stehen
+    antwort = leitung.post(url, data=daten | {"anker": f"frage-{f1}"})
     assert antwort.status_code == 200
     assert re.search(r'role="status"[^>]*>[^<]*' + re.escape(MELDUNG_VORSCHAU), antwort.text)
     assert re.search(r"<textarea[^>]*>\s*Mein Text", antwort.text)
     assert re.search(
         r'<input[^>]*value="4"[^>]*checked|<input[^>]*checked[^>]*value="4"', antwort.text
     )
+    # Knopf unten: zur Startseite der Vorschau, dort steht der Hinweis
+    antwort = leitung.post(url, data=daten, follow_redirects=False)
+    assert antwort.status_code == 303
+    assert antwort.headers["location"] == f"{V}/2026-12-07?erledigt=nicht_gespeichert"
+    start = leitung.get(antwort.headers["location"]).text
+    assert re.search(r'role="status"[^>]*>[^<]*' + re.escape(MELDUNG_VORSCHAU), start)
     assert testdaten.abzug(db) == vorher
 
 

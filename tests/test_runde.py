@@ -121,10 +121,12 @@ def test_speichern_und_anzeigen(runde, client, db, lehrperson):
     rid, f1, f2 = runde
     antwort = _post(client, rid, {f"antwort_{f1}": "Text A", f"antwort_{f2}": "4"})
     assert antwort.status_code == 303
-    assert antwort.headers["location"] == f"/lehrperson/runden/{rid}?erledigt=gespeichert"
-    text = client.get(antwort.headers["location"]).text
-    assert "Gespeichert." in text
-    assert 'role="status"' in text
+    # Der Knopf unten schliesst die Runde ab: zurück zur Startseite mit Hinweis
+    assert antwort.headers["location"] == "/lehrperson?erledigt=runde_gespeichert"
+    start = client.get(antwort.headers["location"]).text
+    assert re.search(r'role="status">Deine Antworten sind gespeichert\.<', start)
+    assert "Beantwortet" in start
+    text = client.get(f"/lehrperson/runden/{rid}").text
     assert _feld(text, f"antwort_{f1}") == "Text A"
     assert _gewaehlt(text, f"antwort_{f2}") == "4"
     assert "Zuletzt gespeichert:" in text
@@ -158,9 +160,10 @@ def test_anker(runde, client):
     ziel = f"/lehrperson/runden/{rid}?erledigt=gespeichert"
     antwort = _post(client, rid, {f"antwort_{f1}": "x", "anker": f"frage-{f1}"})
     assert antwort.headers["location"] == f"{ziel}#frage-{f1}"
+    # Ein ungültiger Anker zählt wie der Knopf unten
     for anker in ["frage-1x", "javascript:x", "frage-" + "1" * 11, "frage-", "x"]:
         antwort = _post(client, rid, {"anker": anker})
-        assert antwort.headers["location"] == ziel, anker
+        assert antwort.headers["location"] == "/lehrperson?erledigt=runde_gespeichert", anker
 
 
 def test_anker_aufnahme(runde, client, db, lehrperson):

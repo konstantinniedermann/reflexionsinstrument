@@ -1,5 +1,6 @@
 """Inhalte der Seiten, getrennt von Route und Ansicht (Lehrperson, Gast, Vorschau)."""
 
+import re
 import sqlite3
 from collections.abc import Mapping
 
@@ -39,6 +40,9 @@ VORLAGEN: dict[str, str] = {
 }
 
 MELDUNG_FEHLER = "Bitte prüfe die markierten Felder."
+
+# Wert der kleinen Speichern-Knöpfe einer Runde; ohne gültigen Anker zählt der Knopf unten.
+ANKER = re.compile(r"(frage|aufnahme)-([0-9]{1,10})")
 
 
 def _entwurf(ansicht: Ansicht, formular: str) -> str | None:
@@ -170,6 +174,22 @@ def neu_geoeffnete_info(
     if offene_abschnitte(zeilen, antworten) <= vorher:
         return None
     return abschnitte(zeilen)[vorher - 1][-1]["frage"]["id"]
+
+
+def oeffnet_neuen_abschnitt(
+    db: sqlite3.Connection, runde_id: int, eingaben: Mapping[str, str]
+) -> bool:
+    """Gast und Vorschau: Öffnen die abgeschickten Werte einen Abschnitt ohne Feld im Formular?
+
+    Dort wird nichts gespeichert; was offen war, zeigt das Formular selbst.
+    """
+    zeilen = _zeilen(db, runde_id, {}, eingaben)
+    teile = abschnitte(zeilen)
+    im_formular = max(
+        (i + 1 for i, teil in enumerate(teile) if any(z["feld"] in eingaben for z in teil)),
+        default=1,
+    )
+    return offene_abschnitte(zeilen, {}) > im_formular
 
 
 def _hinweis_zusatzinfo(teil: list[dict], danach: list[dict]) -> str:

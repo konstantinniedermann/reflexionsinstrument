@@ -158,7 +158,7 @@ def test_verwerfen_nach_dem_anlegen(client, lehrperson, db, heute_ist):
         antwort = client.post(pfad, data={"csrf": csrf_von(client, pfad), "text": "Mein Text"})
         assert antwort.status_code == 303
         ziel = antwort.headers["location"]
-        assert ziel.endswith("?erledigt=gespeichert")
+        assert re.fullmatch(r"/lehrperson/tagebuch/\d+\?erledigt=gespeichert", ziel)
         seite = client.get(ziel).text
         assert f'data-entwurf-verwerfen="{schluessel}"' in seite
         # ohne die Bestätigung (spätere Besuche) kein Verwerfen

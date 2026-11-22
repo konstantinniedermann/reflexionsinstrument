@@ -149,9 +149,9 @@ def test_gast_speichern_verworfen(client, inhalte):
     f1, f2 = inhalte["f1"], inhalte["f2"]
     url = f"/gast/runden/{inhalte['offen']}"
     csrf = csrf_von(client, FORMULAR)
-    antwort = client.post(
-        url, data={"csrf": csrf, f"antwort_{f1}": "Mein Text", f"antwort_{f2}": "3"}
-    )
+    # Kleiner Knopf: die Seite bleibt mit den Eingaben stehen
+    daten = {"csrf": csrf, f"antwort_{f1}": "Mein Text", f"antwort_{f2}": "3"}
+    antwort = client.post(url, data=daten | {"anker": f"frage-{f1}"})
     assert antwort.status_code == 200
     assert re.search(r'role="status"[^>]*>[^<]*' + re.escape(MELDUNG_GAST), antwort.text)
     assert re.search(r"<textarea[^>]*>\s*Mein Text", antwort.text)
@@ -161,10 +161,18 @@ def test_gast_speichern_verworfen(client, inhalte):
     antwort = client.post(url, data={"csrf": csrf, f"antwort_{f2}": "7"})
     assert antwort.status_code == 400
     assert MELDUNG_GAST not in antwort.text
-    antwort = client.post(url, data={"csrf": csrf, f"antwort_{f1}": "<script>x</script>"})
+    antwort = client.post(
+        url, data={"csrf": csrf, f"antwort_{f1}": "<script>x</script>", "anker": f"frage-{f1}"}
+    )
     assert antwort.status_code == 200
     assert "&lt;script&gt;x&lt;/script&gt;" in antwort.text
     assert "<script>x" not in antwort.text
+    # Knopf unten: zur Startseite, dort steht der Hinweis
+    antwort = client.post(url, data=daten, follow_redirects=False)
+    assert antwort.status_code == 303
+    assert antwort.headers["location"] == "/gast?erledigt=nicht_gespeichert"
+    assert MELDUNG_GAST in client.get(antwort.headers["location"]).text
+    assert MELDUNG_GAST not in client.get("/gast").text
     antwort = client.post(
         "/gast/tagebuch/neu/frei",
         data={"csrf": csrf, "text": "Notiz"},
@@ -196,7 +204,9 @@ def _durchgang(client, i, seiten):
         f"/gast/tagebuch/neu/impuls/{i['impuls']}",
     ]
     gueltig = {f"antwort_{i['f1']}": "Mein Text", f"antwort_{i['f2']}": "3"}
-    assert client.post(runde, data={"csrf": csrf, **gueltig}).status_code == 200
+    assert client.post(runde, data={"csrf": csrf, **gueltig}).status_code == 303
+    klein = {"csrf": csrf, **gueltig, "anker": f"frage-{i['f1']}"}
+    assert client.post(runde, data=klein).status_code == 200
     assert client.post(runde, data={"csrf": csrf, f"antwort_{i['f2']}": "7"}).status_code == 400
     lang = {"csrf": csrf, f"antwort_{i['f1']}": "x" * 20_001}
     assert client.post(runde, data=lang).status_code == 400
