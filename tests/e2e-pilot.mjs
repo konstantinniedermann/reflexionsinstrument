@@ -377,13 +377,16 @@ async function ablaufLehrperson() {
   pruefe(!(await text()).includes("folgt eine Zusatzinformation"), "Runde 1: keine Ankündigung mehr");
   await keinUeberlauf("Runde 1 alle Abschnitte 390 px");
   await screenshot("25a-lp-runde-alle-abschnitte");
-  // Skala wählen, unten speichern: Startseite zeigt «Beantwortet»
+  // Skala wählen, unten speichern: zurück zur Startseite mit Hinweis, Runde 1 «Beantwortet»
   await klick("fieldset input[type=radio][value='4']");
   await sende("form.formular > button[type=submit]");
+  pruefe((await pfad()) === "/lehrperson", "Runde 1: Knopf unten führt zur Startseite");
+  pruefe((await meldung()).includes("Deine Antworten sind gespeichert."), "Start: «Deine Antworten sind gespeichert.»");
+  pruefe((await text()).includes("Beantwortet"), "Start: Runde 1 «Beantwortet»");
+  await keinUeberlauf("Start nach dem Speichern 390 px");
+  await screenshot("25b-lp-start-gespeichert");
   await oeffne(rundenPfad);
   pruefe(await js("document.querySelector('fieldset input[value=\"4\"]').checked"), "Runde 1: gewählter Skalawert gespeichert");
-  await oeffne("/lehrperson");
-  pruefe((await text()).includes("Beantwortet"), "Start: Runde 1 «Beantwortet»");
   keineFehlerSeit(stand, "Runde 1");
 
   // 4. Runde 2 ist nicht erreichbar
@@ -489,7 +492,10 @@ async function ablaufLehrperson() {
   // Speichern räumt den Entwurf weg
   await tippe(`#${erstesFeld}`, `${gespeichert} Ergänzung.`);
   await sende("form.formular > button[type=submit]");
-  pruefe((await entwurfSchluessel()) === 0, "Entwurf: nach dem Speichern kein Entwurf im Tab");
+  pruefe((await pfad()) === "/lehrperson", "Entwurf: Knopf unten führt zur Startseite");
+  // Der Entwurf gleicht jetzt dem Gespeicherten und verschwindet beim nächsten Öffnen still
+  await oeffne(rundenPfad);
+  pruefe(!(await hinweisSichtbar()) && (await entwurfSchluessel()) === 0, "Entwurf: nach dem Speichern kein Hinweis und kein Entwurf im Tab");
   // Neuer Tagebucheintrag: nach dem Anlegen ist der Entwurf des Formulars «neu» weg
   await oeffne("/lehrperson/tagebuch/neu/frei");
   await tippe("#text", "Ein Eintrag, der gleich gespeichert wird.");
