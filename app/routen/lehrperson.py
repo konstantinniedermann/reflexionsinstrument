@@ -1,6 +1,5 @@
 """Seiten der Lehrperson."""
 
-import re
 import sqlite3
 from typing import Annotated
 
@@ -22,6 +21,7 @@ from app.eintraege import (
     speichere_antworten,
 )
 from app.seiten_lehrperson import (
+    ANKER,
     VORLAGEN,
     hole_bezug,
     kontext_eintraege,
@@ -47,6 +47,7 @@ ANSICHT = Annotated[Ansicht, Depends(hole_ansicht_lehrperson)]
 # Der Text kommt aus dieser Tabelle, nie aus der Adresse.
 ERLEDIGT = {
     "gespeichert": "Gespeichert.",
+    "runde_gespeichert": "Deine Antworten sind gespeichert.",
     "geloescht": "Gelöscht.",
     "aufnahme_geloescht": "Die Aufnahme wurde gelöscht.",
 }
@@ -73,9 +74,6 @@ def start(request: Request, db: DB, ansicht: ANSICHT):
 def info(request: Request, db: DB, ansicht: ANSICHT):
     kontext = kontext_info(db, ansicht) | {"meldung": _meldung(request)}
     return templates.TemplateResponse(request, VORLAGEN["info"], kontext)
-
-
-ANKER = re.compile(r"(frage|aufnahme)-([0-9]{1,10})")
 
 
 @router.get("/runden/{runde_id}")
@@ -109,7 +107,8 @@ async def runde_speichern(request: Request, db: DB, ansicht: ANSICHT, runde_id: 
     if neue_info is not None and (treffer is None or treffer.group(1) == "frage"):
         return _weiter(pfad, "gespeichert", f"zusatzinfo-{neue_info}")
     if treffer is None:
-        return _weiter(pfad, "gespeichert")
+        # Knopf unten: Die Runde ist für jetzt erledigt, zurück zur Startseite
+        return _weiter(ansicht.url(), "runde_gespeichert")
     art, nummer = treffer.group(1), int(treffer.group(2))
     if art == "aufnahme":
         if any(f["id"] == nummer and f["typ"] == "freitext" for f in fragen):

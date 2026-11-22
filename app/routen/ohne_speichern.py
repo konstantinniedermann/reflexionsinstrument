@@ -5,6 +5,7 @@ from collections.abc import Callable
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import RedirectResponse
 
 from app import inhalte
 from app.ansicht import Ansicht
@@ -13,12 +14,14 @@ from app.db import hole_db
 from app.eingaben import InhaltFehler
 from app.eintraege import lies_runden_eingaben, lies_tagebuchtext
 from app.seiten_lehrperson import (
+    ANKER,
     VORLAGEN,
     kontext_info,
     kontext_runde,
     kontext_start,
     kontext_tagebuch_neu,
     kontext_tagebuch_wahl,
+    oeffnet_neuen_abschnitt,
 )
 from app.sichtbar import sichtbare_runde
 from app.typen import Id
@@ -26,6 +29,7 @@ from app.vorlagen import templates
 
 MELDUNG_GAST = "Nicht gespeichert. In der Ansicht ohne Konto wird nichts gespeichert."
 MELDUNG_VORSCHAU = "Nicht gespeichert. In der Vorschau wird nichts gespeichert."
+NICHT_GESPEICHERT = "nicht_gespeichert"  # Wert von «erledigt» für die Startseite
 
 
 def hole_db_lesend(db: Annotated[sqlite3.Connection, Depends(hole_db)]) -> sqlite3.Connection:
@@ -45,7 +49,9 @@ def registriere_seiten(
 
     @router.get("")
     def start(request: Request, db: DB_LESEND, ansicht: ANSICHT):
-        return templates.TemplateResponse(request, VORLAGEN["start"], kontext_start(db, ansicht))
+        erledigt = request.query_params.get("erledigt") == NICHT_GESPEICHERT
+        kontext = kontext_start(db, ansicht) | {"meldung": meldung if erledigt else None}
+        return templates.TemplateResponse(request, VORLAGEN["start"], kontext)
 
     @router.get("/info")
     def info(request: Request, db: DB_LESEND, ansicht: ANSICHT):
@@ -86,6 +92,12 @@ def registriere_seiten(
             )
             status = 400
         else:
+            # Wie bei der Lehrperson: Der Knopf unten führt zur Startseite, ausser er öffnet
+            # eine Zusatzinfo. Ein kleiner Knopf (mit Anker) bleibt auf der Seite.
+            knopf_unten = ANKER.fullmatch(formular.get("anker", "")) is None
+            if knopf_unten and not oeffnet_neuen_abschnitt(db, runde_id, formular):
+                ziel = f"{ansicht.url()}?erledigt={NICHT_GESPEICHERT}"
+                return RedirectResponse(ziel, status_code=303)
             kontext = kontext_runde(db, ansicht, runde_id, eingaben=formular, meldung=meldung)
             status = 200
         return templates.TemplateResponse(request, VORLAGEN["runde"], kontext, status_code=status)

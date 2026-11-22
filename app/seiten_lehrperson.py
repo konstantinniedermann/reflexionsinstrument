@@ -1,5 +1,6 @@
 """Inhalte der Seiten, getrennt von Route und Ansicht (Lehrperson, Gast, Vorschau)."""
 
+import re
 import sqlite3
 from collections.abc import Mapping
 
@@ -39,6 +40,9 @@ VORLAGEN: dict[str, str] = {
 }
 
 MELDUNG_FEHLER = "Bitte prüfe die markierten Felder."
+
+# Wert der kleinen Speichern-Knöpfe einer Runde; ohne gültigen Anker zählt der Knopf unten.
+ANKER = re.compile(r"(frage|aufnahme)-([0-9]{1,10})")
 
 
 def _entwurf(ansicht: Ansicht, formular: str) -> str | None:
@@ -172,6 +176,26 @@ def neu_geoeffnete_info(
     return abschnitte(zeilen)[vorher - 1][-1]["frage"]["id"]
 
 
+def oeffnet_neuen_abschnitt(
+    db: sqlite3.Connection, runde_id: int, eingaben: Mapping[str, str]
+) -> bool:
+    """Gast und Vorschau: Öffnen die abgeschickten Werte einen Abschnitt ohne Feld im Formular?
+
+    Dort wird nichts gespeichert; was offen war, zeigt das Formular selbst: an seinen Feldern
+    und am Feld «offen», denn eine Zusatzinfo nach der letzten Frage hat kein eigenes Feld.
+    """
+    zeilen = _zeilen(db, runde_id, {}, eingaben)
+    teile = abschnitte(zeilen)
+    im_formular = max(
+        (i + 1 for i, teil in enumerate(teile) if any(z["feld"] in eingaben for z in teil)),
+        default=1,
+    )
+    gemeldet = eingaben.get("offen", "")
+    if re.fullmatch(r"[0-9]{1,3}", gemeldet):
+        im_formular = max(im_formular, int(gemeldet))
+    return offene_abschnitte(zeilen, {}) > im_formular
+
+
 def _hinweis_zusatzinfo(teil: list[dict], danach: list[dict]) -> str:
     oben = "die Frage oben" if len(teil) == 1 else "alle Fragen oben"
     weitere = " mit weiteren Fragen" if danach else ""
@@ -208,6 +232,7 @@ def kontext_runde(
         "meldung": meldung or (MELDUNG_FEHLER if fehler else None),
         "runde": runde,
         "zeilen": [zeile for teil in teile[:offen] for zeile in teil],
+        "offen": offen,
         "gesperrt_nach": None if gesperrt is None else gesperrt["frage"]["id"],
         "hinweis_zusatzinfo": (
             None if gesperrt is None else _hinweis_zusatzinfo(teile[offen - 1], teile[offen])

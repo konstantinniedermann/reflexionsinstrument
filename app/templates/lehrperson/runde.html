@@ -13,6 +13,7 @@
 <div class="hinweis formatiert">{{ hinweis | formatiert }}</div>
 <form class="formular" method="post" action="{{ ansicht.url('/runden/' ~ runde.id) }}"{% if entwurf %} data-entwurf="{{ entwurf }}"{% endif %}>
   {{ csrf_feld(request) }}
+  {% if not ansicht.speichert %}<input type="hidden" name="offen" value="{{ offen }}">{% endif %}
   {% include "lehrperson/_entwurf_hinweis.html" %}
   {% for zeile in zeilen %}
   {% set frage = zeile.frage %}

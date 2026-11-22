@@ -74,6 +74,7 @@ flowchart LR
 | Muss | Fragetypen: Freitext und Skala | A: «Skala ist gut» |
 | Muss | Eine Runde erscheint ab ihrem Freischaltdatum. Freigeschaltete Runden bleiben offen. | A: eine pro Woche. C: Datum statt Knopf, damit sie nicht daran denken muss |
 | Muss | Antworten werden gespeichert, sobald die Lehrperson auf «Speichern» tippt, und lassen sich jederzeit ändern oder löschen. Es gibt kein endgültiges Abschicken. | A: «anpassbar/bearbeitbar sollen die Antworten immer sein» |
+| Muss | Der Knopf «Speichern» unten in einer Runde speichert und führt zur Startseite mit dem Hinweis «Deine Antworten sind gespeichert.». Ausnahme: Öffnet das Speichern eine neue Zusatzinfo, bleibt die Seite dort stehen. Die kleinen «Speichern»-Knöpfe bei den einzelnen Fragen bleiben auf der Seite. Vorschau und Gast-Ansicht verhalten sich gleich, mit dem Hinweis «Nicht gespeichert …». | A: Wunsch 22.11. «im Sinne: das ist jetzt erledigt». C: Ohne die Ausnahme sähe die Lehrperson die Folgefragen nie; die Vorschau zeigt, was eine Lehrperson erlebt |
 | Soll | Antworten auf Fragen auch als Sprachaufnahme | A: «wäre schön» |
 
 ### Tagebuch (Notizbüchlein)

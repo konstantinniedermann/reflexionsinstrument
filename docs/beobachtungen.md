@@ -11,6 +11,12 @@ Letzte Auswertung: 31.10.2026 (19 Einträge, alle abgeschlossen)
 
 ## Offen
 
+- **2026-11-22 — Entwurfsschutz: alter Entwurf nach Änderung auf einem zweiten Gerät**
+  - Fundort: `app/static/js/entwurf.js` (Funktion `schuetze`), Rückkehr zur Startseite in `app/routen/lehrperson.py`
+  - Beobachtung: Seit der Knopf unten zur Startseite führt, bleibt der Entwurf im Tab liegen, bis die Runde dort wieder geöffnet wird. Ändert die Lehrperson die Antwort inzwischen auf einem anderen Gerät, setzt der alte Tab beim Öffnen den älteren Text ins Feld (mit Hinweis «wiederhergestellt» und «Verwerfen»). Speichert sie dann, überschreibt der alte Text den neueren.
+  - Ursprung: Review zum Branch `feat/speichern-zur-startseite`
+  - Einschätzung: selten (zwei Geräte, alter Tab offen), der Hinweis warnt. Löschen auf der Startseite ginge nur ohne Vergleich mit dem gespeicherten Text und verlöre bei «Zurück» neuen, ungespeicherten Text. Darum nicht umgesetzt.
+
 ## Ausgewertet am 31.10.2026
 
 19 Einträge, alle abgeschlossen. Massstab: Der Pilot ist befristet (vier Wochen, fünf Lehrpersonen) und soll mit wenig weiterem Aufwand fertig werden. Was kein falsches Verhalten für Lehrpersonen oder Auftraggeberin bedeutet, wird nicht mehr bearbeitet. Die Einträge mit dem Ausgang «nichts tun» wurden darum nicht einzeln nachgeprüft: Ob sie zutreffen, ändert den Ausgang nicht.

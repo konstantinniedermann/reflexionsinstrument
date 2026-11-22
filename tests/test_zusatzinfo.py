@@ -10,6 +10,8 @@ import pytest
 import testdaten
 from conftest import als_lehrperson, als_leitung, csrf_von
 
+from app.routen.ohne_speichern import MELDUNG_GAST, MELDUNG_VORSCHAU
+
 INFO_A = "Erste **Wendung** im Fall"
 INFO_B = "Zweite **Lage** im Fall"
 SATZ = "folgt eine Zusatzinformation"
@@ -68,6 +70,7 @@ def test_ohne_antwort_nur_erste_frage(runde, client):
     rid, (_, f2, f3, f4) = runde
     text = _seite(client, rid)
     assert _stufe(text) == 1
+    assert 'name="offen"' not in text  # Lehrperson: nur Gespeichertes zählt
     assert f"{EINE} mit weiteren Fragen." in text
     for f in (f2, f3, f4):
         assert f'name="antwort_{f}"' not in text
@@ -94,6 +97,21 @@ def test_abschnitt_fuer_abschnitt_mit_sprung(runde, client):
     assert _stufe(text) == 3
     assert text.index("Dritte Frage") < text.index("Lage") < text.index("Vierte Frage")
     assert f'name="antwort_{f4}"' in text
+
+    # Alles offen: der Knopf unten führt zur Startseite
+    antwort = _post(client, rid, {f"antwort_{f4}": "Schluss"})
+    assert antwort.headers["location"] == "/lehrperson?erledigt=runde_gespeichert"
+
+
+def test_knopf_unten_ohne_neue_zusatzinfo_zur_startseite(runde, client):
+    """Bleibt der nächste Abschnitt zu, ist nichts Neues zu sehen: zurück zur Startseite."""
+    rid, (f1, f2, _, _) = runde
+    antwort = _post(client, rid, {f"antwort_{f1}": "   "})
+    assert antwort.headers["location"] == "/lehrperson?erledigt=runde_gespeichert"
+    _post(client, rid, {f"antwort_{f1}": "Gedanke"})
+    antwort = _post(client, rid, {f"antwort_{f2}": "Nur die zweite"})
+    assert antwort.headers["location"] == "/lehrperson?erledigt=runde_gespeichert"
+    assert _stufe(_seite(client, rid)) == 2
 
 
 def test_skala_keine_angabe_gilt_nicht(runde, client):
@@ -191,8 +209,28 @@ def test_zusatzinfo_nach_der_letzten_frage(db, client, lehrperson, heute_ist):
     assert SATZ not in text
 
 
+def test_gast_zusatzinfo_nach_der_letzten_frage(db, client, heute_ist):
+    """Der leere Schlussabschnitt hat kein Feld: das Formular meldet, was schon offen war."""
+    rid, (f1,) = testdaten.lege_runde_an(
+        db, "Eine", "2026-11-23", (("freitext", "Erste Frage"),), zusatzinfos={0: INFO_A}
+    )
+    db.commit()
+    heute_ist(date(2026, 11, 24))
+    assert 'name="offen" value="1"' in _seite(client, rid, "/gast")
+    antwort = _post(client, rid, {f"antwort_{f1}": "Ja", "offen": "1"}, basis="/gast")
+    assert antwort.status_code == 200
+    assert "<strong>Wendung</strong>" in antwort.text
+    assert 'name="offen" value="2"' in antwort.text
+    antwort = _post(client, rid, {f"antwort_{f1}": "Ja", "offen": "2"}, basis="/gast")
+    assert antwort.headers["location"] == "/gast?erledigt=nicht_gespeichert"
+    # Unsinnige Werte zählen nicht
+    for offen in ("x", "-1", "9" * 30):
+        antwort = _post(client, rid, {f"antwort_{f1}": "Ja", "offen": offen}, basis="/gast")
+        assert antwort.status_code == 200, offen
+
+
 def test_gast_spielt_abschnitte_durch(runde, client):
-    rid, (f1, f2, f3, _) = runde
+    rid, (f1, f2, f3, f4) = runde
     client.cookies.clear()
     assert _stufe(_seite(client, rid, "/gast")) == 1
     antwort = _post(client, rid, {f"antwort_{f1}": "Probe"}, basis="/gast")
@@ -201,6 +239,18 @@ def test_gast_spielt_abschnitte_durch(runde, client):
     daten = {f"antwort_{f1}": "Probe", f"antwort_{f2}": "Mehr", f"antwort_{f3}": "2"}
     assert _stufe(_post(client, rid, daten, basis="/gast").text) == 3
     assert _stufe(_seite(client, rid, "/gast")) == 1
+    # Alles offen: der Knopf unten führt wie bei der Lehrperson zur Startseite
+    antwort = _post(client, rid, daten | {f"antwort_{f4}": "Ende"}, basis="/gast")
+    assert antwort.status_code == 303
+    assert antwort.headers["location"] == "/gast?erledigt=nicht_gespeichert"
+    start = client.get(antwort.headers["location"]).text
+    assert f'role="status">{MELDUNG_GAST}<' in start
+    # Ohne neuen Abschnitt (Frage 1 leer) ebenso; ein kleiner Knopf bleibt auf der Seite
+    antwort = _post(client, rid, {f"antwort_{f1}": ""}, basis="/gast")
+    assert antwort.headers["location"] == "/gast?erledigt=nicht_gespeichert"
+    antwort = _post(client, rid, {f"antwort_{f1}": "", "anker": f"frage-{f1}"}, basis="/gast")
+    assert antwort.status_code == 200
+    assert MELDUNG_GAST in antwort.text
 
 
 def test_aufnahme_auf_erste_frage_springt_zur_zusatzinfo(runde, client):
@@ -228,7 +278,7 @@ def test_fehlerseite_der_lehrperson_zeigt_nur_gespeichertes(runde, client):
 
 
 def test_vorschau_zeigt_zusatzinfo_nach_abschicken(runde, client, auftraggeberin):
-    rid, (f1, _, _, _) = runde
+    rid, (f1, f2, _, _) = runde
     client.cookies.clear()
     als_leitung(client, auftraggeberin)
     basis = "/verwaltung/vorschau/2026-11-23"
@@ -236,3 +286,9 @@ def test_vorschau_zeigt_zusatzinfo_nach_abschicken(runde, client, auftraggeberin
     antwort = _post(client, rid, {f"antwort_{f1}": "Probe"}, basis=basis)
     assert antwort.status_code == 200
     assert _stufe(antwort.text) == 2
+    antwort = _post(client, rid, {f"antwort_{f1}": "Probe", f"antwort_{f2}": "x"}, basis=basis)
+    assert antwort.headers["location"] == f"{basis}?erledigt=nicht_gespeichert"
+    start = client.get(antwort.headers["location"]).text
+    assert f'role="status">{MELDUNG_VORSCHAU}<' in start
+    # Andere Werte von «erledigt» zeigen nichts
+    assert 'role="status"' not in client.get(f"{basis}?erledigt=gespeichert").text
