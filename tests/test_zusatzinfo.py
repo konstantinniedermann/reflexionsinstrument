@@ -70,6 +70,7 @@ def test_ohne_antwort_nur_erste_frage(runde, client):
     rid, (_, f2, f3, f4) = runde
     text = _seite(client, rid)
     assert _stufe(text) == 1
+    assert 'name="offen"' not in text  # Lehrperson: nur Gespeichertes zählt
     assert f"{EINE} mit weiteren Fragen." in text
     for f in (f2, f3, f4):
         assert f'name="antwort_{f}"' not in text
@@ -206,6 +207,26 @@ def test_zusatzinfo_nach_der_letzten_frage(db, client, lehrperson, heute_ist):
     text = _seite(client, rid)
     assert "<strong>Wendung</strong>" in text
     assert SATZ not in text
+
+
+def test_gast_zusatzinfo_nach_der_letzten_frage(db, client, heute_ist):
+    """Der leere Schlussabschnitt hat kein Feld: das Formular meldet, was schon offen war."""
+    rid, (f1,) = testdaten.lege_runde_an(
+        db, "Eine", "2026-11-23", (("freitext", "Erste Frage"),), zusatzinfos={0: INFO_A}
+    )
+    db.commit()
+    heute_ist(date(2026, 11, 24))
+    assert 'name="offen" value="1"' in _seite(client, rid, "/gast")
+    antwort = _post(client, rid, {f"antwort_{f1}": "Ja", "offen": "1"}, basis="/gast")
+    assert antwort.status_code == 200
+    assert "<strong>Wendung</strong>" in antwort.text
+    assert 'name="offen" value="2"' in antwort.text
+    antwort = _post(client, rid, {f"antwort_{f1}": "Ja", "offen": "2"}, basis="/gast")
+    assert antwort.headers["location"] == "/gast?erledigt=nicht_gespeichert"
+    # Unsinnige Werte zählen nicht
+    for offen in ("x", "-1", "9" * 30):
+        antwort = _post(client, rid, {f"antwort_{f1}": "Ja", "offen": offen}, basis="/gast")
+        assert antwort.status_code == 200, offen
 
 
 def test_gast_spielt_abschnitte_durch(runde, client):

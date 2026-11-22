@@ -181,7 +181,8 @@ def oeffnet_neuen_abschnitt(
 ) -> bool:
     """Gast und Vorschau: Öffnen die abgeschickten Werte einen Abschnitt ohne Feld im Formular?
 
-    Dort wird nichts gespeichert; was offen war, zeigt das Formular selbst.
+    Dort wird nichts gespeichert; was offen war, zeigt das Formular selbst: an seinen Feldern
+    und am Feld «offen», denn eine Zusatzinfo nach der letzten Frage hat kein eigenes Feld.
     """
     zeilen = _zeilen(db, runde_id, {}, eingaben)
     teile = abschnitte(zeilen)
@@ -189,6 +190,9 @@ def oeffnet_neuen_abschnitt(
         (i + 1 for i, teil in enumerate(teile) if any(z["feld"] in eingaben for z in teil)),
         default=1,
     )
+    gemeldet = eingaben.get("offen", "")
+    if re.fullmatch(r"[0-9]{1,3}", gemeldet):
+        im_formular = max(im_formular, int(gemeldet))
     return offene_abschnitte(zeilen, {}) > im_formular
 
 
@@ -228,6 +232,7 @@ def kontext_runde(
         "meldung": meldung or (MELDUNG_FEHLER if fehler else None),
         "runde": runde,
         "zeilen": [zeile for teil in teile[:offen] for zeile in teil],
+        "offen": offen,
         "gesperrt_nach": None if gesperrt is None else gesperrt["frage"]["id"],
         "hinweis_zusatzinfo": (
             None if gesperrt is None else _hinweis_zusatzinfo(teile[offen - 1], teile[offen])
