@@ -19,11 +19,6 @@
   {% else %}
   <p class="gedaempft">Kein Fallbeispiel.</p>
   {% endif %}
-  {% if wartende_zusatzinfo %}
-  <h2>Zusatzinfo</h2>
-  <p class="hinweis">Erscheint, sobald die Runde eine Frage hat. Sie steht dann bei der ersten Frage.</p>
-  <div class="formatiert">{{ wartende_zusatzinfo | formatiert }}</div>
-  {% endif %}
   <div class="aktionen">
     <a href="/verwaltung/inhalte/runden/{{ runde.id }}/bearbeiten">Angaben bearbeiten</a>
     <a href="/verwaltung/inhalte/runden/{{ runde.id }}/loeschen">Runde löschen</a>
@@ -31,26 +26,22 @@
   <p><a href="/verwaltung/vorschau/{{ runde.freischaltdatum }}/runden/{{ runde.id }}">Diese Runde ansehen</a></p>
 </section>
 
-<h2>Fragen</h2>
-{% if fragen %}
+<h2>Ablauf</h2>
+<p class="gedaempft">Fragen und Zusatzinfos erscheinen in dieser Reihenfolge unter dem Fallbeispiel. Eine Zusatzinfo hält die Lehrpersonen an: Sie erscheint mit allem, was danach kommt, erst wenn die Fragen davor beantwortet sind.</p>
+{% if ablauf %}
 <ul class="liste-ohne">
-  {% for f in fragen %}
+  {% for b in ablauf %}
   <li>
+    {% if b.art == "frage" %}
+    {% set f = b.frage %}
     <article class="karte" id="frage-{{ f.id }}">
       <p>
-        <span class="marke">{% if f.typ == "skala" %}Skala von 1 bis 5{% else %}Antwort als Text{% endif %}</span>
+        <span class="marke">{% if f.typ == "skala" %}Frage · Skala von 1 bis 5{% else %}Frage · Antwort als Text{% endif %}</span>
         {% if f.anzahl_antworten %}<span class="marke marke--runde">{{ f.anzahl_antworten }}-mal beantwortet</span>{% endif %}
       </p>
       <p><strong>{{ f.text }}</strong></p>
       {% if f.typ == "skala" %}
       <p class="gedaempft">1 = {{ f.skala_min_text }} · 5 = {{ f.skala_max_text }}</p>
-      {% endif %}
-      {% if f.zusatzinfo %}
-      <div class="zusatzinfo-vorschau">
-        <h3>Danach: Zusatzinfo</h3>
-        <p class="gedaempft">Erscheint, sobald die Fragen davor beantwortet sind.</p>
-        <div class="formatiert">{{ f.zusatzinfo | formatiert }}</div>
-      </div>
       {% endif %}
       <div class="aktionen">
         <a href="/verwaltung/inhalte/fragen/{{ f.id }}">Bearbeiten</a>
@@ -58,11 +49,27 @@
       </div>
       {{ verschieben("/verwaltung/inhalte/fragen/" ~ f.id, f.text, loop.first, loop.last) }}
     </article>
+    {% else %}
+    {% set z = b.zusatzinfo %}
+    <article class="karte flaeche bereich--runden" id="zusatzinfo-{{ z.id }}">
+      <p><span class="marke">Zusatzinfo</span></p>
+      <p class="gedaempft">{% if b.sofort %}Erscheint sofort beim Öffnen der Runde.{% else %}Erscheint, sobald die Fragen davor beantwortet sind.{% endif %}</p>
+      <div class="formatiert">{{ z.inhalt | formatiert }}</div>
+      <div class="aktionen">
+        <a href="/verwaltung/inhalte/zusatzinfos/{{ z.id }}">Bearbeiten</a>
+        <a href="/verwaltung/inhalte/zusatzinfos/{{ z.id }}/loeschen">Löschen</a>
+      </div>
+      {{ verschieben("/verwaltung/inhalte/zusatzinfos/" ~ z.id, "Zusatzinfo: " ~ (z.inhalt | replace("**", "") | truncate(50, true, "…", 0)), loop.first, loop.last) }}
+    </article>
+    {% endif %}
   </li>
   {% endfor %}
 </ul>
 {% else %}
 <p class="hinweis">Diese Runde hat noch keine Fragen.</p>
 {% endif %}
-<p><a class="knopf" href="/verwaltung/inhalte/runden/{{ runde.id }}/fragen/neu">Neue Frage</a></p>
+<div class="aktionen">
+  <a class="knopf" href="/verwaltung/inhalte/runden/{{ runde.id }}/fragen/neu">Neue Frage</a>
+  <a class="knopf knopf--zweit" href="/verwaltung/inhalte/runden/{{ runde.id }}/zusatzinfos/neu">Neue Zusatzinfo</a>
+</div>
 {% endblock %}

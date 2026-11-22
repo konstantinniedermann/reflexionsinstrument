@@ -46,7 +46,7 @@ def test_alle_zeilen_werte(db, lehrperson, zweite_lehrperson, einstellungen):
         "runde", True, None, "Frage A", "Text", None,
     )  # fmt: skip
     assert (z.runde_id, z.runde_titel, z.frage_id) == (rid, "Runde 1", f1)
-    assert (z.frage_typ, z.frage_reihenfolge, z.anzeigename) == ("freitext", 1, "Anna Beispiel")
+    assert (z.frage_typ, z.frage_reihenfolge, z.anzeigename) == ("freitext", 2, "Anna Beispiel")
     assert z.aufnahme_dateiname is None
 
     z = nach["antwort", a_skala]

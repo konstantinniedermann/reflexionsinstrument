@@ -85,7 +85,7 @@ def _erwartet():
     return {
         "info_abschnitte": len(d["info"]),
         "runden": len(d["runden"]),
-        "fragen": sum(len(r["fragen"]) for r in d["runden"]),
+        "fragen": sum(1 for r in d["runden"] for b in r["ablauf"] if "typ" in b),
         "runden_ohne_fragen": 0,
         "leitfragen": len(d["leitfragen"]),
         "impulse": len(d["impulse"]),
@@ -179,8 +179,11 @@ def test_platzhalter_datei_zeigt_formatierung():
     d = _datei()
     assert any("\n- " in a["inhalt"] and "**" in a["inhalt"] for a in d["info"])
     assert any(r["fallbeispiel"] is None for r in d["runden"])
-    arten = {f["typ"] for r in d["runden"] for f in r["fragen"]}
+    arten = {b["typ"] for r in d["runden"] for b in r["ablauf"] if "typ" in b}
     assert arten == {"freitext", "skala"}
+    # Mindestens eine Runde zeigt den freien Ablauf «zwei Fragen, Zusatzinfo, Frage»
+    folgen = ["".join("I" if "zusatzinfo" in b else "F" for b in r["ablauf"]) for r in d["runden"]]
+    assert any("FFI" in f for f in folgen)
 
 
 def test_dockerignore_laesst_tests_draussen():

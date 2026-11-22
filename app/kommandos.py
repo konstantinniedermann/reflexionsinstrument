@@ -20,6 +20,7 @@ from app.inhalte import (
     lege_info_an,
     lege_leitfrage_an,
     lege_runde_an,
+    lege_zusatzinfo_an,
     loesche_alle_inhalte,
     speichere_allgemein,
     zaehle_inhalte,
@@ -74,15 +75,18 @@ def lade_platzhalter(db: sqlite3.Connection, daten: dict, projektstart: date) ->
                 eintrag["fallbeispiel"] or "",
                 tag(eintrag["tag"]),
             )
-            for frage in eintrag["fragen"]:
+            # Ablauf: Fragen und Zusatzinfos in der Reihenfolge der Datei
+            for baustein in eintrag["ablauf"]:
+                if "zusatzinfo" in baustein:
+                    lege_zusatzinfo_an(db, runde_id, baustein["zusatzinfo"])
+                    continue
                 lege_frage_an(
                     db,
                     runde_id,
-                    frage["typ"],
-                    frage["text"],
-                    frage.get("skala_min_text", ""),
-                    frage.get("skala_max_text", ""),
-                    frage.get("zusatzinfo", ""),
+                    baustein["typ"],
+                    baustein["text"],
+                    baustein.get("skala_min_text", ""),
+                    baustein.get("skala_max_text", ""),
                 )
         for text in daten["leitfragen"]:
             lege_leitfrage_an(db, text)

@@ -1,5 +1,7 @@
 # Design: Mehrere Zusatzinfos pro Runde
 
+> Die Zusatzinfo pro Frage ist abgelöst durch [Zusatzinfos und Fragen frei anordnen](2026-11-22-zusatzinfos-frei-anordnen-design.md).
+
 Grundlage: Wunsch der Auftraggeberin vom 21.11.2026. Sie möchte zum Fall selbst mehr Zusatzinfos ergänzen können, im Ablauf «Fall – Fragen – Zusatzinfo – Fragen – Zusatzinfo – Fragen». Die Entscheidungen hat Claude getroffen (Projektregel «Fragen selbst beantworten»). Löst die eine Zusatzinfo pro Runde aus dem [Design vom 15.11.](2026-11-15-ablauf-zusatzinfo-design.md) ab.
 
 ## Ziel

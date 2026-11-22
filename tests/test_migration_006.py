@@ -3,17 +3,25 @@
 import shutil
 
 from app.db import MIGRATIONEN, migriere, verbinde
-from app.inhalte import lege_frage_an, runde
+
+
+def _ordner(tmp_path, name, muster):
+    ordner = tmp_path / name
+    ordner.mkdir()
+    for datei in MIGRATIONEN.glob(muster):
+        shutil.copy(datei, ordner)
+    return ordner
 
 
 def _bis_005(tmp_path):
-    ordner = tmp_path / "alt"
-    ordner.mkdir()
-    for datei in MIGRATIONEN.glob("00[1-5]_*.sql"):
-        shutil.copy(datei, ordner)
     conn = verbinde(tmp_path / "test.db")
-    assert migriere(conn, ordner) == 5
+    assert migriere(conn, _ordner(tmp_path, "alt", "00[1-5]_*.sql")) == 5
     return conn
+
+
+def _bis_006(conn, tmp_path):
+    """Nur bis 006: Migration 007 macht aus den Zusatzinfos eigene Bausteine."""
+    return migriere(conn, _ordner(tmp_path, "bis6", "00[1-6]_*.sql"))
 
 
 def _frage(conn, rid, text, reihenfolge):
@@ -42,52 +50,12 @@ def test_zusatzinfo_wandert_zur_ersten_frage(tmp_path):
         ohne = _frage(conn, c, "Ohne", 1)
         conn.commit()
 
-        assert migriere(conn) == 6
+        assert _bis_006(conn, tmp_path) == 6
         info = dict(conn.execute("SELECT id, zusatzinfo FROM fragen").fetchall())
         assert info == {erste: "Info A", zweite: None, ohne: None}
-        assert runde(conn, a)["zusatzinfo"] is None
-        assert runde(conn, b)["zusatzinfo"] == "Info B"
+        bei_runde = dict(conn.execute("SELECT id, zusatzinfo FROM runden").fetchall())
+        assert bei_runde[a] is None
+        assert bei_runde[b] == "Info B"
 
-        # Das Formular der ersten Frage schickt die vorbelegte Info mit.
-        neu = lege_frage_an(conn, b, "freitext", "Neu", "", "", zusatzinfo="Info B")
-        assert conn.execute("SELECT zusatzinfo FROM fragen WHERE id = ?", (neu,)).fetchone()[0] == (
-            "Info B"
-        )
-        assert runde(conn, b)["zusatzinfo"] is None
-    finally:
-        conn.close()
-
-
-def test_eigene_info_ersetzt_wartende(tmp_path):
-    conn = _bis_005(tmp_path)
-    try:
-        b = conn.execute(
-            "INSERT INTO runden (titel, freischaltdatum, zusatzinfo) "
-            "VALUES ('B', '2026-11-30', 'Alt')"
-        ).lastrowid
-        conn.commit()
-        migriere(conn)
-        neu = lege_frage_an(conn, b, "freitext", "Neu", "", "", zusatzinfo="Eigene")
-        zeile = conn.execute("SELECT zusatzinfo FROM fragen WHERE id = ?", (neu,)).fetchone()
-        # Das Formular zeigt die wartende Info vorbelegt; wer sie ersetzt, tut das bewusst.
-        assert zeile[0] == "Eigene"
-        assert runde(conn, b)["zusatzinfo"] is None
-    finally:
-        conn.close()
-
-
-def test_geleerte_wartende_info_ist_weg(tmp_path):
-    conn = _bis_005(tmp_path)
-    try:
-        b = conn.execute(
-            "INSERT INTO runden (titel, freischaltdatum, zusatzinfo) "
-            "VALUES ('B', '2026-11-30', 'Alt')"
-        ).lastrowid
-        conn.commit()
-        migriere(conn)
-        neu = lege_frage_an(conn, b, "freitext", "Neu", "", "", zusatzinfo="   ")
-        zeile = conn.execute("SELECT zusatzinfo FROM fragen WHERE id = ?", (neu,)).fetchone()
-        assert zeile[0] is None
-        assert runde(conn, b)["zusatzinfo"] is None
     finally:
         conn.close()

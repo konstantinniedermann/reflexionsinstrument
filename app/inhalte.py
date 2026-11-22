@@ -30,9 +30,9 @@ SKALA_MAX = 5
 TYPEN = ("freitext", "skala")
 
 # art -> (Tabelle, Spalte der Gruppe oder None). Namen stehen fest im Code, nie aus Eingaben.
+# Fragen und Zusatzinfos teilen sich die Reihenfolge ihrer Runde (siehe «Ablauf»).
 GEORDNET = {
     "info": ("info_abschnitte", None),
-    "frage": ("fragen", "runde_id"),
     "leitfrage": ("leitfragen", None),
 }
 
@@ -116,8 +116,10 @@ def loesche_alle_inhalte(db: sqlite3.Connection) -> None:
 # ---------- Runden ----------
 
 _RUNDEN_SQL = (
-    "SELECT r.id, r.titel, r.fallbeispiel, r.zusatzinfo, r.freischaltdatum, "
-    "(SELECT COUNT(*) FROM fragen f WHERE f.runde_id = r.id) AS anzahl_fragen FROM runden r"
+    "SELECT r.id, r.titel, r.fallbeispiel, r.freischaltdatum, "
+    "(SELECT COUNT(*) FROM fragen f WHERE f.runde_id = r.id) AS anzahl_fragen, "
+    "(SELECT COUNT(*) FROM zusatzinfos z WHERE z.runde_id = r.id) AS anzahl_zusatzinfos "
+    "FROM runden r"
 )
 
 
@@ -233,17 +235,25 @@ def frage(db: sqlite3.Connection, frage_id: int) -> sqlite3.Row | None:
     return db.execute(f"{_FRAGEN_SQL} WHERE f.id = ?", (frage_id,)).fetchone()
 
 
-def _pruefe_frage(typ: str, text: str, skala_min_text: str, skala_max_text: str, zusatzinfo: str):
+def _pruefe_frage(typ: str, text: str, skala_min_text: str, skala_max_text: str):
     if typ not in TYPEN:
         raise InhaltFehler("typ", "Bitte die Art der Antwort wählen.")
     sauberer_text = kurzer_text(text, "text", LAENGE_KURZ, "Bitte eine Frage eingeben.")
-    info = langer_text(zusatzinfo, "zusatzinfo", None)
     if typ != "skala":
-        return typ, sauberer_text, None, None, info
+        return typ, sauberer_text, None, None
     meldung = "Für die Skala braucht es beide Beschriftungen."
     kleinste = kurzer_text(skala_min_text, "skala_min_text", LAENGE_BESCHRIFTUNG, meldung)
     groesste = kurzer_text(skala_max_text, "skala_max_text", LAENGE_BESCHRIFTUNG, meldung)
-    return typ, sauberer_text, kleinste, groesste, info
+    return typ, sauberer_text, kleinste, groesste
+
+
+# Naechste Nummer im Ablauf einer Runde, ueber Fragen und Zusatzinfos hinweg. Erwartet die
+# Runden-Id zweimal. Als Teilabfrage im INSERT wird sie im selben Schritt gelesen und geschrieben.
+_NAECHSTE_NUMMER = (
+    "(SELECT coalesce(max(reihenfolge), 0) + 1 FROM ("
+    "SELECT reihenfolge FROM fragen WHERE runde_id = ? "
+    "UNION ALL SELECT reihenfolge FROM zusatzinfos WHERE runde_id = ?))"
+)
 
 
 def lege_frage_an(
@@ -253,45 +263,19 @@ def lege_frage_an(
     text: str,
     skala_min_text: str,
     skala_max_text: str,
-    zusatzinfo: str = "",
 ) -> int:
-    """Neue Frage am Ende der Runde.
-
-    Wartet bei der Runde noch eine Zusatzinfo aus der Zeit vor Migration 006 (Runde ohne Frage),
-    zeigt das Formular der ersten Frage sie vorbelegt. Es gilt, was abgeschickt wird; danach
-    wartet bei der Runde nichts mehr, auch wenn das Feld bewusst geleert wurde.
-    """
-    typ, text, kleinste, groesste, info = _pruefe_frage(
-        typ, text, skala_min_text, skala_max_text, zusatzinfo
-    )
-    with transaktion(db):
-        wartend = wartende_zusatzinfo(db, runde_id)
-        try:
-            # Eine Anweisung: die naechste Nummer wird im selben Schritt gelesen und geschrieben.
-            frage_id = db.execute(
-                "INSERT INTO fragen (runde_id, typ, text, skala_min_text, skala_max_text, "
-                "zusatzinfo, reihenfolge) "
-                "SELECT ?, ?, ?, ?, ?, ?, coalesce(max(reihenfolge), 0) + 1 FROM fragen "
-                "WHERE runde_id = ?",
-                (runde_id, typ, text, kleinste, groesste, info, runde_id),
-            ).lastrowid
-        except sqlite3.IntegrityError as fehler:
-            if runde(db, runde_id) is None:
-                raise NichtGefunden(runde_id) from fehler
-            raise
-        if wartend is not None:
-            db.execute("UPDATE runden SET zusatzinfo = NULL WHERE id = ?", (runde_id,))
-        return frage_id
-
-
-def wartende_zusatzinfo(db: sqlite3.Connection, runde_id: int) -> str | None:
-    """Zusatzinfo, die noch bei einer Runde ohne Frage steht (nur nach Migration 006 möglich)."""
-    zeile = db.execute(
-        "SELECT zusatzinfo FROM runden r WHERE id = ? "
-        "AND NOT EXISTS (SELECT 1 FROM fragen f WHERE f.runde_id = r.id)",
-        (runde_id,),
-    ).fetchone()
-    return None if zeile is None else zeile["zusatzinfo"]
+    """Neue Frage am Ende des Ablaufs der Runde."""
+    werte = _pruefe_frage(typ, text, skala_min_text, skala_max_text)
+    try:
+        return db.execute(
+            "INSERT INTO fragen (runde_id, typ, text, skala_min_text, skala_max_text, "
+            f"reihenfolge) VALUES (?, ?, ?, ?, ?, {_NAECHSTE_NUMMER})",
+            (runde_id, *werte, runde_id, runde_id),
+        ).lastrowid
+    except sqlite3.IntegrityError as fehler:
+        if runde(db, runde_id) is None:
+            raise NichtGefunden(runde_id) from fehler
+        raise
 
 
 def aendere_frage(
@@ -301,9 +285,8 @@ def aendere_frage(
     text: str,
     skala_min_text: str,
     skala_max_text: str,
-    zusatzinfo: str = "",
 ) -> None:
-    werte = _pruefe_frage(typ, text, skala_min_text, skala_max_text, zusatzinfo)
+    werte = _pruefe_frage(typ, text, skala_min_text, skala_max_text)
     with transaktion(db):
         bisher = frage(db, frage_id)
         if bisher is None:
@@ -315,8 +298,8 @@ def aendere_frage(
                 "Lege bei Bedarf eine neue Frage an.",
             )
         db.execute(
-            "UPDATE fragen SET typ = ?, text = ?, skala_min_text = ?, skala_max_text = ?, "
-            "zusatzinfo = ? WHERE id = ?",
+            "UPDATE fragen SET typ = ?, text = ?, skala_min_text = ?, skala_max_text = ? "
+            "WHERE id = ?",
             (*werte, frage_id),
         )
 
@@ -335,7 +318,110 @@ def loesche_frage(db: sqlite3.Connection, frage_id: int) -> None:
         except sqlite3.IntegrityError as fehler:
             # Sicherheitsnetz: die Datenbank verweigert, was die Pruefung uebersehen hat.
             raise Gesperrt(max(_antworten_frage(db, frage_id), 1)) from fehler
-        _nummeriere(db, "frage", bisher["runde_id"])
+        _nummeriere_ablauf(db, bisher["runde_id"])
+
+
+# ---------- Zusatzinfos ----------
+
+
+def zusatzinfos(db: sqlite3.Connection, runde_id: int) -> list[sqlite3.Row]:
+    return db.execute(
+        "SELECT * FROM zusatzinfos WHERE runde_id = ? ORDER BY reihenfolge, id", (runde_id,)
+    ).fetchall()
+
+
+def zusatzinfo(db: sqlite3.Connection, info_id: int) -> sqlite3.Row | None:
+    return db.execute("SELECT * FROM zusatzinfos WHERE id = ?", (info_id,)).fetchone()
+
+
+def _pruefe_zusatzinfo(inhalt: str) -> str:
+    return langer_text(inhalt, "inhalt", "Bitte einen Text eingeben.")
+
+
+def lege_zusatzinfo_an(db: sqlite3.Connection, runde_id: int, inhalt: str) -> int:
+    """Neue Zusatzinfo am Ende des Ablaufs der Runde."""
+    text = _pruefe_zusatzinfo(inhalt)
+    try:
+        return db.execute(
+            f"INSERT INTO zusatzinfos (runde_id, inhalt, reihenfolge) VALUES (?, ?, {_NAECHSTE_NUMMER})",
+            (runde_id, text, runde_id, runde_id),
+        ).lastrowid
+    except sqlite3.IntegrityError as fehler:
+        if runde(db, runde_id) is None:
+            raise NichtGefunden(runde_id) from fehler
+        raise
+
+
+def aendere_zusatzinfo(db: sqlite3.Connection, info_id: int, inhalt: str) -> None:
+    text = _pruefe_zusatzinfo(inhalt)
+    if db.execute("UPDATE zusatzinfos SET inhalt = ? WHERE id = ?", (text, info_id)).rowcount == 0:
+        raise NichtGefunden(info_id)
+
+
+def loesche_zusatzinfo(db: sqlite3.Connection, info_id: int) -> None:
+    """An einer Zusatzinfo haengen keine Antworten; sie laesst sich immer loeschen."""
+    with transaktion(db):
+        bisher = zusatzinfo(db, info_id)
+        if bisher is None:
+            raise NichtGefunden(info_id)
+        db.execute("DELETE FROM zusatzinfos WHERE id = ?", (info_id,))
+        _nummeriere_ablauf(db, bisher["runde_id"])
+
+
+# ---------- Ablauf einer Runde ----------
+
+# art -> Tabelle; die Namen stehen fest im Code, nie aus Eingaben.
+ABLAUF = {"frage": "fragen", "zusatzinfo": "zusatzinfos"}
+
+
+def ablauf(db: sqlite3.Connection, runde_id: int) -> list[dict]:
+    """Fragen und Zusatzinfos der Runde in ihrer gemeinsamen Reihenfolge.
+
+    Jeder Baustein ist `{"art": "frage", "frage": Row}` oder
+    `{"art": "zusatzinfo", "zusatzinfo": Row}`. Bei gleicher Nummer (nur in Altdaten
+    denkbar) steht die Frage vor der Zusatzinfo.
+    """
+    bausteine = [
+        (f["reihenfolge"], 0, f["id"], {"art": "frage", "frage": f}) for f in fragen(db, runde_id)
+    ]
+    bausteine += [
+        (z["reihenfolge"], 1, z["id"], {"art": "zusatzinfo", "zusatzinfo": z})
+        for z in zusatzinfos(db, runde_id)
+    ]
+    return [b[3] for b in sorted(bausteine, key=lambda b: b[:3])]
+
+
+def _ablauf_schluessel(db: sqlite3.Connection, runde_id: int) -> list[tuple[str, int]]:
+    return [(b["art"], b[b["art"]]["id"]) for b in ablauf(db, runde_id)]
+
+
+def _schreibe_ablauf(db: sqlite3.Connection, schluessel: list[tuple[str, int]]) -> None:
+    for nummer, (art, eintrag_id) in enumerate(schluessel, start=1):
+        db.execute(f"UPDATE {ABLAUF[art]} SET reihenfolge = ? WHERE id = ?", (nummer, eintrag_id))
+
+
+def _nummeriere_ablauf(db: sqlite3.Connection, runde_id: int) -> None:
+    _schreibe_ablauf(db, _ablauf_schluessel(db, runde_id))
+
+
+def verschiebe_im_ablauf(db: sqlite3.Connection, art: str, eintrag_id: int, richtung: str) -> None:
+    """Tauscht Frage oder Zusatzinfo mit ihrem Nachbarn im Ablauf, egal welcher Art.
+
+    Am Rand ohne Wirkung; schreibt die Runde 1 bis n neu.
+    """
+    if richtung not in ("hoch", "runter") or art not in ABLAUF:
+        raise ValueError(f"{art!r} / {richtung!r}")
+    with transaktion(db):
+        zeile = db.execute(f"SELECT runde_id FROM {ABLAUF[art]} WHERE id = ?", (eintrag_id,))
+        zeile = zeile.fetchone()
+        if zeile is None:
+            return
+        schluessel = _ablauf_schluessel(db, zeile[0])
+        stelle = schluessel.index((art, eintrag_id))
+        nachbar = stelle - 1 if richtung == "hoch" else stelle + 1
+        if 0 <= nachbar < len(schluessel):
+            schluessel[stelle], schluessel[nachbar] = schluessel[nachbar], schluessel[stelle]
+        _schreibe_ablauf(db, schluessel)
 
 
 # ---------- Infoblock ----------
